@@ -1,0 +1,104 @@
+import json
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from launchkit.adapters.images import make_images
+from launchkit.adapters.models import model_name, resolve_model
+from launchkit.adapters.pricing import cost_usd
+from launchkit.harness.agent import build_copy_agent, build_picture_agent
+from launchkit.harness.context import ContextBuilder, approx_tokens
+from launchkit.harness.request import Request, resolve_workspace_id
+from launchkit.harness.spec import PosterSpec, SpecError, repair_message, validate_spec
+from launchkit.harness.trace import Trace
+from launchkit.harness.workspace import load_workspace
+from launchkit.settings import settings as default_settings
+
+
+@dataclass
+class Result:
+    spec: PosterSpec | None = None
+    image: Path | None = None
+    trace: Trace = field(default_factory=Trace)
+    context: list[dict] = field(default_factory=list)
+    history_tokens: int = 0
+    history_messages: int = 0
+    runs: list = field(default_factory=list)
+
+
+def run_request(
+    req: Request, *, settings=default_settings, model=None, images=None, trace: Trace | None = None, facts: str | None = None
+) -> Result:
+    trace = trace if trace is not None else Trace()
+    settings.data_dir.mkdir(parents=True, exist_ok=True)
+    wid = resolve_workspace_id(req, settings)
+    ws = load_workspace(wid, settings, trace)
+    ctx = ContextBuilder(settings.budgets)
+    if facts:
+        ctx.set("facts", facts)
+    model = model if model is not None else resolve_model(settings, trace)
+    images = images if images is not None else make_images(settings)
+    result = Result(trace=trace)
+
+    agent = build_copy_agent(ws, ctx, model, settings)
+    result.context = ctx.report()
+    trace.context(result.context)
+    session = f"{wid}:{req.session_id}"
+    run = agent.run(req.text, session_id=session, user_id=req.user_id)
+    result.runs.append(run)
+    trace.model("copy", model_name(model), run.metrics)
+    result.history_tokens, result.history_messages = history_size(run)
+
+    spec = as_spec(run.content)
+    errors = validate_spec(spec, ws.rules)
+    if errors:
+        # TODO step 2: trace.validation(errors, 1); one repair run with repair_message(errors); validate again; raise SpecError if errors remain
+        pass
+    result.spec = spec
+    write_explain(settings, result, wid, model_name(model))
+
+    picture_agent = build_picture_agent(spec, model, images, ws.colours, trace, settings)
+    if picture_agent is None:
+        trace.picture("skipped", reason="the image tool is step 3")
+        return result
+    picture_run = picture_agent.run(spec.image_prompt, session_id=f"{session}:picture", user_id=req.user_id)
+    result.runs.append(picture_run)
+    trace.model("picture", model_name(model), picture_run.metrics)
+    files = [e.detail["result"].get("file") for e in trace.tool_calls("generate_image") if e.kind == "tool"]
+    files = [f for f in files if f]
+    result.image = Path(files[-1]) if files else None
+    trace.picture("done" if result.image else "none", file=str(result.image) if result.image else None)
+    return result
+
+
+def as_spec(content) -> PosterSpec:
+    if isinstance(content, PosterSpec):
+        return content
+    if isinstance(content, dict):
+        return PosterSpec.model_validate(content)
+    if isinstance(content, str):
+        return PosterSpec.model_validate_json(content)
+    raise SpecError([f"the model returned {type(content).__name__}, not a poster spec"])
+
+
+def history_size(run) -> tuple[int, int]:
+    earlier = [m for m in (run.messages or []) if getattr(m, "from_history", False)]
+    return approx_tokens(" ".join(str(m.content or "") for m in earlier)), len(earlier)
+
+
+def write_explain(settings, result: Result, workspace_id: str, model_id: str):
+    run = result.runs[-1]
+    metrics = run.metrics
+    payload = {
+        "run_id": run.run_id,
+        "workspace": workspace_id,
+        "model": model_id,
+        "sections": result.context,
+        "history_tokens": result.history_tokens,
+        "history_messages": result.history_messages,
+        "input_tokens": getattr(metrics, "input_tokens", 0) or 0,
+        "cached_tokens": getattr(metrics, "cache_read_tokens", 0) or 0,
+        "output_tokens": getattr(metrics, "output_tokens", 0) or 0,
+        "system_message": next((m.content for m in (run.messages or []) if m.role == "system"), ""),
+    }
+    payload["cost_usd"] = cost_usd(model_id, payload["input_tokens"], payload["cached_tokens"], payload["output_tokens"])
+    (settings.data_dir / "last_run.json").write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")

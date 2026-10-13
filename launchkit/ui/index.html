@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LaunchKit</title>
+<style>
+:root{
+  --bg:#f4f6f8;--surface:#fff;--ink:#172029;--ink-2:#44515c;--muted:#75838f;--line:#d9e0e6;
+  --accent:#0b5d6b;--accent-soft:#e0eff1;--model:#b8641a;--model-soft:#f8ecdd;--pass:#2d7a4f;--fail:#b23a3a;--fail-soft:#f8e4e4;--code:#edf1f4;
+}
+@media (prefers-color-scheme:dark){:root{--bg:#111619;--surface:#192024;--ink:#e7edf1;--ink-2:#b4c0c9;--muted:#80909c;--line:#2b353c;--accent:#4fb3c0;--accent-soft:#143036;--model:#e0944e;--model-soft:#3a2816;--pass:#6cc08e;--fail:#ef8a8a;--fail-soft:#3c2323;--code:#0d1214}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;height:100vh;display:flex;flex-direction:column}
+header{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--surface)}
+header h1{font-size:17px;margin:0 14px 0 0;letter-spacing:-.01em}
+header label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+select,input,button{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+button{cursor:pointer;background:var(--accent);color:#fff;border-color:var(--accent)}
+button.quiet{background:transparent;color:var(--ink-2);border-color:var(--line)}
+main{flex:1;display:grid;grid-template-columns:minmax(320px,1fr) minmax(360px,1.2fr);min-height:0}
+.chat{display:flex;flex-direction:column;border-right:1px solid var(--line);min-width:0}
+.messages{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+.msg{max-width:92%;padding:10px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--line);white-space:pre-wrap;word-break:break-word}
+.msg.user{align-self:flex-end;background:var(--accent-soft);border-color:transparent}
+.msg.error{background:var(--fail-soft);border-color:var(--fail);color:var(--ink)}
+.msg .k{display:inline-block;width:110px;color:var(--muted);font-size:12.5px}
+.msg img{display:block;max-width:100%;border-radius:6px;margin-top:8px}
+.compose{display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line);background:var(--surface)}
+.compose input{flex:1}
+.side{display:flex;flex-direction:column;min-width:0}
+.tabs{display:flex;gap:4px;padding:10px 18px 0;border-bottom:1px solid var(--line);background:var(--surface)}
+.tabs button{background:transparent;color:var(--muted);border:none;border-bottom:2px solid transparent;border-radius:0;padding:8px 10px}
+.tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
+.panel{flex:1;overflow:auto;padding:16px 18px;display:none}
+.panel.on{display:block}
+pre{margin:0;font:12.5px/1.6 ui-monospace,Menlo,Consolas,monospace;background:var(--code);padding:12px;border-radius:8px;white-space:pre-wrap;word-break:break-word}
+.trace div{font:12.5px/1.7 ui-monospace,Menlo,Consolas,monospace;border-bottom:1px solid var(--line);padding:2px 0}
+.trace .refused,.trace .stop{color:var(--fail)}
+.trace .model{color:var(--model)}
+.trace .tool,.trace .picture{color:var(--accent)}
+.trace .validation{color:var(--model)}
+table{border-collapse:collapse;width:100%;font-size:14px;margin-bottom:12px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.empty{color:var(--muted)}
+.poster img{max-width:100%;border-radius:8px;border:1px solid var(--line)}
+@media (max-width:860px){main{grid-template-columns:1fr;grid-template-rows:1fr 1fr}.chat{border-right:none;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>LaunchKit</h1>
+  <label>Workspace <select id="workspace"></select></label>
+  <label>Custom id <input id="custom" placeholder="only with Custom" size="12"></label>
+  <label>User <select id="user"><option>maya</option><option>sam</option></select></label>
+  <label>Model <select id="model">
+    <option value="">real (from .env)</option>
+    <option value="fake:good">fake: good</option>
+    <option value="fake:echo">fake: echo</option>
+    <option value="fake:malformed">fake: malformed</option>
+    <option value="fake:endless">fake: endless</option>
+  </select></label>
+  <label>Conversation <span id="session" style="font:12px ui-monospace,Menlo,monospace;color:var(--ink-2)"></span></label>
+  <button class="quiet" id="new">New conversation</button>
+</header>
+<main>
+  <section class="chat">
+    <div class="messages" id="messages"><div class="msg empty">Pick a workspace, type a request, press Run. Try: Poster for the Tidal launch. The bottle on a misty lakeshore. Headline: Cold for 24 hours.</div></div>
+    <form class="compose" id="form">
+      <input id="text" placeholder="What should the poster say?" autocomplete="off">
+      <button id="send">Run</button>
+    </form>
+  </section>
+  <section class="side">
+    <div class="tabs">
+      <button class="on" data-tab="trace">Trace</button>
+      <button data-tab="context">Context</button>
+      <button data-tab="poster">Poster</button>
+    </div>
+    <div class="panel on trace" id="trace"><div class="empty">What happens during a run, line by line. "sent" is what the model read, "got back" is what it wrote, in tokens.</div></div>
+    <div class="panel" id="context"><div class="empty">After a run: what the model saw, in what order, at what cost.</div></div>
+    <div class="panel poster" id="poster"><div class="empty">The picture appears here after step 3.</div></div>
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+let session = newSession();
+function newSession(){ const s = Math.random().toString(36).slice(2,8); $("session") && ($("session").textContent = s); return s; }
+$("new").onclick = () => { session = newSession(); $("messages").innerHTML = ""; };
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".panel").forEach(p => p.classList.toggle("on", p.id === b.dataset.tab));
+});
+fetch("/workspaces").then(r => r.json()).then(list => {
+  const sel = $("workspace");
+  list.forEach(w => { const o = document.createElement("option"); o.value = w; o.textContent = w; sel.appendChild(o); });
+  const c = document.createElement("option"); c.value = "__custom__"; c.textContent = "Custom…"; sel.appendChild(c);
+});
+function add(cls, html){ const d = document.createElement("div"); d.className = "msg " + cls; d.innerHTML = html; $("messages").appendChild(d); $("messages").scrollTop = 1e9; return d; }
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function traceLine(ev){ const d = document.createElement("div"); d.className = ev.kind; d.textContent = ev.line; $("trace").appendChild(d); $("trace").scrollTop = 1e9; }
+function showContext(x){
+  const rows = x.sections.map(s => `<tr><td>${s.section}</td><td class="n">${s.tokens}</td><td class="n">${s.budget}</td><td>${s.given === 0 ? "(empty)" : (s.trimmed ? "trimmed from " + s.given : "")}</td></tr>`).join("");
+  const cost = x.cost_usd == null ? "price unknown" : "$" + x.cost_usd.toFixed(4);
+  $("context").innerHTML = `<p><b>${esc(x.workspace)}</b> · ${esc(x.model)} · copy phase</p>
+    <table><tr><th>section</th><th class="n">tokens</th><th class="n">budget</th><th></th></tr>${rows}
+    <tr><td>history</td><td class="n">${x.history_tokens}</td><td class="n">2000</td><td>${x.history_messages} earlier messages</td></tr></table>
+    <p>input ${x.input_tokens} · cached ${x.cached_tokens} · output ${x.output_tokens} · ${cost}</p>
+    <p class="empty">Section tokens are approximate (4 characters each). Totals are the provider's.</p>
+    <details><summary>System message as sent</summary><pre>${esc(x.system_message)}</pre></details>`;
+}
+$("form").onsubmit = async e => {
+  e.preventDefault();
+  const text = $("text").value.trim(); if (!text) return;
+  let workspace = $("workspace").value; if (workspace === "__custom__") workspace = $("custom").value;
+  add("user", esc(text)); $("text").value = "";
+  $("trace").innerHTML = ""; $("send").disabled = true;
+  const body = { workspace_id: workspace, user_id: $("user").value, session_id: session, text, model: $("model").value || null };
+  const { run_id } = await (await fetch("/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json();
+  const es = new EventSource(`/events/${run_id}`);
+  es.onmessage = m => {
+    const ev = JSON.parse(m.data);
+    if (ev.type === "trace") traceLine(ev);
+    if (ev.type === "result") {
+      const s = ev.spec;
+      const d = add("", `<span class="k">headline</span>${esc(s.headline)}\n<span class="k">subheadline</span>${esc(s.subheadline)}\n<span class="k">body</span>${esc(s.body)}\n<span class="k">image prompt</span>${esc(s.image_prompt)}\n<span class="k">format</span>${esc(s.format)}`);
+      if (ev.image) { d.innerHTML += `<img src="${ev.image}" alt="poster picture">`; $("poster").innerHTML = `<img src="${ev.image}" alt="poster picture">`; }
+      showContext(ev.explain);
+    }
+    if (ev.type === "error") add("error", `<b>${esc(ev.kind)}</b>\n${esc(ev.message)}`);
+  };
+  es.addEventListener("done", () => { es.close(); $("send").disabled = false; });
+  es.onerror = () => { es.close(); $("send").disabled = false; };
+};
+</script>
+</body>
+</html>
