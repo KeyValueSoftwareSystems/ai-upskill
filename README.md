@@ -21,11 +21,11 @@ Harbor's rules live in `workspaces/harbor/brand.json`.
 
 ## Setup
 
-You need Python 3.12 or newer, [`uv`](https://docs.astral.sh/uv/), git with access to the KeyValue repo, the coding agent you already use, and an OpenAI key from KeyValue.
+You need Python 3.12 or newer, [`uv`](https://docs.astral.sh/uv/), git with access to the KeyValue repo, the coding agent you already use, and a LiteLLM key from KeyValue.
 
 ```bash
 uv sync
-cp .env.example .env      # then add your OPENAI_API_KEY
+cp .env.example .env      # then add your LITELLM_API_KEY and LITELLM_BASE_URL
 ```
 
 Images use `gpt-image-1` by default. To skip paid image calls, set `LAUNCHKIT_IMAGES=placeholder` in `.env`.
