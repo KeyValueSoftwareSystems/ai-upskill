@@ -1,9 +1,5 @@
 """A LangGraph pipeline.
 
-Work through TODO 1 to 3 in order, rerunning the scoreboard after each:
-    uv run python -m launchkit.scoreboard --approach graph
-TODO 4 is a stretch.
-
     START -> start_turn -> write_spec -> validate --ok--> generate_image -> END
                                ^            |
                                +--retry-----+--fail--> give_up -> END
@@ -13,12 +9,12 @@ loop, and (with a checkpointer) state that survives between turns.
 """
 import json
 
-from langgraph.checkpoint.memory import MemorySaver  # noqa: F401  (TODO 3)
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from typing_extensions import TypedDict
 
 from launchkit.brand import brand_rules_text, load_brand
-from launchkit.images import generate_image, resize_image  # noqa: F401  (TODO 4)
+from launchkit.images import generate_image
 from launchkit.llm import complete
 from launchkit.result import Result
 from launchkit.spec import PosterSpec, SpecError, validate_spec
@@ -59,8 +55,9 @@ def write_spec(state: State) -> dict:
         "Reply with ONLY a JSON object with the keys headline, subheadline, body and visual_concept. "
         "visual_concept describes the picture only and must never contain words to be drawn."
     )
-    # TODO 3 (part b): if state has a "last_spec", append it to the system message, e.g.
-    #   "Previous poster spec (edit this one if the user asks for changes):\n" + json.dumps(...)
+    # TODO 3 (part b): give the model the previous poster so follow-ups work.
+    if state.get("last_spec"):
+        system += "\nPrevious poster spec (edit this one if the user asks for changes):\n" + json.dumps(state["last_spec"])
     messages = [{"role": "system", "content": system}, {"role": "user", "content": state["request"]}]
     if state.get("problems"):
         messages += [
@@ -81,22 +78,19 @@ def parse_spec(raw: str) -> PosterSpec:
 
 
 def validate(state: State) -> dict:
-    """TODO 1: Parse the reply and validate it. Store the spec and any problems.
-
-    Use parse_spec(state["raw"]) and validate_spec(spec, state["brand"]).
-    Return {"spec": spec.to_dict(), "problems": [...]}. If parsing raises
-    SpecError, return {"spec": None, "problems": [str(error)]}.
-    """
-    raise NotImplementedError("TODO 1: validate in approach_graph/graph.py")
+    """TODO 1: Parse the reply and validate it. Store the spec and any problems."""
+    try:
+        spec = parse_spec(state["raw"])
+    except SpecError as e:
+        return {"spec": None, "problems": [str(e)]}
+    return {"spec": spec.to_dict(), "problems": validate_spec(spec, state["brand"])}
 
 
 def route_after_validate(state: State) -> str:
-    """TODO 2: Decide where to go after validate: "ok", "retry" or "fail".
-
-    "ok" when there are no problems; "retry" while state["attempts"] < MAX_ATTEMPTS;
-    otherwise "fail". The edges for these three names are already wired in build_graph.
-    """
-    raise NotImplementedError("TODO 2: route_after_validate in approach_graph/graph.py")
+    """TODO 2: Decide where to go after validate: "ok", "retry" or "fail"."""
+    if not state["problems"]:
+        return "ok"
+    return "retry" if state["attempts"] < MAX_ATTEMPTS else "fail"
 
 
 def generate(state: State) -> dict:
@@ -107,26 +101,6 @@ def generate(state: State) -> dict:
 
 def give_up(state: State) -> dict:
     return {"error": "still invalid after one repair: " + "; ".join(state["problems"])}
-
-
-def route_request(state: State) -> str:
-    """TODO 4 (stretch): return "resize" for resize-only requests, otherwise "write".
-
-    A request is resize-only if it mentions "story size", "1080x1920" or "resize"
-    AND there is a state["last_image"] to resize.
-    """
-    raise NotImplementedError("TODO 4: route_request in approach_graph/graph.py")
-
-
-def resize_last(state: State) -> dict:
-    """TODO 4 (stretch): resize state["last_image"] to (1080, 1920) with resize_image.
-
-    No model call. Return {"image": new_path, "spec": state["last_spec"]}.
-    Then in build_graph: add this node, replace the start_turn -> write_spec edge with
-    g.add_conditional_edges("start_turn", route_request, {"write": "write_spec", "resize": "resize_last"}),
-    and add g.add_edge("resize_last", END).
-    """
-    raise NotImplementedError("TODO 4: resize_last in approach_graph/graph.py")
 
 
 def build_graph(checkpointer=None):
@@ -146,9 +120,8 @@ def build_graph(checkpointer=None):
     return g.compile(checkpointer=checkpointer)
 
 
-# TODO 3 (part a): pass checkpointer=MemorySaver() so state survives between turns
-# of the same conversation (handle() already passes the conversation ID as thread_id).
-GRAPH = build_graph(checkpointer=None)
+# TODO 3 (part a): add a checkpointer so state survives between turns.
+GRAPH = build_graph(checkpointer=MemorySaver())
 
 
 def handle(text: str, *, workspace: str, conversation_id: str, attachments: list[str]) -> Result:
