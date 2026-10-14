@@ -75,7 +75,7 @@ def resize_last(state: State) -> dict:
     return {"image": image, "spec": state["last_spec"]}
 ```
 
-Then in `build_graph`, add the node and swap the `start_turn -> write_spec` edge for a routed one:
+Then in `build_graph`, delete the line `g.add_edge("start_turn", "write_spec")` and add:
 
 ```python
     g.add_node("resize_last", resize_last)
