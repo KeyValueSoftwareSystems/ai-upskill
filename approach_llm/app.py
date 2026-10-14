@@ -2,54 +2,61 @@
 
 The whole approach is: build a prompt, call the model once, turn the reply
 into a PosterSpec, then ask the image model for the picture.
-
-Work through the TODOs in order and rerun the scoreboard after each one:
-    uv run python -m launchkit.scoreboard --approach llm
 """
-import json  # noqa: F401  (you'll need these for TODO 2)
-import re  # noqa: F401
+import json
+import re
 
-from launchkit.brand import brand_rules_text, load_brand  # noqa: F401
+from launchkit.brand import brand_rules_text, load_brand
 from launchkit.images import generate_image
 from launchkit.llm import complete
 from launchkit.result import Result
-from launchkit.spec import PosterSpec, SpecError, validate_spec  # noqa: F401
+from launchkit.spec import PosterSpec, SpecError, validate_spec
 
 
 def build_prompt(text: str, brand: dict) -> list[dict]:
-    """TODO 1: Build the messages for the model.
-
-    Return [{"role": "system", ...}, {"role": "user", "content": text}].
-    The system message should:
-      - include the brand's rules (brand_rules_text(brand) gives you them as text)
-      - ask for ONLY a JSON object with the keys headline, subheadline, body, visual_concept
-      - say that visual_concept describes the picture only, never words to be drawn
-    """
-    raise NotImplementedError("TODO 1: build_prompt in approach_llm/app.py")
+    """TODO 1: Build the messages for the model."""
+    system = (
+        "You write poster ad specs.\n"
+        f"{brand_rules_text(brand)}\n"
+        "Reply with ONLY a JSON object with the keys headline, subheadline, body and visual_concept. "
+        "visual_concept describes the picture only and must never contain words to be drawn."
+    )
+    return [{"role": "system", "content": system}, {"role": "user", "content": text}]
 
 
 def parse_spec(raw: str) -> PosterSpec:
-    """TODO 2: Turn the model's reply into a PosterSpec, or raise SpecError.
-
-    Models often wrap JSON in prose or ```json fences. Find the JSON object,
-    json.loads it, and build the spec with PosterSpec.from_dict(data).
-    Raise SpecError with a clear message if there's no JSON or it's invalid.
-    """
-    raise NotImplementedError("TODO 2: parse_spec in approach_llm/app.py")
+    """TODO 2: Turn the model's reply into a PosterSpec, or raise SpecError."""
+    match = re.search(r"\{.*\}", raw, re.S)
+    if not match:
+        raise SpecError("no JSON object in the model's reply")
+    try:
+        data = json.loads(match.group(0))
+    except json.JSONDecodeError as e:
+        raise SpecError(f"invalid JSON: {e}") from e
+    return PosterSpec.from_dict(data)
 
 
 def get_valid_spec(messages: list[dict], brand: dict) -> PosterSpec:
-    """TODO 3: Validate, allow ONE repair, otherwise raise SpecError.
-
-    Right now this trusts whatever comes back. Replace it so that:
-      1. problems = validate_spec(spec, brand) (and a SpecError from parsing counts as a problem)
-      2. if there are problems, call the model ONCE more with the original messages, the model's
-         reply as an "assistant" message, and a "user" message starting
-         "Fix these problems and reply with only the corrected JSON:" followed by the problems
-      3. if it's still invalid, raise SpecError("still invalid after one repair: ...")
-    """
+    """TODO 3: Call the model, validate, allow ONE repair, else raise SpecError."""
     raw = complete(messages)
-    return parse_spec(raw)
+    try:
+        spec = parse_spec(raw)
+        problems = validate_spec(spec, brand)
+    except SpecError as e:
+        spec, problems = None, [str(e)]
+    if not problems:
+        return spec
+
+    repair = messages + [
+        {"role": "assistant", "content": raw},
+        {"role": "user", "content": "Fix these problems and reply with only the corrected JSON:\n- " + "\n- ".join(problems)},
+    ]
+    raw = complete(repair)
+    spec = parse_spec(raw)
+    problems = validate_spec(spec, brand)
+    if problems:
+        raise SpecError("still invalid after one repair: " + "; ".join(problems))
+    return spec
 
 
 def handle(text: str, *, workspace: str, conversation_id: str, attachments: list[str]) -> Result:
@@ -59,7 +66,6 @@ def handle(text: str, *, workspace: str, conversation_id: str, attachments: list
         spec = get_valid_spec(build_prompt(text, brand), brand)
     except SpecError as e:
         return Result(error=str(e))
-    # TODO 4: The image model can't spell, so it must never receive the copy.
-    # Change this call to send only spec.visual_concept.
-    image = generate_image(f"{spec.headline}. {spec.visual_concept}", brand, conversation_id=conversation_id)
+    # TODO 4: picture-only image. Send the visual concept, never the copy.
+    image = generate_image(spec.visual_concept, brand, conversation_id=conversation_id)
     return Result(spec=spec, images=[image])

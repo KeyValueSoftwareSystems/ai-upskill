@@ -1,86 +1,86 @@
-# Hands-on: one LLM call
+# Hands-on: a LangGraph pipeline
 
-Branch `session-01-llm-call` · file `approach_llm/app.py` · about 3 minutes
+Branch `session-01-langgraph` · file `approach_graph/graph.py` · about 3 minutes
 
-Paste each snippet over the matching function in `approach_llm/app.py`, then run:
+This branch already contains the solved LLM call. Paste each snippet into `approach_graph/graph.py`, then run:
 
 ```bash
-uv run python -m launchkit.scoreboard --approach llm
+uv run python -m launchkit.scoreboard --approach graph
 ```
 
-## TODO 1: build the prompt
-
-Solves: the model doesn't know Harbor's rules or the shape of answer we need.
-
-```python
-def build_prompt(text: str, brand: dict) -> list[dict]:
-    """TODO 1: Build the messages for the model."""
-    system = (
-        "You write poster ad specs.\n"
-        f"{brand_rules_text(brand)}\n"
-        "Reply with ONLY a JSON object with the keys headline, subheadline, body and visual_concept. "
-        "visual_concept describes the picture only and must never contain words to be drawn."
-    )
-    return [{"role": "system", "content": system}, {"role": "user", "content": text}]
+```
+START -> start_turn -> write_spec -> validate --ok--> generate_image -> END
+                           ^            |
+                           +--retry-----+--fail--> give_up -> END
 ```
 
-## TODO 2: parse the reply
+## TODO 1: validate node
 
-Solves: the model wraps JSON in prose and code fences, so the reply isn't usable as data.
+Solves: each reply must be checked before the graph moves on.
 
 ```python
-def parse_spec(raw: str) -> PosterSpec:
-    """TODO 2: Turn the model's reply into a PosterSpec, or raise SpecError."""
-    match = re.search(r"\{.*\}", raw, re.S)
-    if not match:
-        raise SpecError("no JSON object in the model's reply")
+def validate(state: State) -> dict:
+    """TODO 1: Parse the reply and validate it. Store the spec and any problems."""
     try:
-        data = json.loads(match.group(0))
-    except json.JSONDecodeError as e:
-        raise SpecError(f"invalid JSON: {e}") from e
-    return PosterSpec.from_dict(data)
-```
-
-## TODO 3: validate, allow one repair
-
-Solves: the model breaks word limits and uses banned claims; code checks every reply and asks for one fix.
-
-```python
-def get_valid_spec(messages: list[dict], brand: dict) -> PosterSpec:
-    """TODO 3: Call the model, validate, allow ONE repair, else raise SpecError."""
-    raw = complete(messages)
-    try:
-        spec = parse_spec(raw)
-        problems = validate_spec(spec, brand)
+        spec = parse_spec(state["raw"])
     except SpecError as e:
-        spec, problems = None, [str(e)]
-    if not problems:
-        return spec
-
-    repair = messages + [
-        {"role": "assistant", "content": raw},
-        {"role": "user", "content": "Fix these problems and reply with only the corrected JSON:\n- " + "\n- ".join(problems)},
-    ]
-    raw = complete(repair)
-    spec = parse_spec(raw)
-    problems = validate_spec(spec, brand)
-    if problems:
-        raise SpecError("still invalid after one repair: " + "; ".join(problems))
-    return spec
+        return {"spec": None, "problems": [str(e)]}
+    return {"spec": spec.to_dict(), "problems": validate_spec(spec, state["brand"])}
 ```
 
-## TODO 4: picture only
+## TODO 2: route after validate
 
-Solves: image models misspell text, so the copy must never reach the image model. In `handle`, replace the `generate_image(...)` line with:
+Solves: a bad reply gets one repair, through a loop the graph controls, instead of failing outright.
 
 ```python
-    image = generate_image(spec.visual_concept, brand, conversation_id=conversation_id)
+def route_after_validate(state: State) -> str:
+    """TODO 2: Decide where to go after validate: "ok", "retry" or "fail"."""
+    if not state["problems"]:
+        return "ok"
+    return "retry" if state["attempts"] < MAX_ATTEMPTS else "fail"
 ```
 
-## Then
+## TODO 3a: save state between turns
 
-Run the scoreboard and read why R2, R3 and R4 fail. Try your own requests:
+Solves: without a checkpointer, every request starts from nothing. Replace the `GRAPH = ...` line with:
 
-```bash
-uv run python -m launchkit.ask --approach llm "Poster for the Tidal bottle on a beach"
+```python
+GRAPH = build_graph(checkpointer=MemorySaver())
 ```
+
+## TODO 3b: use the saved state
+
+Solves: saved state does nothing until the prompt uses it. In `write_spec`, replace the TODO 3 comment with:
+
+```python
+    if state.get("last_spec"):
+        system += "\nPrevious poster spec (edit this one if the user asks for changes):\n" + json.dumps(state["last_spec"])
+```
+
+## TODO 4 (stretch): a resize branch
+
+Solves: a resize-only request should resize the existing poster, not generate a new one. Replace the two stubs with:
+
+```python
+def route_request(state: State) -> str:
+    """TODO 4 (stretch): send resize-only requests to resize_last instead of write_spec."""
+    text = state["request"].lower()
+    wants_resize = "story size" in text or "1080x1920" in text or "resize" in text
+    return "resize" if wants_resize and state.get("last_image") else "write"
+
+
+def resize_last(state: State) -> dict:
+    """TODO 4 (stretch): resize the previous poster to the story size, no model call."""
+    image = resize_image(state["last_image"], (1080, 1920), conversation_id=state["conversation_id"])
+    return {"image": image, "spec": state["last_spec"]}
+```
+
+Then in `build_graph`, add the node and swap the `start_turn -> write_spec` edge for a routed one:
+
+```python
+    g.add_node("resize_last", resize_last)
+    g.add_conditional_edges("start_turn", route_request, {"write": "write_spec", "resize": "resize_last"})
+    g.add_edge("resize_last", END)
+```
+
+Count what one new kind of request cost you. Now imagine every request type Harbor will send.
