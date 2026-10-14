@@ -14,3 +14,11 @@ def test_skeleton_skips_the_picture(settings, images, trace, request_for, good):
     result = run_request(request_for(), settings=settings, model=good, images=images, trace=trace)
     assert result.image is None
     assert any(e.kind == "picture" and e.detail.get("status") == "skipped" for e in trace.events)
+
+
+def test_second_turn_remembers_the_first(settings, images, trace, request_for, good):
+    """R2: "Make the headline shorter" in the same conversation sees the earlier poster and returns fewer words."""
+    first = run_request(request_for(session_id="r2"), settings=settings, model=good, images=images)
+    second = run_request(request_for(text="Make the headline shorter.", session_id="r2"), settings=settings, model=good, images=images, trace=trace)
+    assert len(second.spec.headline.split()) < len(first.spec.headline.split())
+    assert second.history_messages > 0

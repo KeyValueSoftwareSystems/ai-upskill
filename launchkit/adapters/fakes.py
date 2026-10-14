@@ -102,6 +102,16 @@ def picture_phase(messages: list) -> ModelResponse:
     return tool_call_response("render_image", {"image_prompt": last_user_text(messages)}, "call_1")
 
 
+def previous_spec(messages: list) -> dict | None:
+    for m in reversed(messages):
+        if getattr(m, "role", None) == "assistant" and getattr(m, "from_history", False) and m.content:
+            try:
+                return json.loads(str(m.content))
+            except ValueError:
+                continue
+    return None
+
+
 class GoodModel(FakeModel):
     def __init__(self):
         super().__init__("good")
@@ -109,7 +119,12 @@ class GoodModel(FakeModel):
     def answer(self, messages, tools):
         if tools:
             return picture_phase(messages)
-        return text_response(json.dumps(HARBOR_SPEC), messages)
+        spec = dict(HARBOR_SPEC)
+        earlier = previous_spec(messages)
+        if "shorter" in last_user_text(messages).lower() and earlier:
+            words = earlier["headline"].split()
+            spec = {**earlier, "headline": " ".join(words[:-1]) if len(words) > 1 else words[0]}
+        return text_response(json.dumps(spec), messages)
 
 
 class EchoModel(FakeModel):
