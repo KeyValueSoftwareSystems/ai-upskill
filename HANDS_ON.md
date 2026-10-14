@@ -1,16 +1,27 @@
 # Hands-on: one LLM call
 
-Branch `session-01-llm-call` · file `approach_llm/app.py` · about 3 minutes
+Branch `session-01-llm-call` · file `approach_llm/app.py` · about 10 minutes
 
-Paste each snippet over the matching function in `approach_llm/app.py`, then run:
+Every function in `approach_llm/app.py` starts as the simplest version that runs. You replace them one TODO at a time, and after each one you run the step runner. It works out which TODOs you've done, sends a live request through your code, shows what came back, checks it, and names the limitation the next TODO fixes.
 
 ```bash
-uv run python -m launchkit.scoreboard --approach llm
+uv run python -m launchkit.step llm              # run the step you're on
+uv run python -m launchkit.step llm --no-image   # same, without the paid image call
 ```
+
+## Step 0: before you change anything
+
+Run `uv run python -m launchkit.step llm`.
+
+Look for: what the model writes when it has no rules or format to follow, and what `parse_spec` does with it.
+
+Limitation: the model doesn't know Harbor's rules or the shape of answer we need.
 
 ## TODO 1: build the prompt
 
 Solves: the model doesn't know Harbor's rules or the shape of answer we need.
+
+Paste over `build_prompt`:
 
 ```python
 def build_prompt(text: str, brand: dict) -> list[dict]:
@@ -24,9 +35,17 @@ def build_prompt(text: str, brand: dict) -> list[dict]:
     return [{"role": "system", "content": system}, {"role": "user", "content": text}]
 ```
 
+Run `uv run python -m launchkit.step llm`.
+
+Look for: the system message carrying Harbor's rules and the reply it gets. Then a reply from another run, wrapped in prose and a ```` ```json ```` fence, and what `parse_spec` does with it.
+
+Limitation: the reply is text, not data; one stray sentence breaks it.
+
 ## TODO 2: parse the reply
 
 Solves: the model wraps JSON in prose and code fences, so the reply isn't usable as data.
+
+Paste over `parse_spec`:
 
 ```python
 def parse_spec(raw: str) -> PosterSpec:
@@ -41,9 +60,17 @@ def parse_spec(raw: str) -> PosterSpec:
     return PosterSpec.from_dict(data)
 ```
 
+Run `uv run python -m launchkit.step llm`.
+
+Look for: a request that asks for banned claims, a reply your `parse_spec` reads, and the problems `validate_spec` finds in it. Nothing in your code stops them yet.
+
+Limitation: we can read the reply, but nothing stops it breaking the rules.
+
 ## TODO 3: validate, allow one repair
 
 Solves: the model breaks word limits and uses banned claims; code checks every reply and asks for one fix.
+
+Paste over `get_valid_spec`:
 
 ```python
 def get_valid_spec(messages: list[dict], brand: dict) -> PosterSpec:
@@ -69,18 +96,38 @@ def get_valid_spec(messages: list[dict], brand: dict) -> PosterSpec:
     return spec
 ```
 
+Run `uv run python -m launchkit.step llm`.
+
+Look for: attempt 1 and its problems, the repair message your code sent, and attempt 2. Then the prompt sent to the image model, with the headline marked `>>> <<<` inside it.
+
+Limitation: the copy is baked into the picture, so it can't be edited, resized or set in Harbor's font, and spelling isn't guaranteed.
+
 ## TODO 4: picture only
 
-Solves: image models misspell text, so the copy must never reach the image model. In `handle`, replace the `generate_image(...)` line with:
+Solves: image models misspell text, so the copy must never reach the image model.
+
+In `handle`, replace the `generate_image(...)` line with:
 
 ```python
     image = generate_image(spec.visual_concept, brand, conversation_id=conversation_id)
 ```
 
-## Then
+Run `uv run python -m launchkit.step llm`.
 
-Run the scoreboard and read why R2, R3 and R4 fail. Try your own requests:
+Look for: an image prompt with no headline in it. Then "Make the headline shorter." in the same conversation, and the headline that comes back next to the first one.
+
+Limitation: a single call has no memory. The follow-up starts from nothing, so it can't edit the poster we just made.
+
+## Final check: the scoreboard
+
+```bash
+uv run python -m launchkit.scoreboard --approach llm
+```
+
+Expect R1 to pass and R2 to R4 to fail. Read why each one fails: those are the problems the next approach has to solve. Try your own requests too:
 
 ```bash
 uv run python -m launchkit.ask --approach llm "Poster for the Tidal bottle on a beach"
 ```
+
+Next: `git checkout session-01-langgraph`
