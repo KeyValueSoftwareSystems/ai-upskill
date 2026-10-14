@@ -13,6 +13,7 @@ from launchkit.adapters.pricing import PRICES_AS_OF
 from launchkit.harness.request import Request, UnknownWorkspace
 from launchkit.harness.run import run_request
 from launchkit.harness.spec import SpecError
+from launchkit.harness.trace import Trace
 from launchkit.settings import ROOT, settings
 
 console = Console(soft_wrap=True)
@@ -22,21 +23,41 @@ def cmd_run(args):
     current = replace(settings, model=args.model) if args.model else settings
     facts = Path(args.facts).read_text(encoding="utf-8") if args.facts else None
     req = Request(workspace_id=args.workspace, user_id=args.user, session_id=args.session, text=args.text)
+    trace = Trace()
     try:
-        result = run_request(req, settings=current, facts=facts)
+        result = run_request(req, settings=current, trace=trace, facts=facts)
     except (UnknownWorkspace, SpecError) as error:
-        console.print(f"[red]{type(error).__name__}[/red]: {error}")
+        print_trace(trace)
+        console.print(f"\n[red]{type(error).__name__}[/red]  {error}")
         return 1
-    finally:
-        pass
-    console.print("[bold]what happened[/bold]")
-    for line in result.trace.lines():
-        console.print("  " + line, highlight=False)
+    print_trace(trace)
     console.print("\n[bold]the spec the model filled in[/bold]")
     for name, value in result.spec.model_dump().items():
         console.print(f"  {name:<13} {value}", highlight=False)
     if result.image:
         console.print(f"\n[bold]picture[/bold]  {result.image}")
+    return 0
+
+
+def print_trace(trace: Trace):
+    console.print("[bold]what happened[/bold]")
+    for line in trace.lines():
+        console.print("  " + line, highlight=False)
+
+
+def cmd_onboard(args):
+    from launchkit.harness.onboard import onboard_workspace
+
+    current = replace(settings, model=args.model) if args.model else settings
+    trace = Trace()
+    try:
+        written = onboard_workspace(args.workspace, Path(args.pdf), settings=current, trace=trace)
+    except (UnknownWorkspace, ValueError) as error:
+        print_trace(trace)
+        console.print(f"\n[red]{type(error).__name__}[/red]  {error}")
+        return 1
+    print_trace(trace)
+    console.print(f"\n[bold]{len(written)} files written to workspaces/{args.workspace}/[/bold]. Read them. The model drafted them; you own them.")
     return 0
 
 
@@ -71,7 +92,8 @@ def cmd_explain(args):
 
 
 def cmd_check(args):
-    targets = [ROOT / "checks" / f"test_step{n}.py" for n in (range(5) if args.step == "all" else [int(args.step)])]
+    names = [f"step{n}" for n in range(5)] + ["onboard"] if args.step == "all" else [("onboard" if args.step == "onboard" else f"step{args.step}")]
+    targets = [ROOT / "checks" / f"test_{name}.py" for name in names]
     command = [sys.executable, "-m", "pytest", "-q", "--tb=no", "-rN", "-p", "no:cacheprovider", *map(str, targets)]
     proc = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
     for line in proc.stdout.splitlines():
@@ -107,12 +129,18 @@ def main(argv=None):
     run.add_argument("--facts", help="a text file to load into the facts section")
     run.set_defaults(func=cmd_run)
 
+    onboard = sub.add_parser("onboard", help="draft a workspace's files from a brand pack PDF")
+    onboard.add_argument("workspace")
+    onboard.add_argument("pdf")
+    onboard.add_argument("--model", help="override LAUNCHKIT_MODEL, e.g. fake:profile")
+    onboard.set_defaults(func=cmd_onboard)
+
     explain = sub.add_parser("explain", help="what the model saw on the last run, in what order, at what cost")
     explain.add_argument("--show", action="store_true", help="print the system message as sent")
     explain.set_defaults(func=cmd_explain)
 
     check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all")
-    check.add_argument("step", choices=["0", "1", "2", "3", "4", "all"])
+    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "all"])
     check.set_defaults(func=cmd_check)
 
     ui = sub.add_parser("ui", help="start the chat page")

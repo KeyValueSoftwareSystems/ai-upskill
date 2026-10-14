@@ -75,3 +75,30 @@ def pytest_runtest_makereport(item, call):
     doc = (item.function.__doc__ or item.name).strip().splitlines()[0]
     callspec = getattr(item, "callspec", None)
     report._launchkit_doc = f"{doc}  [{callspec.id}]" if callspec else doc
+
+
+def minimal_pdf(lines: list[str]) -> bytes:
+    content = "BT /F1 12 Tf 40 760 Td 16 TL " + " ".join(f"({line}) Tj T*" for line in lines) + " ET"
+    objects = [
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>",
+        f"<< /Length {len(content)} >>\nstream\n{content}\nendstream",
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    out = "%PDF-1.4\n"
+    offsets = []
+    for i, obj in enumerate(objects, 1):
+        offsets.append(len(out.encode()))
+        out += f"{i} 0 obj\n{obj}\nendobj\n"
+    xref = len(out.encode())
+    out += f"xref\n0 {len(objects) + 1}\n0000000000 65535 f \n" + "".join(f"{o:010d} 00000 n \n" for o in offsets)
+    out += f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n"
+    return out.encode()
+
+
+@pytest.fixture
+def brand_pdf(tmp_path):
+    path = tmp_path / "moss-brand-pack.pdf"
+    path.write_bytes(minimal_pdf(["Moss and Fern brand pack", "Voice: warm, green, patient.", "Never say cheap or guaranteed.", "Colour: Fern 2f6b4f. Pots ship in 3 days."]))
+    return path

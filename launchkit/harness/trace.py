@@ -51,6 +51,9 @@ class Trace:
     def stop(self, reason: str):
         self.add("stop", reason=reason)
 
+    def written(self, path: Path):
+        self.add("written", path=str(path))
+
     def picture(self, status: str, **detail):
         self.add("picture", status=status, **detail)
 
@@ -71,6 +74,8 @@ class Trace:
                     out.append(f"file      read {_relative(d['path'])}")
                 case "note":
                     out.append(f"note      {d['text']}")
+                case "written":
+                    out.append(f"wrote     {_relative(d['path'])}")
                 case "context":
                     parts = " · ".join(
                         f"{s['section']}: " + ("empty" if s['tokens'] == 0 else f"{s['tokens']} tokens" + (" (cut to fit)" if s['trimmed'] else ""))

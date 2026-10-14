@@ -46,6 +46,13 @@ th{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--mu
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .empty{color:var(--muted)}
 .poster img{max-width:100%;border-radius:8px;border:1px solid var(--line)}
+.onboard{border-bottom:1px solid var(--line);background:var(--surface);padding:12px 18px;display:flex;flex-direction:column;gap:10px}
+.onboard form{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end}
+.onboard .hint{font-size:12px;color:var(--muted);flex-basis:100%}
+.files{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.files div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.files b{display:block;font:12px ui-monospace,Menlo,monospace;color:var(--accent);margin-bottom:4px}
+.files pre{max-height:160px;overflow:auto;font-size:11.5px}
 @media (max-width:860px){main{grid-template-columns:1fr;grid-template-rows:1fr 1fr}.chat{border-right:none;border-bottom:1px solid var(--line)}}
 </style>
 </head>
@@ -64,7 +71,17 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
   </select></label>
   <label>Conversation <span id="session" style="font:12px ui-monospace,Menlo,monospace;color:var(--ink-2)"></span></label>
   <button class="quiet" id="new">New conversation</button>
+  <button class="quiet" id="onboardToggle">Onboard a brand</button>
 </header>
+<section class="onboard" id="onboard" hidden>
+  <form id="onboardForm">
+    <label>Workspace id <input id="onboardId" placeholder="e.g. moss" pattern="[a-z0-9-]{1,32}" required></label>
+    <label>Brand pack (PDF) <input id="onboardPdf" type="file" accept="application/pdf" required></label>
+    <button id="onboardRun">Upload and draft the files</button>
+    <span class="hint">The PDF is stored under workspaces/&lt;id&gt;/assets. The model drafts SOUL.md, AGENTS.md, rules.yaml and facts.md. You own them after that.</span>
+  </form>
+  <div class="files" id="onboardFiles"></div>
+</section>
 <main>
   <section class="chat">
     <div class="messages" id="messages"><div class="msg empty">Pick a workspace, type a request, press Run. Try: Poster for the Tidal launch. The bottle on a misty lakeshore. Headline: Cold for 24 hours.</div></div>
@@ -89,6 +106,28 @@ const $ = id => document.getElementById(id);
 let session = newSession();
 function newSession(){ const s = Math.random().toString(36).slice(2,8); $("session") && ($("session").textContent = s); return s; }
 $("new").onclick = () => { session = newSession(); $("messages").innerHTML = ""; };
+$("onboardToggle").onclick = () => { $("onboard").hidden = !$("onboard").hidden; };
+$("onboardForm").onsubmit = async e => {
+  e.preventDefault();
+  const fd = new FormData();
+  fd.append("workspace_id", $("onboardId").value.trim());
+  fd.append("model", $("model").value.replace("fake:good", "fake:profile").replace("fake:echo", "fake:profile").replace("fake:malformed", "fake:profile").replace("fake:endless", "fake:profile"));
+  fd.append("pdf", $("onboardPdf").files[0]);
+  $("trace").innerHTML = ""; $("onboardFiles").innerHTML = ""; $("onboardRun").disabled = true;
+  const { run_id } = await (await fetch("/onboard", { method: "POST", body: fd })).json();
+  const es = new EventSource(`/events/${run_id}`);
+  es.onmessage = m => {
+    const ev = JSON.parse(m.data);
+    if (ev.type === "trace") traceLine(ev);
+    if (ev.type === "onboarded") {
+      $("onboardFiles").innerHTML = Object.entries(ev.files).map(([name, body]) => `<div><b>workspaces/${esc(ev.workspace_id)}/${esc(name)}</b><pre>${esc(body)}</pre></div>`).join("");
+      fetch("/workspaces").then(r => r.json()).then(list => { const sel = $("workspace"); if (![...sel.options].some(o => o.value === ev.workspace_id)) { const o = document.createElement("option"); o.value = ev.workspace_id; o.textContent = ev.workspace_id; sel.insertBefore(o, sel.lastElementChild); } sel.value = ev.workspace_id; });
+    }
+    if (ev.type === "error") add("error", `<b>${esc(ev.kind)}</b>\n${esc(ev.message)}`);
+  };
+  es.addEventListener("done", () => { es.close(); $("onboardRun").disabled = false; });
+  es.onerror = () => { es.close(); $("onboardRun").disabled = false; };
+};
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
   document.querySelectorAll(".panel").forEach(p => p.classList.toggle("on", p.id === b.dataset.tab));

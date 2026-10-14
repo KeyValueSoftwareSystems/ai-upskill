@@ -28,6 +28,7 @@ Without a key everything still runs: live runs use a fake model and a fake pictu
 | `uv run launchkit check 1` | Prove step 1 with fake models. `check all` is the CP1.1 gate |
 | `uv run launchkit run harbor "..." --model fake:echo` | Force a fake model for one run |
 | `uv run launchkit run harbor "..." --facts workspaces/harbor/brand-book.md` | Load a file into the facts section |
+| `uv run launchkit onboard moss samples/harbor-brand-pack.pdf` | Draft a new workspace's files from a brand pack PDF. See `docs/onboarding.md` |
 
 ## The build, in four steps
 
@@ -51,7 +52,8 @@ launchkit/
   harness/          request → workspace → context → copy agent → validate → picture agent → result
   adapters/         model resolver, fake models, image adapters, prices
   ui/               FastAPI app and one HTML page
-workspaces/         one folder per brand: SOUL.md, AGENTS.md, rules.yaml, facts.md
+workspaces/         one folder per brand: SOUL.md, AGENTS.md, rules.yaml, facts.md, assets/
+samples/            a brand pack PDF to try onboarding with
 checks/             one pytest file per step; `launchkit check` wraps them
 docs/               setup, glossary, one page per step
 ```

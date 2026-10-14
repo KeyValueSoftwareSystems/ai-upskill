@@ -1,6 +1,6 @@
 import os
 
-from launchkit.adapters.fakes import EchoModel, EndlessModel, GoodModel, MalformedModel
+from launchkit.adapters.fakes import EchoModel, EndlessModel, GoodModel, MalformedModel, ProfileModel
 from launchkit.harness.trace import Trace
 
 PROVIDER_KEYS = {
@@ -10,7 +10,7 @@ PROVIDER_KEYS = {
     "groq": "GROQ_API_KEY",
 }
 
-FAKES = {"echo": EchoModel, "malformed": MalformedModel, "endless": EndlessModel, "good": GoodModel}
+FAKES = {"echo": EchoModel, "malformed": MalformedModel, "endless": EndlessModel, "good": GoodModel, "profile": ProfileModel}
 
 
 def resolve_model(settings, trace: Trace):

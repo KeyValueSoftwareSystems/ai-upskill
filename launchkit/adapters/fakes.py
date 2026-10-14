@@ -153,3 +153,20 @@ class EndlessModel(FakeModel):
             return text_response(json.dumps(HARBOR_SPEC), messages)
         self.asks += 1
         return tool_call_response("generate_image", {"image_prompt": f"the same lakeshore, better sky, try {self.asks}"}, f"call_{self.asks}")
+
+
+class ProfileModel(FakeModel):
+    def __init__(self):
+        super().__init__("profile")
+
+    def answer(self, messages, tools):
+        first_line = next((line.strip() for line in last_user_text(messages).splitlines() if line.strip()), "Unknown brand")
+        profile = {
+            "brand_name": first_line.replace(" brand pack", ""),
+            "voice": ["Warm, green, patient.", "Short lines. Talk to one person."],
+            "rules": ["Mention the plant's name once."],
+            "banned_claims": ["cheap", "guaranteed"],
+            "colours": [{"name": "Fern", "hex": "#2f6b4f"}, {"name": "Clay", "hex": "#c97b4a"}],
+            "facts": ["Pots ship in 3 days."],
+        }
+        return text_response(json.dumps(profile), messages)

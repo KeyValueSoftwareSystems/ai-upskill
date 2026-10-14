@@ -6,10 +6,11 @@ from dataclasses import replace
 from pathlib import Path
 from queue import Queue
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
+from launchkit.harness.onboard import onboard_workspace
 from launchkit.harness.request import Request, UnknownWorkspace
 from launchkit.harness.run import run_request
 from launchkit.harness.spec import SpecError
@@ -66,6 +67,35 @@ def _worker(body: RunBody, queue: Queue):
         )
     except (UnknownWorkspace, SpecError) as error:
         queue.put({"type": "error", "kind": type(error).__name__, "message": str(error), "errors": getattr(error, "errors", None)})
+    except Exception as error:
+        queue.put({"type": "error", "kind": type(error).__name__, "message": str(error)})
+    finally:
+        queue.put(DONE)
+
+
+@app.post("/onboard")
+async def start_onboard(workspace_id: str = Form(...), model: str = Form(""), pdf: UploadFile = File(...)):
+    run_id = uuid.uuid4().hex[:8]
+    queue: Queue = Queue()
+    RUNS[run_id] = queue
+    uploads = settings.data_dir / "uploads"
+    uploads.mkdir(parents=True, exist_ok=True)
+    path = uploads / Path(pdf.filename or "brand-pack.pdf").name
+    path.write_bytes(await pdf.read())
+    threading.Thread(target=_onboard_worker, args=(workspace_id.strip(), path, model.strip() or None, queue), daemon=True).start()
+    return {"run_id": run_id}
+
+
+def _onboard_worker(workspace_id: str, path: Path, model: str | None, queue: Queue):
+    trace = Trace()
+    trace.listeners.append(lambda event: queue.put({"type": "trace", "kind": event.kind, "detail": event.detail, "line": trace.lines()[-1]}))
+    current = replace(settings, model=model) if model else settings
+    try:
+        written = onboard_workspace(workspace_id, path, settings=current, trace=trace)
+        files = {p.name: p.read_text(encoding="utf-8") for p in written if p.name != "brand-book.md"}
+        queue.put({"type": "onboarded", "workspace_id": workspace_id, "files": files})
+    except (UnknownWorkspace, ValueError) as error:
+        queue.put({"type": "error", "kind": type(error).__name__, "message": str(error)})
     except Exception as error:
         queue.put({"type": "error", "kind": type(error).__name__, "message": str(error)})
     finally:
