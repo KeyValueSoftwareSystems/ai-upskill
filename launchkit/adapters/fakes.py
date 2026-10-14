@@ -99,7 +99,7 @@ def section(system: str, header: str) -> str:
 def picture_phase(messages: list) -> ModelResponse:
     if has_tool_result(messages):
         return text_response("done", messages)
-    return tool_call_response("generate_image", {"image_prompt": last_user_text(messages)}, "call_1")
+    return tool_call_response("render_image", {"image_prompt": last_user_text(messages)}, "call_1")
 
 
 class GoodModel(FakeModel):
@@ -152,7 +152,7 @@ class EndlessModel(FakeModel):
         if not tools:
             return text_response(json.dumps(HARBOR_SPEC), messages)
         self.asks += 1
-        return tool_call_response("generate_image", {"image_prompt": f"the same lakeshore, better sky, try {self.asks}"}, f"call_{self.asks}")
+        return tool_call_response("render_image", {"image_prompt": f"the same lakeshore, better sky, try {self.asks}"}, f"call_{self.asks}")
 
 
 class ProfileModel(FakeModel):

@@ -63,7 +63,7 @@ def run_request(
     picture_run = picture_agent.run(spec.image_prompt, session_id=f"{session}:picture", user_id=req.user_id)
     result.runs.append(picture_run)
     trace.model("picture", model_name(model), picture_run.metrics)
-    files = [e.detail["result"].get("file") for e in trace.tool_calls("generate_image") if e.kind == "tool"]
+    files = [e.detail["result"].get("file") for e in trace.tool_calls("render_image") if e.kind == "tool"]
     files = [f for f in files if f]
     result.image = Path(files[-1]) if files else None
     trace.picture("done" if result.image else "none", file=str(result.image) if result.image else None)

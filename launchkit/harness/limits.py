@@ -9,7 +9,7 @@ class Limits:
 
 def make_leash(limits: Limits, trace):
     def leash(function_name: str, function_call, arguments: dict):
-        # TODO step 3: count calls, stop at limits.step_cap, refuse generate_image past limits.image_budget
+        # TODO step 3: count calls, stop at limits.step_cap, refuse render_image past limits.image_budget
         return function_call(**arguments)
 
     return leash
