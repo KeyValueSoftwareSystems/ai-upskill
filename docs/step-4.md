@@ -36,4 +36,4 @@ Then choose "Custom…" in the picker, type `../harbor`: a red UnknownWorkspace 
 
 ## Stuck?
 
-The answer is on the branch `cp1.1-step4-trust-the-request`.
+The answer is on the branch `session-01-harness-step4`.

@@ -52,4 +52,4 @@ Then pick the model `fake: endless`: three fake pictures, three refusals in red,
 
 ## Stuck?
 
-The answer is on the branch `cp1.1-step3-tool-and-leash`.
+The answer is on the branch `session-01-harness-step3`.

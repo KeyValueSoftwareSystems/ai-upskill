@@ -35,7 +35,11 @@ class ContextBuilder:
         return out
 
     def render(self) -> str:
-        return "\n\n".join(f"{HEADERS[name]}\n{text}" for name, text, _ in self.rendered_sections())
+        parts = []
+        for name, text, trimmed in self.rendered_sections():
+            marker = f"\n(The {name} section was cut here to fit its budget of {self.budgets.get(name)} tokens.)" if trimmed else ""
+            parts.append(f"{HEADERS[name]}\n{text}{marker}")
+        return "\n\n".join(parts)
 
     def report(self) -> list[dict]:
         rows = []

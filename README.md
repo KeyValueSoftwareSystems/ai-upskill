@@ -31,14 +31,14 @@ Without a key everything still runs: live runs use a fake model and a fake pictu
 
 ## The build, in four steps
 
-Each step fills one TODO slot in `launchkit/harness/`. Each step has a check. The answer to each step is on its own branch.
+Each step fills one TODO slot in `launchkit/harness/`. Each step has a check. The answer to each step is on its own branch, and each branch contains the previous one's answer.
 
-| Step | Slot | Check | Branch |
+| Step | Slot | Check | Branch with the answer |
 | --- | --- | --- | --- |
-| 1 · The agent reads its rules from files | `workspace.py` `load_workspace`, `agent.py` rules section | `check 1` | `cp1.1-step1-agent-from-files` |
-| 2 · Check the form, fix it once, then stop | `spec.py` `validate_spec`, `run.py` repair | `check 2` | `cp1.1-step2-validate-and-repair` |
-| 3 · A tool and a leash | `tools.py`, `limits.py`, `agent.py` picture agent | `check 3` | `cp1.1-step3-tool-and-leash` |
-| 4 · The request says who you are | `request.py` `resolve_workspace_id` | `check 4` | `cp1.1-step4-trust-the-request` |
+| 1 · The agent reads its rules from files | `workspace.py` `load_workspace`, `agent.py` rules section | `check 1` | `session-01-harness-step1` |
+| 2 · Check the form, fix it once, then stop | `spec.py` `validate_spec`, `run.py` repair | `check 2` | `session-01-harness-step2` |
+| 3 · A tool and a leash | `tools.py`, `limits.py`, `agent.py` picture agent | `check 3` | `session-01-harness-step3` |
+| 4 · The request says who you are | `request.py` `resolve_workspace_id` | `check 4` | `session-01-harness-step4` |
 
 Prompt cards for each step are in `docs/`.
 

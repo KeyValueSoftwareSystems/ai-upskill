@@ -40,7 +40,7 @@ class Trace:
         )
 
     def tool(self, name: str, arguments: dict, result):
-        self.add("tool", name=name, arguments=arguments, result=result)
+        self.add("tool", name=name, arguments=arguments, result=result, result_tokens=round(len(str(result)) / 4))
 
     def refused(self, name: str, reason: str):
         self.add("refused", name=name, reason=reason)
@@ -81,7 +81,7 @@ class Trace:
                     cached = f", {d['cached_tokens']} of them from cache" if d["cached_tokens"] else ""
                     out.append(f"model     {d['phase']} phase · {d['model']} · sent {d['input_tokens']} tokens{cached}, got back {d['output_tokens']}")
                 case "tool":
-                    out.append(f"tool      {d['name']}({_short(_args(d['arguments']), 60)}) → {_short(_result(d['result']), 60)}")
+                    out.append(f"tool      {d['name']}({_short(_args(d['arguments']), 60)}) → {_short(_result(d['result']), 60)} · {d.get('result_tokens', 0)} tokens back")
                 case "refused":
                     out.append(f"refused   {d['name']}: {d['reason']}")
                 case "validation":

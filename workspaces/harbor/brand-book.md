@@ -4,7 +4,7 @@ Version 7, for everyone who makes anything with the Harbor name on it.
 
 ## Welcome to Harbor
 
-Harbor makes drinkware for people who spend their days outside. We started on a cold shore with one steel bottle and a promise: what you fill at dawn is still cold at dusk. This book is how we talk, how we look, and what we never say.
+Harbor makes insulated bottles for people who hike at the weekend and commute in the week. We started on a cold shore with one steel bottle and a promise: what you fill at dawn is still cold at dusk. This book is how we talk, how we look, and what we never say.
 
 ## How we sound
 
@@ -16,7 +16,7 @@ Shore, dawn, dusk, cold, steel, long day, pack, trail, tide. We say 'keeps drink
 
 ## Words we never use
 
-Eco-friendly. Green. Sustainable. Guilt-free. BPA-free. Revolutionary. Game-changing. Any claim about recycling, carbon, or certifications. If a claim is not on the product sheet, it is not a claim.
+Eco-friendly. Sustainable. Unbreakable. Lifetime guarantee. Cold forever. Fully dishwasher-safe. Any claim about recycling, carbon, or certifications. If a claim is not on the product sheet, it is not a claim.
 
 ## Colours
 
@@ -110,13 +110,17 @@ The picture never contains words. Headlines, subheadlines and body text are set 
 
 210 × 148 mm. Headline and subheadline only. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
-## Product facts: Tidal
+## Product facts: Flask Trail 750, Tidal colourway
 
-Tidal is a 750 ml insulated steel bottle. It keeps drinks cold for 24 hours and hot for 12. The body is dishwasher-safe. The lid is hand-wash only, because the seal does not survive dishwasher heat. Launch month is June. Colours at launch: Deep Tide and Foam.
+The Flask Trail 750 is a 750 ml insulated steel bottle. It keeps drinks cold for 24 hours and hot for 12 hours. The body is dishwasher-safe. The lid is hand-wash only. The lid is leak-proof. The warranty is 5 years. Tidal is the new colourway, launching in six weeks: Deep Tide and Foam.
 
-## Product facts: Tidal Mini
+## Launch timeline: Tidal
 
-Tidal Mini is 500 ml. Cold for 18 hours, hot for 8. Same body and lid rules as Tidal.
+The Tidal launch is embargoed until launch day. No poster, post or press line about Tidal goes out before then. Pre-orders open one week before launch.
+
+## Product facts: Flask Trail 500
+
+The Flask Trail 500 is 500 ml. Cold for 18 hours, hot for 8. Same body and lid rules as the 750.
 
 ## Product facts: Harbor Mug
 

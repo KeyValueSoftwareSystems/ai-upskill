@@ -28,7 +28,7 @@ def build_copy_agent(ws: Workspace, ctx: ContextBuilder, model, settings) -> Age
         output_schema=PosterSpec,
         db=session_db(settings),
         add_history_to_context=True,
-        num_history_runs=3,
+        num_history_runs=5,
         telemetry=False,
     )
 

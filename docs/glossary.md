@@ -20,4 +20,4 @@
 
 **LaunchKit** is a marketing assistant. Brands are its customers. A marketer types a request, and LaunchKit answers with the poster's words (the copy) and the poster's picture, both following that brand's rules.
 
-**Harbor** sells outdoor drinkware. **Tidal** is Harbor's new insulated bottle, and "the Tidal launch" is the campaign for it. **Ember Coffee Co.** is the second customer: same software, different voice and rules.
+**Harbor** makes insulated bottles for people who hike at the weekend and commute in the week. **Tidal** is the new colourway of its Flask Trail 750 bottle, and "the Tidal launch" is the campaign for it. **Ember Coffee Co.** is the second customer: same software, different voice and rules.

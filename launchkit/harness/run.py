@@ -85,6 +85,11 @@ def history_size(run) -> tuple[int, int]:
     return approx_tokens(" ".join(str(m.content or "") for m in earlier)), len(earlier)
 
 
+def tool_result_size(run) -> tuple[int, int]:
+    results = [m for m in (run.messages or []) if m.role == "tool" and not getattr(m, "from_history", False)]
+    return approx_tokens(" ".join(str(m.content or "") for m in results)), len(results)
+
+
 def write_explain(settings, result: Result, workspace_id: str, model_id: str):
     run = result.runs[-1]
     metrics = run.metrics
@@ -95,6 +100,8 @@ def write_explain(settings, result: Result, workspace_id: str, model_id: str):
         "sections": result.context,
         "history_tokens": result.history_tokens,
         "history_messages": result.history_messages,
+        "tool_tokens": tool_result_size(run)[0],
+        "tool_results": tool_result_size(run)[1],
         "input_tokens": getattr(metrics, "input_tokens", 0) or 0,
         "cached_tokens": getattr(metrics, "cache_read_tokens", 0) or 0,
         "output_tokens": getattr(metrics, "output_tokens", 0) or 0,

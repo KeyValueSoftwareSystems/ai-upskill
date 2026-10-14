@@ -1,7 +1,15 @@
 banned_claims:
   - eco-friendly
-  - dishwasher-safe lid
-  - BPA-free
+  - sustainable
+  - unbreakable
+  - lifetime guarantee
+  - cold forever
+  - fully dishwasher-safe
 colours:
   primary: "#0f2f4a"
   secondary: "#f2f5f7"
+placements:
+  feed: ["1080x1080", "1080x1350"]
+  story: ["1080x1920"]
+  web: ["1200x628"]
+  display: ["300x250"]

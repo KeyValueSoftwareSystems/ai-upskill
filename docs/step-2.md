@@ -4,6 +4,8 @@ The model proposes. The harness checks. A model can return nine words in a headl
 Code catches both. We send the errors back once. If the spec is still wrong, we stop with a clear error.
 We never ship bad copy, and the picture phase never starts.
 
+You did this once already, in the opener, for a single model call. Now the harness owns it, for every brand and every turn.
+
 The banned claim lives in two files on purpose. The sentence in `AGENTS.md` is for the model: a request.
 The list in `rules.yaml` is for the code: a guarantee.
 
@@ -43,4 +45,4 @@ In the chat page pick the model `fake: malformed`. The trace shows check, repair
 
 ## Stuck?
 
-The answer is on the branch `cp1.1-step2-validate-and-repair`.
+The answer is on the branch `session-01-harness-step2`.

@@ -39,4 +39,4 @@ Harbor's calm voice, then Ember's warm one. The trace shows the three files read
 
 ## Stuck?
 
-The answer is on the branch `cp1.1-step1-agent-from-files`.
+The answer is on the branch `session-01-harness-step1`.

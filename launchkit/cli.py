@@ -56,6 +56,7 @@ def cmd_explain(args):
         note = "(empty)" if row["given"] == 0 else (f"trimmed from {row['given']}" if row["trimmed"] else "")
         table.add_row(row["section"], str(row["tokens"]), str(row["budget"]), note)
     table.add_row("history", str(data["history_tokens"]), str(settings.budgets["history"]), f"{data['history_messages']} earlier messages")
+    table.add_row("tool results", str(data.get("tool_tokens", 0)), "", f"{data.get('tool_results', 0)} tool calls this turn")
     console.print(table)
     cost = data.get("cost_usd")
     cost_text = f"${cost:.4f}" if cost is not None else "price unknown for this model"

@@ -1,3 +1,6 @@
-Tidal bottle, 750 ml. Keeps drinks cold for 24 hours and hot for 12.
-Body is dishwasher-safe. Lid is hand-wash only.
-Launch month: June. Colours: Deep Tide navy, Foam white.
+Harbor makes insulated bottles for people who hike at the weekend and commute in the week.
+Product: Flask Trail 750, in the new Tidal colourway. Launches in six weeks.
+Keeps drinks cold for 24 hours and hot for 12 hours.
+Lid: leak-proof, hand-wash only. Body: dishwasher-safe.
+Warranty: 5 years.
+Colours: Deep Tide navy, Foam white.
