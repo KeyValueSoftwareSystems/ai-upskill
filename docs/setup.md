@@ -1,0 +1,29 @@
+# Setup, before the session
+
+Do this before the day. It takes about ten minutes. At the start of the build we only confirm it.
+
+## On your machine
+
+- Python 3.12 or newer.
+- [uv](https://docs.astral.sh/uv/), the Python package runner. `curl -LsSf https://astral.sh/uv/install.sh | sh` on macOS and Linux.
+- git, and access to this repository.
+- A coding agent you already use: Cursor, Claude Code, or another. Each step gives you a short prompt to hand to it.
+- An OpenAI key. KeyValue gives you one.
+
+## Proof it works
+
+```
+git clone <this repository> && cd ai-upskill
+uv sync
+cp .env.example .env            # paste your key after OPENAI_API_KEY=
+uv run launchkit check 0        # prints two PASS lines
+uv run launchkit ui             # open http://localhost:8000 and send a request
+```
+
+If port 8000 is taken: `uv run launchkit ui --port 8010`.
+
+Without a key everything still runs. Live runs use a fake model and a fake picture, and the trace says so.
+
+## Read once
+
+- [glossary.md](glossary.md), the words we use. Five minutes.
