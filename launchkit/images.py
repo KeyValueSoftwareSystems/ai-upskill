@@ -8,7 +8,7 @@ import base64
 import io
 import os
 
-from PIL import Image, ImageColor, ImageDraw
+from PIL import Image, ImageColor, ImageDraw, ImageFont
 
 from .poster import OUT, Picture
 
@@ -35,7 +35,8 @@ def _placeholder(brand: dict, reference: str | None) -> Image.Image:
         photo = Image.open(reference).convert("RGB")
         photo.thumbnail((int(w * 0.7), int(h * 0.7)))
         img.paste(photo, ((w - photo.width) // 2, (h - photo.height) // 2))
-    draw.text((16, h - 28), "placeholder image", fill=(255, 255, 255))
+    label = "PLACEHOLDER: no image model call"
+    draw.text((w // 2, 60), label, fill=(255, 255, 255), anchor="mm", font=ImageFont.load_default(size=40))
     return img
 
 
@@ -44,7 +45,8 @@ def generate_image(visual_concept: str, brand: dict, *, conversation_id: str,
     """Ask the image model for the poster picture. Pass the visual concept only, never the copy."""
     colours = ", ".join(brand["colours"].values())
     prompt = f"{visual_concept}. Colour palette: {colours}. No text, letters or logos in the image."
-    if os.getenv("LAUNCHKIT_IMAGES") == "placeholder":
+    placeholder = os.getenv("LAUNCHKIT_IMAGES") == "placeholder"
+    if placeholder:
         img = _placeholder(brand, reference)
     else:
         from .llm import client
@@ -56,7 +58,7 @@ def generate_image(visual_concept: str, brand: dict, *, conversation_id: str,
             reply = client().images.generate(model=model, prompt=prompt, size="1024x1024")
         img = Image.open(io.BytesIO(base64.b64decode(reply.data[0].b64_json))).convert("RGB")
     path = _save(img, conversation_id, "generated")
-    return Picture(path, (img.width, img.height), prompt=prompt, reference=reference)
+    return Picture(path, (img.width, img.height), prompt=prompt, reference=reference, placeholder=placeholder)
 
 
 def resize_image(picture: Picture, size: tuple[int, int], *, conversation_id: str) -> Picture:
@@ -70,4 +72,4 @@ def resize_image(picture: Picture, size: tuple[int, int], *, conversation_id: st
         nh = int(src.width * th / tw)
         box = (0, (src.height - nh) // 2, src.width, (src.height - nh) // 2 + nh)
     path = _save(src.crop(box).resize(size), conversation_id, "resized")
-    return Picture(path, (tw, th), resized_from=picture.path)
+    return Picture(path, (tw, th), resized_from=picture.path, placeholder=picture.placeholder)
