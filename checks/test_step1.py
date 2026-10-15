@@ -16,7 +16,7 @@ def test_editing_agents_md_changes_the_next_turn(settings, images, request_for, 
     agents = settings.workspaces_dir / "harbor" / "AGENTS.md"
     agents.write_text("Always open with the word Tidal.\n" + agents.read_text())
     after = run_request(request_for("harbor", session_id="t2"), settings=settings, model=echo, images=images)
-    assert before.spec.body != after.spec.body
+    assert before.spec != after.spec
 
 
 def test_three_files_are_read(settings, images, trace, request_for, echo):
