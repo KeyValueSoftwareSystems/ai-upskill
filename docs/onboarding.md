@@ -5,21 +5,21 @@ For a real brand they are drafted at onboarding, from the brand pack, and a huma
 
 ## How it works
 
-1. A marketer uploads the brand pack as a PDF. The file is stored under `workspaces/<id>/assets/`.
+1. A marketer uploads the brand pack as a PDF. The brand's name comes out of the pack and becomes the folder name. The file is stored under `workspaces/<brand>/assets/`. A brand that already has a folder is never overwritten.
 2. The harness pulls the text out of the PDF and hands it to the model with a form to fill: `BrandProfile`
    (brand name, voice, rules, banned claims, colours, facts). Same pattern as the poster: the model fills a form, code checks and writes.
 3. Code renders `SOUL.md`, `AGENTS.md`, `rules.yaml` and `facts.md` from the form, and `brand-book.md` from the text.
 4. The marketer reads and edits the files. Nothing in Python changed. A new brand is a new folder.
 
-The workspace id must match the allow-list (`[a-z0-9-]`, up to 32 characters), the same rule step 4 enforces on every request.
+The folder name is made of lower-case letters, digits and dashes, the same allow-list step 4 enforces on every request.
 
 ## Try it
 
-In the chat page press "Onboard a brand", give an id and a PDF. Or in the terminal:
+In the chat page press "Onboard a brand" and choose a PDF. Or in the terminal:
 
 ```
-uv run launchkit onboard moss samples/harbor-brand-pack.pdf --model fake:profile
-uv run launchkit onboard harbor-2 samples/harbor-brand-pack.pdf        # real model, needs a key
+uv run launchkit onboard samples/moss-and-fern-brand-pack.pdf --model fake:profile
+uv run launchkit onboard samples/moss-and-fern-brand-pack.pdf        # real model, needs a key
 uv run launchkit check onboard
 ```
 

@@ -7,9 +7,9 @@ import pytest
 
 
 def test_pdf_is_stored_and_four_files_are_written(settings, trace, brand_pdf):
-    """Uploading a brand pack stores the PDF under assets and writes SOUL.md, AGENTS.md, rules.yaml and facts.md."""
-    written = onboard_workspace("moss", brand_pdf, settings=settings, model=ProfileModel(), trace=trace)
-    root = settings.workspaces_dir / "moss"
+    """Uploading a brand pack names the workspace after the brand, stores the PDF under assets and writes the files."""
+    written = onboard_workspace(brand_pdf, settings=settings, model=ProfileModel(), trace=trace)
+    root = settings.workspaces_dir / "moss-and-fern"
     assert (root / "assets" / "moss-brand-pack.pdf").exists()
     assert {p.name for p in written} >= {"SOUL.md", "AGENTS.md", "rules.yaml", "facts.md", "brand-book.md", "users.yaml"}
     assert "Moss and Fern" in (root / "SOUL.md").read_text()
@@ -20,7 +20,7 @@ def test_pdf_is_stored_and_four_files_are_written(settings, trace, brand_pdf):
 
 def test_extracted_text_reaches_the_model(settings, trace, brand_pdf):
     """The model receives the PDF text, and the trace shows pages, tokens and every file written."""
-    onboard_workspace("moss", brand_pdf, settings=settings, model=ProfileModel(), trace=trace)
+    onboard_workspace(brand_pdf, settings=settings, model=ProfileModel(), trace=trace)
     kinds = [e.kind for e in trace.events]
     assert kinds.count("written") == 6
     assert any(e.kind == "model" and e.detail["phase"] == "onboard" for e in trace.events)
@@ -28,7 +28,15 @@ def test_extracted_text_reaches_the_model(settings, trace, brand_pdf):
 
 
 def test_bad_workspace_id_is_refused_before_anything_is_written(settings, trace, brand_pdf):
-    """An id outside the allow-list is refused and no folder is created."""
+    """A forced id outside the allow-list is refused and no folder is created."""
     with pytest.raises(UnknownWorkspace):
-        onboard_workspace("../moss", brand_pdf, settings=settings, model=ProfileModel(), trace=trace)
+        onboard_workspace(brand_pdf, workspace_id="../moss", settings=settings, model=ProfileModel(), trace=trace)
     assert not (settings.workspaces_dir / ".." / "moss").exists()
+
+
+def test_an_existing_brand_is_never_overwritten(settings, trace, brand_pdf):
+    """Onboarding a pack for a brand that already has a workspace is refused, and its files stay as they were."""
+    before = (settings.workspaces_dir / "harbor" / "SOUL.md").read_text()
+    with pytest.raises(FileExistsError):
+        onboard_workspace(brand_pdf, workspace_id="harbor", settings=settings, model=ProfileModel(), trace=trace)
+    assert (settings.workspaces_dir / "harbor" / "SOUL.md").read_text() == before

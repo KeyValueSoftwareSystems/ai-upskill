@@ -54,13 +54,13 @@ def cmd_onboard(args):
     current = replace(settings, model=args.model) if args.model else settings
     trace = Trace()
     try:
-        written = onboard_workspace(args.workspace, Path(args.pdf), settings=current, trace=trace)
-    except (UnknownWorkspace, ValueError) as error:
+        written = onboard_workspace(Path(args.pdf), workspace_id=args.id, settings=current, trace=trace)
+    except (UnknownWorkspace, ValueError, FileExistsError) as error:
         print_trace(trace)
         console.print(f"\n[red]{type(error).__name__}[/red]  {error}")
         return 1
     print_trace(trace)
-    console.print(f"\n[bold]{len(written)} files written to workspaces/{args.workspace}/[/bold]. Read them. The model drafted them; you own them.")
+    console.print(f"\n[bold]{len(written)} files written to {written[0].parent.relative_to(ROOT)}/[/bold]. Read them. The model drafted them; you own them.")
     return 0
 
 
@@ -133,8 +133,8 @@ def main(argv=None):
     run.set_defaults(func=cmd_run)
 
     onboard = sub.add_parser("onboard", help="draft a workspace's files from a brand pack PDF")
-    onboard.add_argument("workspace")
     onboard.add_argument("pdf")
+    onboard.add_argument("--id", help="force the folder name; by default it is made from the brand name in the pack")
     onboard.add_argument("--model", help="override LAUNCHKIT_MODEL, e.g. fake:profile")
     onboard.set_defaults(func=cmd_onboard)
 

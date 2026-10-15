@@ -1,3 +1,4 @@
+import re
 import shutil
 from pathlib import Path
 
@@ -71,29 +72,38 @@ def render_files(profile: BrandProfile, brand_text: str) -> dict[str, str]:
     }
 
 
-def onboard_workspace(workspace_id: str, pdf_path: Path, *, settings=default_settings, model=None, trace: Trace | None = None) -> list[Path]:
-    trace = trace if trace is not None else Trace()
-    if not WORKSPACE_ID.match(workspace_id):
-        raise UnknownWorkspace(workspace_id)
-    pdf_path = Path(pdf_path)
-    root = settings.workspaces_dir / workspace_id
-    assets = root / "assets"
-    assets.mkdir(parents=True, exist_ok=True)
-    stored = assets / pdf_path.name
-    if stored.resolve() != pdf_path.resolve():
-        shutil.copyfile(pdf_path, stored)
-    trace.file(stored)
+def slug(name: str) -> str:
+    cleaned = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    return cleaned[:32].strip("-") or "brand"
 
-    text, pages = extract_text(stored)
+
+def onboard_workspace(pdf_path: Path, *, workspace_id: str | None = None, settings=default_settings, model=None, trace: Trace | None = None) -> list[Path]:
+    trace = trace if trace is not None else Trace()
+    pdf_path = Path(pdf_path)
+    if workspace_id is not None and not WORKSPACE_ID.match(workspace_id):
+        raise UnknownWorkspace(workspace_id)
+
+    text, pages = extract_text(pdf_path)
     if not text:
         raise ValueError(f"{pdf_path.name} has no text to read. A scanned PDF needs OCR first.")
-    trace.note(f"read {pages} page{'s' if pages != 1 else ''}, about {approx_tokens(text)} tokens of text")
+    trace.note(f"read {pages} page{'s' if pages != 1 else ''} of {pdf_path.name}, about {approx_tokens(text)} tokens of text")
 
     model = model if model is not None else resolve_model(settings, trace)
     agent = Agent(model=model, system_message=ONBOARD_TASK, output_schema=BrandProfile, telemetry=False)
     run = agent.run(text)
     trace.model("onboard", model_name(model), run.metrics)
     profile = run.content if isinstance(run.content, BrandProfile) else BrandProfile.model_validate_json(str(run.content))
+
+    workspace_id = workspace_id or slug(profile.brand_name)
+    root = settings.workspaces_dir / workspace_id
+    if root.exists():
+        raise FileExistsError(f"workspace '{workspace_id}' already exists. Edit its files, or remove the folder to onboard it again.")
+    trace.note(f"brand '{profile.brand_name}' gets the new workspace '{workspace_id}'")
+    assets = root / "assets"
+    assets.mkdir(parents=True)
+    stored = assets / pdf_path.name
+    shutil.copyfile(pdf_path, stored)
+    trace.file(stored)
 
     written = []
     for name, body in render_files(profile, text).items():

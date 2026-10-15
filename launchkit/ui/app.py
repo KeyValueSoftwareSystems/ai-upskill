@@ -81,7 +81,7 @@ def _worker(body: RunBody, queue: Queue):
 
 
 @app.post("/onboard")
-async def start_onboard(workspace_id: str = Form(...), model: str = Form(""), pdf: UploadFile = File(...)):
+async def start_onboard(model: str = Form(""), pdf: UploadFile = File(...)):
     run_id = uuid.uuid4().hex[:8]
     queue: Queue = Queue()
     RUNS[run_id] = queue
@@ -89,19 +89,19 @@ async def start_onboard(workspace_id: str = Form(...), model: str = Form(""), pd
     uploads.mkdir(parents=True, exist_ok=True)
     path = uploads / Path(pdf.filename or "brand-pack.pdf").name
     path.write_bytes(await pdf.read())
-    threading.Thread(target=_onboard_worker, args=(workspace_id.strip(), path, model.strip() or None, queue), daemon=True).start()
+    threading.Thread(target=_onboard_worker, args=(path, model.strip() or None, queue), daemon=True).start()
     return {"run_id": run_id}
 
 
-def _onboard_worker(workspace_id: str, path: Path, model: str | None, queue: Queue):
+def _onboard_worker(path: Path, model: str | None, queue: Queue):
     trace = Trace()
     trace.listeners.append(lambda event: queue.put({"type": "trace", "kind": event.kind, "detail": event.detail, "line": trace.lines()[-1]}))
     current = replace(settings, model=model) if model else settings
     try:
-        written = onboard_workspace(workspace_id, path, settings=current, trace=trace)
+        written = onboard_workspace(path, settings=current, trace=trace)
         files = {p.name: p.read_text(encoding="utf-8") for p in written if p.name != "brand-book.md"}
-        queue.put({"type": "onboarded", "workspace_id": workspace_id, "files": files})
-    except (UnknownWorkspace, ValueError) as error:
+        queue.put({"type": "onboarded", "workspace_id": written[0].parent.name, "files": files})
+    except (UnknownWorkspace, ValueError, FileExistsError) as error:
         queue.put({"type": "error", "kind": type(error).__name__, "message": str(error)})
     except Exception as error:
         queue.put({"type": "error", "kind": type(error).__name__, "message": str(error)})

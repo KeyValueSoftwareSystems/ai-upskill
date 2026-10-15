@@ -73,10 +73,9 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 </header>
 <section class="onboard" id="onboard" hidden>
   <form id="onboardForm">
-    <label>Workspace id <input id="onboardId" placeholder="e.g. moss" pattern="[a-z0-9-]{1,32}" required></label>
     <label>Brand pack (PDF) <input id="onboardPdf" type="file" accept="application/pdf" required></label>
     <button id="onboardRun">Upload and draft the files</button>
-    <span class="hint">The PDF is stored under workspaces/&lt;id&gt;/assets. The model drafts SOUL.md, AGENTS.md, rules.yaml and facts.md. You own them after that.</span>
+    <span class="hint">A new brand gets a new folder, named after the brand in the pack. The PDF is stored under its assets. The model drafts SOUL.md, AGENTS.md, rules.yaml and facts.md. You own them after that.</span>
   </form>
   <div class="files" id="onboardFiles"></div>
 </section>
@@ -108,7 +107,6 @@ $("onboardToggle").onclick = () => { $("onboard").hidden = !$("onboard").hidden;
 $("onboardForm").onsubmit = async e => {
   e.preventDefault();
   const fd = new FormData();
-  fd.append("workspace_id", $("onboardId").value.trim());
   fd.append("model", $("model").value.replace("fake:good", "fake:profile").replace("fake:echo", "fake:profile").replace("fake:malformed", "fake:profile").replace("fake:endless", "fake:profile"));
   fd.append("pdf", $("onboardPdf").files[0]);
   $("trace").innerHTML = ""; $("onboardFiles").innerHTML = ""; $("onboardRun").disabled = true;
