@@ -24,7 +24,7 @@ Each branch starts from the previous branch's solution, so you can always jump a
 | Branch | What you do | Scoreboard |
 | --- | --- | --- |
 | `session-01-llm-call` | One LLM call, in `approach_llm/app.py` | 1/4: R1 only |
-| **`session-01-langgraph`** (you are here) | A graph around that call, in `approach_graph/graph.py` (`HANDS_ON.md`) | 1/4 at the start, 4/4 when done |
+| **`session-01-langgraph`** (you are here) | A graph around that call, in `approach_graph/graph.py` (snippets on the hands-on sheet from your trainer) | 1/4 at the start, 4/4 when done |
 | `session-01-harness` | Next segment: the agent harness | |
 
 ## Setup
