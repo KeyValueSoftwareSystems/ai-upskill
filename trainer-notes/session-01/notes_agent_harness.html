@@ -1,0 +1,733 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Session 1 Harness Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky contents rail on the left, one reading column (~68ch) on the right; stacks to one column on phones. */
+:root {
+  --bg: #ffffff;
+  --surface: #f5f5f2;
+  --surface-2: #ebebe6;
+  --fg: #0c0b02;
+  --muted: #5f5f57;
+  --line: #e2e2dc;
+  --mark: #fff310;
+  --mark-fg: #0c0b02;
+  --code-bg: #14140f;
+  --code-fg: #f2f2ec;
+  --code-dim: #a3a399;
+  --fail: #b53224;
+  --fail-bg: #fde6e3;
+  --ok: #0f7a42;
+  --ok-bg: #d6f1e3;
+  --warn: #a54d00;
+  --warn-bg: #fff0dc;
+  --font-body: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11110e; --surface: #1b1b17; --surface-2: #26261f; --fg: #f2f2ec; --muted: #a8a89d; --line: #2f2f28;
+    --mark: #fff310; --mark-fg: #0c0b02; --code-bg: #0a0a07; --code-fg: #f2f2ec; --code-dim: #8f8f85;
+    --fail: #ff8f80; --fail-bg: #3a1714; --ok: #6fd6a2; --ok-bg: #12301f; --warn: #ffb766; --warn-bg: #3a2610;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11110e; --surface: #1b1b17; --surface-2: #26261f; --fg: #f2f2ec; --muted: #a8a89d; --line: #2f2f28;
+  --mark: #fff310; --mark-fg: #0c0b02; --code-bg: #0a0a07; --code-fg: #f2f2ec; --code-dim: #8f8f85;
+  --fail: #ff8f80; --fail-bg: #3a1714; --ok: #6fd6a2; --ok-bg: #12301f; --warn: #ffb766; --warn-bg: #3a2610;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 17px; line-height: 1.65; padding-inline: 20px; padding-block: 0; }
+.shell { max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 56px; padding-block: 48px 96px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; max-height: calc(100vh - 48px); overflow-y: auto; font-size: 14px; line-height: 1.45; }
+nav.toc p { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+nav.toc ol { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 6px; }
+nav.toc a { color: var(--muted); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--fg); text-decoration: underline; }
+main { min-width: 0; max-width: 70ch; }
+header.top { display: grid; gap: 16px; padding-bottom: 32px; border-bottom: 1px solid var(--line); margin-bottom: 40px; }
+.eyebrow { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+h1 { font-size: clamp(34px, 5vw, 52px); line-height: 1.05; letter-spacing: -0.025em; font-weight: 500; margin: 0; text-wrap: balance; }
+h1 .hl { background: linear-gradient(transparent 62%, var(--mark) 62%); color: inherit; }
+.lede { font-size: 20px; line-height: 1.5; color: var(--muted); margin: 0; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.meta li { font-size: 13px; border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; color: var(--muted); }
+h2 { font-size: 30px; line-height: 1.15; letter-spacing: -0.02em; font-weight: 500; margin: 72px 0 8px; text-wrap: balance; scroll-margin-top: 24px; }
+h2 + .sub { color: var(--muted); margin: 0 0 24px; }
+h3 { font-size: 22px; line-height: 1.25; letter-spacing: -0.01em; font-weight: 500; margin: 56px 0 12px; text-wrap: balance; scroll-margin-top: 24px; }
+h3 .id { font-family: var(--font-mono); font-size: 14px; color: var(--muted); font-weight: 400; margin-right: 8px; vertical-align: 2px; }
+h4 { font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 500; margin: 24px 0 6px; }
+p { margin: 0 0 14px; }
+ul, ol { margin: 0 0 14px; padding-left: 22px; }
+li { margin-bottom: 6px; }
+a { color: var(--fg); text-underline-offset: 3px; }
+strong { font-weight: 600; }
+code { font-family: var(--font-mono); font-size: 0.88em; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+pre { background: var(--code-bg); color: var(--code-fg); border-radius: 10px; padding: 18px 20px; overflow-x: auto; font-family: var(--font-mono); font-size: 14px; line-height: 1.6; margin: 0 0 18px; }
+pre code { background: none; border: 0; padding: 0; font-size: inherit; color: inherit; }
+pre .c { color: var(--code-dim); }
+pre .k { color: var(--mark); }
+.plain { font-size: 19px; line-height: 1.55; border-left: 3px solid var(--mark); padding: 4px 0 4px 16px; margin: 0 0 18px; }
+.pencil { background: var(--surface); border-radius: 10px; padding: 18px 20px; margin: 18px 0; }
+.pencil > h4:first-child { margin-top: 0; }
+.pencil p:last-child, .pencil ul:last-child { margin-bottom: 0; }
+.tradeoff { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 12px; }
+.tradeoff p { margin: 0; border-radius: 8px; padding: 10px 14px; font-size: 15px; }
+.gain { background: var(--ok-bg); color: var(--ok); }
+.cost { background: var(--warn-bg); color: var(--warn); }
+.discuss { border: 1px solid var(--fg); border-radius: 10px; padding: 18px 20px; margin: 28px 0; }
+.discuss .q { font-size: 19px; line-height: 1.45; margin: 4px 0 12px; font-weight: 500; }
+details { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
+details > summary { cursor: pointer; color: var(--muted); font-size: 15px; }
+details > summary:focus-visible { outline: 2px solid var(--fg); outline-offset: 3px; border-radius: 4px; }
+details[open] > summary { margin-bottom: 8px; }
+.tbl { overflow-x: auto; margin: 0 0 20px; border: 1px solid var(--line); border-radius: 10px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; line-height: 1.45; }
+th, td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+th { font-weight: 500; background: var(--surface); }
+tr:last-child td { border-bottom: 0; }
+td code, th code { white-space: nowrap; }
+.pill { display: inline-block; font-size: 12px; letter-spacing: 0.04em; border-radius: 999px; padding: 1px 9px; font-weight: 500; white-space: nowrap; }
+.pill.fail { background: var(--fail-bg); color: var(--fail); }
+.pill.ok { background: var(--ok-bg); color: var(--ok); }
+.req { display: grid; gap: 6px; background: var(--code-bg); color: var(--code-fg); border-radius: 10px; padding: 16px 18px; margin: 0 0 12px; }
+.req .who { font-size: 13px; color: var(--code-dim); margin: 0; }
+.req .say { font-size: 19px; margin: 0; font-weight: 500; }
+.out { border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin: 0 0 18px; }
+.out p { margin: 6px 0 0; }
+.diagram { overflow-x: auto; margin: 6px 0 20px; }
+.flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; }
+.flow .n { border: 1px solid var(--fg); border-radius: 8px; padding: 8px 12px; background: var(--bg); }
+.flow .n.dark { background: var(--fg); color: var(--bg); }
+.flow .a { color: var(--muted); }
+.loop { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; counter-reset: step; }
+.loop div { background: var(--surface); border-radius: 8px; padding: 12px 14px; font-size: 14px; line-height: 1.4; counter-increment: step; }
+.loop div::before { content: counter(step); display: block; font-family: var(--font-mono); font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.loop div strong { display: block; margin-bottom: 2px; }
+.loop div.gate { background: var(--fg); color: var(--bg); }
+.loop div.gate::before { color: var(--bg); opacity: 0.7; }
+.harness-box { border: 2px solid var(--fg); border-radius: 12px; padding: 16px; display: grid; gap: 12px; }
+.harness-box .label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.harness-box .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.harness-box .chips span { font-size: 13px; border: 1px solid var(--line); border-radius: 6px; padding: 3px 9px; background: var(--surface); }
+.harness-box .engine { background: var(--fg); color: var(--bg); border-radius: 8px; padding: 12px 14px; font-size: 14px; }
+.bridge { background: var(--fg); color: var(--bg); border-radius: 12px; padding: 24px; margin: 40px 0; }
+.bridge .eyebrow { color: var(--bg); opacity: 0.7; }
+.bridge p.big { font-size: 22px; line-height: 1.4; font-weight: 500; margin: 8px 0 0; }
+.part { margin-top: 88px; padding-top: 24px; border-top: 1px solid var(--line); }
+.part .eyebrow + h2 { margin-top: 6px; }
+footer { margin-top: 80px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); padding-top: 18px; }
+@media (max-width: 860px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-block: 28px 64px; }
+  nav.toc { position: static; max-height: none; border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  body { font-size: 16px; }
+  h2 { margin-top: 56px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<div class="shell">
+<nav class="toc" aria-label="Contents">
+  <p>Contents</p>
+  <ol>
+    <li><a href="#start">How to read this</a></li>
+    <li><a href="#example">The running example</a></li>
+  </ol>
+  <p>Part A · The harness</p>
+  <ol>
+    <li><a href="#a1">A1 A model alone</a></li>
+    <li><a href="#a2">A2 Three ways to use a model</a></li>
+    <li><a href="#a3">A3 What a harness is</a></li>
+    <li><a href="#a4">A4 The agent loop</a></li>
+    <li><a href="#a5">A5 What the harness owns</a></li>
+    <li><a href="#a6">A6 Limits</a></li>
+    <li><a href="#a7">A7 Output contracts</a></li>
+    <li><a href="#a8">A8 State</a></li>
+    <li><a href="#a9">A9 Model abstraction</a></li>
+    <li><a href="#a10">A10 Agno, the engine</a></li>
+    <li><a href="#a11">A11 How Pencil does it</a></li>
+    <li><a href="#a-next">Next problem</a></li>
+  </ol>
+  <p>Part B · The workspace</p>
+  <ol>
+    <li><a href="#b1">B1 Configuration as files</a></li>
+    <li><a href="#b2">B2 The OpenClaw workspace</a></li>
+    <li><a href="#b3">B3 Files into instructions</a></li>
+    <li><a href="#b4">B4 Identity picks the folder</a></li>
+    <li><a href="#b5">B5 Who edits what</a></li>
+    <li><a href="#b6">B6 How Pencil does it</a></li>
+    <li><a href="#b-next">Bridge to context</a></li>
+  </ol>
+  <p>Reference</p>
+  <ol>
+    <li><a href="#failures">Failure modes</a></li>
+    <li><a href="#glossary">Glossary</a></li>
+    <li><a href="#check">Check yourself</a></li>
+    <li><a href="#reading">Further reading</a></li>
+    <li><a href="#facilitators">For facilitators</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="top" id="start">
+  <p class="eyebrow">Session 1 · Building a mini-Pencil</p>
+  <h1>The agent harness, and the <span class="hl">workspace</span> as its home</h1>
+  <p class="lede">Notes for the talk and discussion at 0:18–0:38. They cover what an agent harness is, what Agno gives you, and how a folder of plain files can shape an agent's behaviour, with Pencil as the real-world example throughout.</p>
+  <ul class="meta">
+    <li>About 25 minutes to read</li>
+    <li>Part A · 12 min in session</li>
+    <li>Part B · 8 min in session</li>
+    <li>Hands-on comes later, in CP1.1</li>
+  </ul>
+</header>
+
+<p>Every concept below follows the same five parts, so you can skim the first and stop, or read all five:</p>
+<ul>
+  <li><strong>In plain terms</strong>: the idea in a sentence or two.</li>
+  <li><strong>Why it matters</strong>: what goes wrong for LaunchKit without it.</li>
+  <li><strong>How it breaks</strong>: the failure you'll actually see.</li>
+  <li><strong>Example</strong>: a small piece of code or a diagram.</li>
+  <li><strong>How Pencil does it</strong>: what a production system chose, and what it cost.</li>
+</ul>
+<p>Discussion questions appear where they come up in the session. Try answering before you open the suggested answer.</p>
+
+<h2 id="example">The running example</h2>
+<p class="sub">LaunchKit, Harbor and Ember Coffee Co. are fictional.</p>
+<p>We're building <strong>LaunchKit</strong>, a marketing assistant. Its first job: turn one campaign concept into on-brand poster ads. The first customer is <strong>Harbor</strong>, launching an insulated bottle called <strong>Tidal</strong>. A second customer, <strong>Ember Coffee Co.</strong>, arrives later and needs a different voice and different rules.</p>
+<p>A poster has a short headline, a subheadline, body copy and a picture. Harbor's rules include word limits (headline up to 6 words, subheadline up to 12, body up to 25) and a list of claims the copy must never make, such as "eco-friendly".</p>
+<p>The opening demo of this session sent four requests to a plain model call, then to a fixed LangGraph pipeline:</p>
+<div class="tbl"><table>
+  <tr><th style="width:42%">Request</th><th>What went wrong</th></tr>
+  <tr><td>"The Tidal bottle on a misty lakeshore, headline: Cold for 24 hours"</td><td>Plain call: the headline came back misspelled inside the picture, the copy added "eco-friendly", and the format changed on every run</td></tr>
+  <tr><td>"Make the bottle bigger" (a follow-up)</td><td>Started again from scratch: nothing remembered the poster</td></tr>
+  <tr><td>"Give me three variants"</td><td>The pipeline had no step for it</td></tr>
+  <tr><td>"Just resize this one for an Instagram story"</td><td>The pipeline ran every step anyway</td></tr>
+</table></div>
+<p>These notes pick up from there.</p>
+
+<!-- ======================= PART A ======================= -->
+<section class="part" aria-labelledby="part-a">
+<p class="eyebrow">Part A · 0:18–0:30</p>
+<h2 id="part-a">The agent harness, and Agno as the engine under it</h2>
+
+<h3 id="a1"><span class="id">A1</span>Why a model alone isn't a product</h3>
+<p class="plain">A model call takes text in and gives text back. It doesn't remember the last request, check its own work, follow your rules reliably, or do anything in the world.</p>
+<h4>Why it matters</h4>
+<p>Everything a marketer needs from LaunchKit sits outside that one call: the poster spec in a fixed shape, the banned claims kept out, the picture generated without words baked into it, and the follow-up that remembers which poster we're talking about. The model is a powerful part, but it's one part.</p>
+<h4>How it breaks</h4>
+<div class="tbl"><table>
+  <tr><th>What we saw</th><th>What was missing</th></tr>
+  <tr><td>"eco-friendly" in the copy</td><td>Rules checked by code, not hoped for in a prompt</td></tr>
+  <tr><td>A different format on every run</td><td>A typed output that's validated</td></tr>
+  <tr><td>The headline misspelled inside the image</td><td>A rule that the image model draws the picture only, never the words</td></tr>
+  <tr><td>"Make the bottle bigger" restarted</td><td>State that survives to the next message</td></tr>
+</table></div>
+<div class="pencil">
+  <h4>How Pencil does it</h4>
+  <p>Pencil's assistant, Scribble, makes the agent name its final deliverable explicitly, and retries a blank answer once before showing an error. Neither comes from the model. Both are code around it.</p>
+</div>
+
+<h3 id="a2"><span class="id">A2</span>Three ways to put a model to work</h3>
+<p class="plain">There's a spectrum. At one end, you call the model once. In the middle, you wire calls into fixed steps you drew in advance (a workflow). At the other end, the model decides the next step itself, in a loop (an agent).</p>
+<div class="tbl"><table>
+  <tr><th></th><th>Plain call</th><th>Workflow (fixed graph)</th><th>Agent loop</th></tr>
+  <tr><td><strong>Who picks the next step</strong></td><td>Nobody: one step</td><td>Your code, decided in advance</td><td>The model, at run time</td></tr>
+  <tr><td><strong>Good for</strong></td><td>Rewrite this line; classify this text</td><td>Work with a known shape: resize 500 images every night</td><td>Requests you can't predict: "three variants", "just resize", "use my photo instead"</td></tr>
+  <tr><td><strong>Breaks when</strong></td><td>The task needs more than one step</td><td>A new kind of request arrives</td><td>Nothing bounds it: loops, cost, wrong tools</td></tr>
+  <tr><td><strong>Predictability</strong></td><td>High</td><td>High</td><td>Lower; needs limits</td></tr>
+</table></div>
+<h4>Why it matters</h4>
+<p>A fixed graph like the LangGraph pipeline in the demo is a good tool when you can draw the flow in advance. It handled the happy path well. It broke because LaunchKit's requests can't be drawn in advance: every new kind of request needs another node and another edge, and retries are written by hand for each step.</p>
+<p>Agents aren't free. They're less predictable, usually slower and more expensive, and harder to test. Start with the simplest thing that works and move right along the spectrum only when the requests demand it.</p>
+<h4>How it breaks</h4>
+<p>Adding nodes for every new request is the obvious fix to the graph, and it fails for a real reason: the number of request shapes keeps growing, and each one needs a developer.</p>
+
+<div class="discuss">
+  <p class="eyebrow">Discuss · 1</p>
+  <p class="q">Where would you still use a fixed graph instead of an agent loop?</p>
+  <details><summary>Suggested answer</summary>
+    <p>When the steps are known and stable, mistakes are expensive, or you need the same path every time for audit: a nightly batch resize, a compliance check that must always run in the same order, a data pipeline. Many real systems mix both: an agent that calls a fixed workflow as one of its tools.</p>
+  </details>
+</div>
+
+<h3 id="a3"><span class="id">A3</span>What an agent harness is</h3>
+<p class="plain">An agent harness is everything around the model that makes it reliable. <strong>The model proposes; the harness enforces.</strong></p>
+<p>The name fits: a harness channels the power of something strong and unpredictable in a useful direction. Letting the model choose its next step fixes the rigidity of the graph, but now it can loop forever regenerating "a better sky", lose track of what it was doing, call tools it shouldn't, or return anything at all. The harness is what stops that.</p>
+<div class="diagram">
+  <div class="harness-box">
+    <p class="label">Harness: our code</p>
+    <div class="chips"><span>limits</span><span>tool dispatch</span><span>instructions and context</span><span>state</span><span>output validation</span><span>identity</span></div>
+    <div class="engine">Agent loop: model ↔ tools (the engine, Agno)</div>
+  </div>
+</div>
+<h4>Why it matters</h4>
+<p>You need this layer whichever framework sits underneath, because it's where your product's rules live. A framework can run a loop; it can't know that Harbor bans "eco-friendly", that a turn may spend at most three image generations, or which customer is asking.</p>
+
+<h3 id="a4"><span class="id">A4</span>The agent loop, step by step</h3>
+<p class="plain">The model never runs anything itself. It replies with either a final answer or a request to call a tool. The harness runs the tool, feeds the result back, and asks again, until there's a final answer or the harness decides to stop.</p>
+<div class="diagram">
+  <div class="loop">
+    <div class="gate"><strong>Build context</strong>Instructions, history, the request</div>
+    <div><strong>Call the model</strong>It returns text or tool calls</div>
+    <div class="gate"><strong>Check the call</strong>Exists? Allowed? In budget? Valid args?</div>
+    <div><strong>Run the tool</strong>For example, render_image</div>
+    <div class="gate"><strong>Feed back the result</strong>Append it, then loop</div>
+    <div class="gate"><strong>Stop and validate</strong>Final answer or a limit hit</div>
+  </div>
+</div>
+<p>Dark boxes are where the harness decides. Light boxes are the model and the tools.</p>
+<h4>Example: "Give me three variants"</h4>
+<div class="tbl"><table>
+  <tr><th>Step</th><th>Model proposes</th><th>Harness does</th></tr>
+  <tr><td>1</td><td>Call <code>write_spec</code> three times with different angles</td><td>Runs them; validates each spec</td></tr>
+  <tr><td>2</td><td>Call <code>render_image</code> for each spec</td><td>Checks the image budget (3 per turn); runs them</td></tr>
+  <tr><td>3</td><td>Final answer: three posters</td><td>Validates the output; returns a typed result</td></tr>
+</table></div>
+<p>Nobody drew a "three variants" node. The model chose the steps; the harness kept them inside the rules.</p>
+<h4>How it breaks</h4>
+<ul>
+  <li>It never stops, regenerating the same image to "improve" it.</li>
+  <li>It calls a tool that doesn't exist, or that it isn't allowed to use.</li>
+  <li>It retries a failing call with slightly different arguments, again and again.</li>
+  <li>Its final answer is malformed.</li>
+</ul>
+<p>Each of these is caught by a different part of the harness, covered next.</p>
+
+<h3 id="a5"><span class="id">A5</span>What the harness owns</h3>
+<p class="plain">Eight jobs, all product decisions, none of which a model or a framework can make for you.</p>
+<div class="tbl"><table>
+  <tr><th style="width:26%">Job</th><th>What it does</th><th>LaunchKit example</th></tr>
+  <tr><td><strong>Tool dispatch</strong></td><td>Looks up the tool, checks the arguments against its schema, runs it, returns the result</td><td><code>render_image</code> gets a valid prompt and size</td></tr>
+  <tr><td><strong>Context assembly</strong></td><td>Decides what the model sees each turn, in what order</td><td>Harbor's rules, then the request, then recent history</td></tr>
+  <tr><td><strong>State</strong></td><td>Keeps the conversation so the next message has it</td><td>"Make the bottle bigger" knows which poster</td></tr>
+  <tr><td><strong>Limits</strong></td><td>Steps, time, money, repeated failures</td><td>At most 3 image generations per turn</td></tr>
+  <tr><td><strong>Output contract</strong></td><td>A typed result or a typed error, never "anything"</td><td>A valid poster spec, or a clear error</td></tr>
+  <tr><td><strong>Identity and permissions</strong></td><td>Who is asking, and what they may touch, from the system and never from the prompt</td><td>An Ember user can't load Harbor's rules</td></tr>
+  <tr><td><strong>Recovery</strong></td><td>What happens when a tool or the model fails</td><td>One repair attempt, then an error</td></tr>
+  <tr><td><strong>Observability</strong></td><td>A record of every step, so you can see what happened</td><td>Why did this turn make 50 calls?</td></tr>
+</table></div>
+
+<div class="discuss">
+  <p class="eyebrow">Discuss · 2</p>
+  <p class="q">Model or code? Sort these: the next step, the step limit, which tool to call, the user's identity, the headline wording, the image budget.</p>
+  <details><summary>Suggested answer</summary>
+    <p><strong>Model:</strong> the next step, which tool to call, the headline wording. <strong>Code:</strong> the step limit, the user's identity, the image budget. The rule of thumb: the model makes choices that need judgment; code enforces anything about safety, money, identity or correctness that you can check.</p>
+  </details>
+</div>
+
+<h3 id="a6"><span class="id">A6</span>Limits</h3>
+<p class="plain">Limits are how the harness stops a loop that has gone wrong. There are several kinds, and each catches something the others miss.</p>
+<div class="tbl"><table>
+  <tr><th style="width:22%">Limit</th><th>Catches</th><th>Misses</th></tr>
+  <tr><td><strong>Step cap</strong> (max tool calls per turn)</td><td>Runaway loops</td><td>Cuts off a long task that was doing real work</td></tr>
+  <tr><td><strong>Time limits</strong>, nested: per tool, no progress, whole turn</td><td>Hangs and slow tools</td><td>A fast loop that finishes within time but goes nowhere</td></tr>
+  <tr><td><strong>Per-tool breaker</strong></td><td>The same tool failing again and again</td><td>Calls that succeed but go nowhere</td></tr>
+  <tr><td><strong>Budgets</strong> for paid calls</td><td>Cost: the 4th image generation when the budget is 3</td><td>Loops that cost nothing</td></tr>
+</table></div>
+<p>One detail matters for the breaker: <strong>count failures by the tool's name, not its arguments.</strong> A model stuck on a broken tool tends to retry with slightly different arguments each time. A counter keyed on the exact call never fires.</p>
+<h4>Example: an image budget as a tool hook</h4>
+<p>Agno lets you wrap every tool call in a hook. The hook gets the tool's name, the function and its arguments. Calling the function runs the tool; returning without calling it blocks the tool, and whatever you return becomes the tool result the model sees.</p>
+<pre><code><span class="k">def</span> image_budget(function_name, func, args):
+    <span class="k">if</span> function_name == <span class="k">"render_image"</span>:
+        <span class="k">if</span> turn.images_used &gt;= 3:
+            <span class="k">return</span> <span class="k">"Refused: this turn's image budget (3) is used up."</span>
+        turn.images_used += 1
+    <span class="k">return</span> func(**args)
+
+agent = Agent(..., tool_hooks=[image_budget], tool_call_limit=6)</code></pre>
+<p><code>tool_call_limit</code> is Agno's built-in step cap. For CP1.1 we use 6.</p>
+<div class="pencil">
+  <h4>How Pencil does it</h4>
+  <p>One Scribble turn made about 50 calls to a search tool over about 14 minutes. The search skill kept telling the model to call a different search tool that wasn't available in that workspace, and the model kept obeying. A sibling turn finished in under 17 seconds, so the problem depended on the model's choices, not on the code path.</p>
+  <p>Pencil's fix was a breaker, <strong>not a step cap</strong>. Failures are counted per tool name, ignoring arguments:</p>
+  <ul>
+    <li>From the 2nd failure, a nudge is added to the tool result.</li>
+    <li>At 3, that tool is disabled for the rest of the turn.</li>
+    <li>At 12, the turn ends, in the strict mode only. The default mode disables the tool and lets the turn continue.</li>
+  </ul>
+  <p>Around it sit nested time limits: one tool call can take up to 30 minutes, a turn with no progress for 40 minutes is failed, and no turn runs longer than an hour. Paid image and video generation is checked against the customer's credit before each call.</p>
+  <div class="tradeoff">
+    <p class="gain"><strong>Gained:</strong> long, legitimate turns aren't cut off by a fixed count</p>
+    <p class="cost"><strong>Cost:</strong> only known kinds of failure count, so calls that succeed but go nowhere run until the time limit</p>
+  </div>
+</div>
+
+<div class="discuss">
+  <p class="eyebrow">Discuss · 3</p>
+  <p class="q">CP1.1 uses a step cap of 6. Why didn't Pencil use one?</p>
+  <details><summary>Suggested answer</summary>
+    <p>Scribble's real turns vary enormously: a quick reply might take one call, a multi-asset campaign might take dozens of legitimate ones. Any fixed number would either cut good turns short or be too high to catch anything. The incident showed the real danger was one broken tool repeated, so Pencil limits that directly, and backs it with time. For a small, predictable agent like LaunchKit's, a step cap is simple and fine.</p>
+  </details>
+</div>
+
+<h3 id="a7"><span class="id">A7</span>Output contracts</h3>
+<p class="plain">The harness defines exactly what a finished answer looks like, checks it in code, allows one repair, and otherwise returns a clear error.</p>
+<h4>Why it matters</h4>
+<p>Downstream code (the image model, the layout, the marketer's screen) needs a predictable shape. "The model usually returns JSON" isn't a contract.</p>
+<h4>Example</h4>
+<pre><code><span class="k">class</span> PosterSpec(BaseModel):
+    headline: str        <span class="c"># 6 words or fewer</span>
+    subheadline: str     <span class="c"># 12 words or fewer</span>
+    body: str            <span class="c"># 25 words or fewer</span>
+    image_prompt: str    <span class="c"># the picture only, never the words</span>
+
+<span class="k">def</span> check(spec, brand):
+    errors = []
+    <span class="k">if</span> len(spec.headline.split()) &gt; 6: errors.append(<span class="k">"headline over 6 words"</span>)
+    <span class="k">for</span> claim <span class="k">in</span> brand.banned_claims:
+        <span class="k">if</span> claim <span class="k">in</span> spec.body.lower(): errors.append(f<span class="k">"banned claim: {claim}"</span>)
+    <span class="k">return</span> errors</code></pre>
+<p>Agno can ask the model for this shape directly with <code>output_schema=PosterSpec</code>. Your <code>check</code> still runs, because a schema checks the shape, not the rules. If <code>check</code> fails, send the errors back for one repair. If it fails again, return a typed error. Invalid copy never reaches the image model.</p>
+<h4>How it breaks</h4>
+<p>Without a repair limit, a model that can't satisfy a rule repairs forever. Without a typed error, failures show up as half-finished posters.</p>
+<div class="pencil">
+  <h4>How Pencil does it</h4>
+  <p>Scribble's agent ends a turn by calling a <code>deliver_final</code> tool that names its final outputs. After that, further tool calls are refused, which stopped agents from carrying on with checks after they'd already delivered. A blank answer is retried once, on the same model; if it's still blank, the user sees an error and isn't charged. The team chose not to switch models on retry, because "a silent swap makes the reply's provenance a lie".</p>
+</div>
+
+<h3 id="a8"><span class="id">A8</span>State</h3>
+<p class="plain">State is what lets the next message build on the last one. Three things are easy to confuse: the <strong>transcript</strong> (everything said, stored), the <strong>session</strong> (one conversation's identity and data) and the <strong>context window</strong> (what the model actually sees on this turn).</p>
+<h4>Why it matters</h4>
+<p>"Make the bottle bigger" only works if the harness loads the earlier turns about that poster. But you can't send the whole transcript forever: it gets slow and expensive, and important instructions get buried.</p>
+<h4>Example</h4>
+<pre><code>agent = Agent(
+    db=sessions_db,                 <span class="c"># where transcripts are stored</span>
+    session_id=conversation_id,     <span class="c"># set by the harness, never by the model</span>
+    add_history_to_context=True,    <span class="c"># without this, history isn't sent</span>
+    num_history_runs=5,             <span class="c"># only the last 5 turns go to the model</span>
+)</code></pre>
+<h4>How it breaks</h4>
+<ul>
+  <li>No session: every message starts from scratch.</li>
+  <li>Unbounded history: every turn costs more than the last.</li>
+  <li>A session id taken from the request: one user can read another's conversation.</li>
+</ul>
+<div class="pencil">
+  <h4>How Pencil does it</h4>
+  <p>Scribble keeps the full transcript per conversation in a database and sends only the last five turns to the model. Session ids come from the system. Managing long histories (summaries, trimming bulky tool results) is a Session 2 topic.</p>
+</div>
+
+<h3 id="a9"><span class="id">A9</span>Model abstraction</h3>
+<p class="plain">Every model sits behind one interface. Code asks for a model by a string such as <code>"provider:model"</code>, and the same retry and timeout policy applies to all of them.</p>
+<h4>Why it matters</h4>
+<ul>
+  <li>You can pick a model per task (a fast one for copy, a strong one for planning) without rewriting the harness.</li>
+  <li>You can swap in a <strong>fake model</strong> in tests: one that returns a valid spec, one that returns malformed output, one that never stops. That's how you test limits and repairs without paying for, or waiting on, a real model.</li>
+</ul>
+<h4>How it breaks</h4>
+<p>Quiet fallbacks change behaviour without anyone noticing. If the model you asked for isn't available and the system silently uses another, the output changes and nobody knows why.</p>
+<div class="pencil">
+  <h4>How Pencil does it</h4>
+  <p>Scribble turns one model string into an Agno model in a single place. Which models a customer may use is a policy: if the requested model isn't enabled, Scribble falls back to the customer's best enabled model, choosing availability over exactness. For blank-answer retries it deliberately does the opposite and keeps the same model (see A7). Both are product decisions, made in the harness.</p>
+</div>
+
+<h3 id="a10"><span class="id">A10</span>Agno, the engine under the harness</h3>
+<p class="plain">Agno is an open-source Python framework for building agents. It works with many model providers. It gives you the generic machinery, so your code can focus on the product.</p>
+<h4>What Agno gives you</h4>
+<ul>
+  <li><strong>Agent</strong>: the loop, with instructions, a model and tools.</li>
+  <li><strong>Tools</strong>: plain Python functions (or ready-made toolkits, or MCP servers) with their schemas generated for the model, plus tool-call parsing for each provider.</li>
+  <li><strong>Sessions</strong>: stored conversations and history.</li>
+  <li><strong>Memory and knowledge</strong>: hooks for long-term memory and retrieval (later sessions).</li>
+  <li><strong>Teams</strong>: several agents working together (Session 2).</li>
+  <li><strong>Controls</strong>: <code>tool_call_limit</code>, <code>tool_hooks</code>, <code>output_schema</code>, and exceptions a tool can raise to retry or stop the run.</li>
+</ul>
+<h4>Example: LaunchKit's agent, roughly</h4>
+<pre><code><span class="k">from</span> agno.agent <span class="k">import</span> Agent
+
+agent = Agent(
+    model=make_model(<span class="k">"provider:model"</span>),           <span class="c"># our helper: one interface</span>
+    instructions=build_instructions(workspace),   <span class="c"># from the brand's files (Part B)</span>
+    tools=[write_spec, render_image, resize_image],
+    output_schema=PosterSpec,                     <span class="c"># typed result (A7)</span>
+    tool_call_limit=6,                            <span class="c"># step cap (A6)</span>
+    tool_hooks=[image_budget],                    <span class="c"># budget (A6)</span>
+    db=sessions_db, session_id=conversation_id,   <span class="c"># state (A8)</span>
+    add_history_to_context=True, num_history_runs=5,
+)</code></pre>
+<p>Illustrative only: you'll build the real one in CP1.1. Notice how many of the arguments are harness decisions passed into the engine.</p>
+<h4>What stays ours</h4>
+<div class="tbl"><table>
+  <tr><th>Agno gives us</th><th>We still own</th></tr>
+  <tr><td>The loop</td><td>When it should stop, for our product</td></tr>
+  <tr><td>Tool calling</td><td>Which tools a user may call, and the budgets</td></tr>
+  <tr><td>Sessions</td><td>Who the user is, and which session is theirs</td></tr>
+  <tr><td>Structured output</td><td>The brand rules the output must follow</td></tr>
+  <tr><td>Many model providers</td><td>Which model a task uses, and what happens when it's unavailable</td></tr>
+</table></div>
+
+<h3 id="a11"><span class="id">A11</span>How Pencil does it, in one picture</h3>
+<p class="plain">Scribble is Pencil's harness, built on Agno. Agno runs the loop; Pencil's code owns state, limits, identity and instructions.</p>
+<div class="tbl"><table>
+  <tr><th>From Agno</th><th>Added by Pencil</th></tr>
+  <tr><td>The agent loop and tool calling</td><td>A database-backed session store per workspace</td></tr>
+  <tr><td>Model classes for each provider</td><td>One model resolver with customer policy, and retry wrappers</td></tr>
+  <tr><td>A way to stop a run</td><td>The per-tool breaker and nested time limits</td></tr>
+  <tr><td>Instructions as a string</td><td>An instruction builder that assembles them from workspace files (Part B)</td></tr>
+  <tr><td></td><td>The final-delivery contract and blank-answer retry</td></tr>
+  <tr><td></td><td>A cache of ready-built agents, rebuilt when a workspace's files change</td></tr>
+</table></div>
+<p>Pencil's earlier assistants were built on a different framework (Google's ADK). The team will share in person why they moved.</p>
+
+<section id="a-next">
+<h3><span class="id">A → B</span>The next problem</h3>
+<p>Our harness now works for Harbor. A second customer signs up.</p>
+<div class="req"><p class="who">Signed in as Ember Coffee Co.</p><p class="say">"Same Tidal concept, for Ember Coffee"</p></div>
+<div class="out"><span class="pill fail">Fails</span><p>The poster comes back in Harbor's calm, outdoorsy voice, checked against Harbor's banned claims. Ember's own rules are nowhere.</p></div>
+<p>The harness has one set of instructions, written for Harbor, in Python.</p>
+<p><strong>The obvious fix:</strong> a prompt per brand, in code.</p>
+<pre><code>BRAND_PROMPTS = {
+    <span class="k">"harbor"</span>: <span class="k">"Calm, outdoorsy. Never say eco-friendly. ..."</span>,
+    <span class="k">"ember"</span>:  <span class="k">"Warm, crafted. ..."</span>,
+}
+prompt = BRAND_PROMPTS[request[<span class="k">"brand"</span>]]   <span class="c"># the request picks the brand</span></code></pre>
+<p>Ember's poster now works. Then two more things happen:</p>
+<ul>
+  <li>Ember's marketer says "Never use the word 'cheap'". The next request, "Poster for our budget weekday blend", still says "cheap": only an engineer can add the rule, then the app must be redeployed.</li>
+  <li>An Ember user sends <code>brand=harbor</code> and gets Harbor's unreleased Tidal rules.</li>
+</ul>
+<p>Taking the brand from the login instead of the request fixes the leak. But the rules still belong to engineering, not to the brand.</p>
+<div class="bridge">
+  <p class="eyebrow">Carried into Part B</p>
+  <p class="big">Each brand's agent setup has to live in files that brand owns, chosen by who is asking.</p>
+</div>
+</section>
+</section>
+
+<!-- ======================= PART B ======================= -->
+<section class="part" aria-labelledby="part-b">
+<p class="eyebrow">Part B · 0:30–0:38</p>
+<h2 id="part-b">OpenClaw on Agno: the workspace as the agent's home</h2>
+
+<h3 id="b1"><span class="id">B1</span>Configuration as files</h3>
+<p class="plain">Put an agent's behaviour (its persona, rules and memory) in plain text files, one folder per agent, instead of in code.</p>
+<h4>Why it matters</h4>
+<ul>
+  <li><strong>No deploy:</strong> change a file and the next turn changes.</li>
+  <li><strong>Readable:</strong> a marketer can see exactly what the agent is told.</li>
+  <li><strong>One per customer:</strong> a new brand is a new folder, not new code.</li>
+  <li><strong>Versioned:</strong> files can live in git, so every change is reviewable and reversible.</li>
+</ul>
+
+<h3 id="b2"><span class="id">B2</span>The OpenClaw workspace</h3>
+<p class="plain">OpenClaw, an open-source agent runtime, popularised a simple convention: each agent has a <strong>workspace</strong> folder that is its home. A handful of files with fixed names and roles define who the agent is and how it works.</p>
+<div class="tbl"><table>
+  <tr><th style="width:28%">File</th><th>Role</th><th>When it's read</th></tr>
+  <tr><td><code>AGENTS.md</code></td><td>Operating instructions, and how to use memory</td><td>Every session</td></tr>
+  <tr><td><code>SOUL.md</code></td><td>Persona, tone and boundaries</td><td>Every session</td></tr>
+  <tr><td><code>USER.md</code></td><td>Who the user is, how to address them</td><td>Every session</td></tr>
+  <tr><td><code>IDENTITY.md</code></td><td>The agent's name and style</td><td>Set up on first run</td></tr>
+  <tr><td><code>MEMORY.md</code></td><td>Curated long-term memory</td><td>Only in the main, private session</td></tr>
+  <tr><td><code>memory/YYYY-MM-DD.md</code></td><td>A daily log</td><td>Recent days at start; older ones on demand</td></tr>
+  <tr><td><code>BOOTSTRAP.md</code></td><td>A one-time first-run ritual</td><td>Once, then deleted</td></tr>
+  <tr><td><code>skills/</code></td><td>Workspace-specific skills</td><td>When needed</td></tr>
+</table></div>
+<p>Two details from OpenClaw's docs worth knowing. First, files injected into the prompt are <strong>truncated</strong>: 20,000 characters per file and 60,000 in total by default. Second, the workspace is the agent's default working folder, <strong>not a hard sandbox</strong>: without sandboxing turned on, tools can still reach the rest of the machine.</p>
+<p>LaunchKit uses a subset: <code>SOUL.md</code>, <code>AGENTS.md</code>, <code>MEMORY.md</code>, <code>memory/</code> and <code>skills/</code>, one folder per brand.</p>
+<pre><code>workspaces/
+├── harbor/
+│   ├── SOUL.md        <span class="c"># calm, outdoorsy</span>
+│   ├── AGENTS.md      <span class="c"># word limits; never "eco-friendly"</span>
+│   ├── MEMORY.md
+│   └── skills/
+└── ember/
+    ├── SOUL.md        <span class="c"># warm, crafted</span>
+    ├── AGENTS.md      <span class="c"># + Never use the word "cheap"</span>
+    ├── MEMORY.md
+    └── skills/</code></pre>
+<p>Put this convention on top of Agno's engine and every brand gets its own agent by changing files, not code. Agno stays the engine; the files shape what it's told.</p>
+
+<h3 id="b3"><span class="id">B3</span>Files into instructions</h3>
+<p class="plain">The harness reads the workspace's files and assembles them into the model's instructions: in a fixed order, each within a size limit, with the stable parts first.</p>
+<h4>Example</h4>
+<pre><code><span class="k">def</span> build_instructions(ws):
+    parts = []
+    <span class="k">for</span> name <span class="k">in</span> [<span class="k">"SOUL.md"</span>, <span class="k">"AGENTS.md"</span>, <span class="k">"MEMORY.md"</span>]:   <span class="c"># stable first</span>
+        text = ws.read(name) <span class="k">or</span> f<span class="k">"# {name}\n(missing)"</span>
+        parts.append(text[:MAX_CHARS_PER_FILE])           <span class="c"># cap each file</span>
+    <span class="k">return</span> <span class="k">"\n\n"</span>.join(parts)</code></pre>
+<h4>Why the order and the caps matter</h4>
+<ul>
+  <li><strong>Order:</strong> model providers can cache the start of a prompt that doesn't change between turns. Keep what rarely changes (persona, rules) first and what changes often (memory, the user) last.</li>
+  <li><strong>Caps:</strong> without them, one huge file crowds out everything else and makes every turn slow and expensive.</li>
+</ul>
+<h4>How it breaks</h4>
+<p>A cap that cuts silently can drop the one rule that mattered. A missing file can produce an agent with no persona. Make both visible: mark truncation and missing files in the instructions and in your logs.</p>
+
+<h3 id="b4"><span class="id">B4</span>Identity picks the folder</h3>
+<p class="plain">The harness works out which workspace to read from who is signed in. The request never names the folder, and the model never chooses it.</p>
+<div class="diagram"><div class="flow">
+  <span class="n dark">Signed-in user</span><span class="a">→</span>
+  <span class="n">Their brand's folder</span><span class="a">→</span>
+  <span class="n">Instruction builder</span><span class="a">→</span>
+  <span class="n dark">Harness</span>
+</div></div>
+<h4>Why it matters</h4>
+<p>This is the fix for the <code>brand=harbor</code> leak. If the path to the folder comes from the request, or from anything the model writes, someone will eventually point it at another customer's files.</p>
+<h4>How it breaks</h4>
+<ul>
+  <li>A workspace name read from the request body.</li>
+  <li>A path built from user input without checks (<code>../harbor</code>).</li>
+  <li>One shared folder for every brand, filtered "by convention".</li>
+</ul>
+<div class="pencil">
+  <h4>How Pencil does it</h4>
+  <p>Scribble takes the user and workspace from a signed login token and checks membership before doing anything. A worker serves exactly one workspace at a time. Per-user files are found from the signed-in user's id, and there's no function that accepts someone else's id, so reading another user's file isn't possible by construction.</p>
+</div>
+
+<h3 id="b5"><span class="id">B5</span>Who edits what</h3>
+<p class="plain">Once behaviour lives in files, someone has to decide who may change each one.</p>
+<div class="tbl"><table>
+  <tr><th>Editor</th><th>What they might change</th><th>The risk</th></tr>
+  <tr><td>The marketer</td><td>Tone, rules ("never say cheap")</td><td>A rule that conflicts with another, or with the law</td></tr>
+  <tr><td>The agent itself</td><td>Memory, notes</td><td>Drift: the agent slowly rewrites who it is. A malicious instruction in a document gets saved and obeyed forever</td></tr>
+  <tr><td>An engineer</td><td>The harness code</td><td>The bottleneck we were trying to remove</td></tr>
+</table></div>
+<div class="pencil">
+  <h4>How Pencil does it</h4>
+  <p>Pencil splits it. The persona and start-up files (SOUL and BOOT) can only be edited by an admin; the agent can't change them. The agent can write memory, but saving a memory that applies to the whole workspace needs the user to confirm it.</p>
+</div>
+
+<div class="discuss">
+  <p class="eyebrow">Discuss · 4</p>
+  <p class="q">Who may edit a workspace's files: the marketer, the agent itself, or an engineer? What goes wrong with each?</p>
+  <details><summary>Suggested answer</summary>
+    <p>There's no single right answer, but most teams land on a split like Pencil's: humans own identity and rules, with review; the agent owns notes and memory, with confirmation for anything shared; engineers own the harness. The question to ask of any file: if it changed silently tonight, who would notice?</p>
+  </details>
+</div>
+
+<h3 id="b6"><span class="id">B6</span>How Pencil does it</h3>
+<p class="plain">Pencil keeps the workspace idea but loads less of it into every prompt. Each Pencil workspace has its own set of files, which Pencil calls its DNA.</p>
+<div class="tbl"><table>
+  <tr><th style="width:20%">File</th><th>LaunchKit (what we build)</th><th>Pencil</th></tr>
+  <tr><td><code>SOUL.md</code></td><td>Persona and tone; loaded</td><td>Loaded first. Admin-only</td></tr>
+  <tr><td><code>BOOT.md</code></td><td>Not used</td><td>A start-up protocol; loaded second. Admin-only</td></tr>
+  <tr><td><code>AGENTS.md</code></td><td>Operating rules; loaded</td><td>A list of the workspace's sub-agents, generated automatically. Kept out of the prompt; the agent searches for what it needs</td></tr>
+  <tr><td><code>MEMORY.md</code></td><td>Curated memory</td><td>A short index of memories, loaded last. Each note is cut to a short summary; details are fetched on demand</td></tr>
+  <tr><td>Per-user file</td><td>Not used</td><td>One per user, found from the signed-in user</td></tr>
+</table></div>
+<ul>
+  <li>New workspaces start from preset files.</li>
+  <li>Editing a workspace's files rebuilds its cached agent, so the change lands on the next turn.</li>
+  <li>Operating rules live in SOUL and BOOT, not in AGENTS.md: Pencil uses the same file name for a different job.</li>
+</ul>
+<div class="tradeoff">
+  <p class="gain"><strong>Gained:</strong> every workspace behaves differently with no deploy</p>
+  <p class="cost"><strong>Cost:</strong> deciding who may edit what, and how much rides in every prompt</p>
+</div>
+
+<div class="discuss">
+  <p class="eyebrow">Discuss · 5</p>
+  <p class="q">What belongs in workspace files, and what must stay in code? And what should be looked up when needed, rather than loaded every time?</p>
+  <details><summary>Suggested answer</summary>
+    <p><strong>Files:</strong> tone, rules, memory, skills: anything a brand owns and might change. <strong>Code:</strong> limits, identity, validation, permissions: anything that keeps the system safe and correct whatever the files say. <strong>Looked up:</strong> anything large, rarely needed, or different per request, such as the full sub-agent list in Pencil, and as you'll see next, product facts.</p>
+  </details>
+</div>
+
+<section id="b-next">
+<h3><span class="id">B →</span>The next problem</h3>
+<div class="req"><p class="who">Signed in as Harbor</p><p class="say">"Mention it's dishwasher-safe"</p></div>
+<div class="out"><span class="pill fail">Fails</span><p>"Tidal is fully dishwasher-safe." Harbor's fact sheet says the body is dishwasher-safe and <strong>the lid is hand-wash only</strong>. The fact sheet wasn't in context.</p></div>
+<p><strong>The obvious fix:</strong> paste Harbor's product fact sheets and its 40-page brand guide into <code>AGENTS.md</code>, so the agent always has them.</p>
+<ul>
+  <li>With a size cap (OpenClaw's default is 20,000 characters per file), the file is cut off. The lid line is past the cut. Still "fully dishwasher-safe".</li>
+  <li>Raise the cap, and it may pass. But now every turn carries every fact for every product, even "make the bottle bigger". Slower, more expensive, and the one line that matters is buried among thousands.</li>
+</ul>
+<div class="bridge">
+  <p class="eyebrow">Carried into context engineering, 1:00</p>
+  <p class="big">The model needs the right fact at the moment it writes, not every fact on every turn.</p>
+</div>
+</section>
+</section>
+
+<!-- ======================= REFERENCE ======================= -->
+<section class="part" aria-labelledby="ref">
+<p class="eyebrow">Reference</p>
+<h2 id="ref">Look things up</h2>
+
+<h3 id="failures">Failure modes</h3>
+<div class="tbl"><table>
+  <tr><th>What you see</th><th>What's missing</th><th>Where</th></tr>
+  <tr><td>The agent never stops</td><td>A step cap, time limits</td><td>A6</td></tr>
+  <tr><td>The same broken tool called 50 times</td><td>A per-tool breaker, keyed on the name</td><td>A6</td></tr>
+  <tr><td>Image costs spike</td><td>A budget for paid calls</td><td>A6</td></tr>
+  <tr><td>Malformed or rule-breaking output</td><td>An output contract: schema, rules, one repair, typed error</td><td>A7</td></tr>
+  <tr><td>Follow-ups start from scratch</td><td>Sessions and history</td><td>A8</td></tr>
+  <tr><td>Tests are slow, flaky or expensive</td><td>Fake models behind one interface</td><td>A9</td></tr>
+  <tr><td>Every brand change needs a deploy</td><td>Configuration as files</td><td>B1</td></tr>
+  <tr><td>One customer sees another's rules</td><td>Identity picking the workspace</td><td>B4</td></tr>
+  <tr><td>The agent's persona drifts</td><td>Edit rights on workspace files</td><td>B5</td></tr>
+  <tr><td>Confident wrong facts</td><td>Retrieval at the right moment</td><td>Next segment</td></tr>
+</table></div>
+
+<h3 id="glossary">Glossary</h3>
+<div class="tbl"><table>
+  <tr><th style="width:28%">Term</th><th>Meaning</th></tr>
+  <tr><td>Agent</td><td>A model in a loop that chooses its next step, using tools</td></tr>
+  <tr><td>Agent harness</td><td>Everything around the model that makes it reliable: limits, tools, context, state, validation, identity</td></tr>
+  <tr><td>Agno</td><td>An open-source Python framework that provides the agent loop, tools, sessions and more</td></tr>
+  <tr><td>Breaker</td><td>A limit that disables a tool after repeated failures</td></tr>
+  <tr><td>Context window</td><td>What the model sees on one turn</td></tr>
+  <tr><td>Fake model</td><td>A scripted stand-in for a real model, used in tests</td></tr>
+  <tr><td>OpenClaw</td><td>An open-source agent runtime that popularised the workspace-as-files convention</td></tr>
+  <tr><td>Output contract</td><td>The exact shape and rules a final answer must meet</td></tr>
+  <tr><td>Scribble</td><td>Pencil's agent harness, built on Agno</td></tr>
+  <tr><td>Session</td><td>One stored conversation, identified by the system</td></tr>
+  <tr><td>Step cap</td><td>A maximum number of tool calls in one turn (Agno: <code>tool_call_limit</code>)</td></tr>
+  <tr><td>Tool</td><td>A function the model can ask the harness to run</td></tr>
+  <tr><td>Tool hook</td><td>Code that runs around every tool call: it can check, block or change it</td></tr>
+  <tr><td>Workflow</td><td>Fixed steps decided in advance by code</td></tr>
+  <tr><td>Workspace</td><td>A folder that is one agent's home: its persona, rules, memory and skills as files</td></tr>
+</table></div>
+
+<h3 id="check">Check yourself</h3>
+<details><summary>1. In one sentence, what's the difference between a workflow and an agent?</summary><p>In a workflow, your code decides the next step in advance; in an agent, the model decides it at run time, inside limits your code enforces.</p></details>
+<details><summary>2. Name four jobs of a harness that a framework can't do for you.</summary><p>Any four of: deciding your limits and budgets, enforcing your brand rules, knowing who the user is and what they may touch, choosing which model a task uses, deciding what happens on failure.</p></details>
+<details><summary>3. Why should a breaker count failures by tool name rather than by exact call?</summary><p>A model stuck on a broken tool retries with slightly different arguments. Counting exact calls never reaches the limit.</p></details>
+<details><summary>4. A schema validates your poster spec. Why do you still need a rule check?</summary><p>A schema checks the shape (fields and types). It doesn't check word counts or banned claims.</p></details>
+<details><summary>5. What's the difference between the transcript and the context window?</summary><p>The transcript is everything said, stored. The context window is the part the model sees on this turn, such as the last five turns.</p></details>
+<details><summary>6. Why must the workspace be picked from the login and not the request?</summary><p>Anything in the request can be changed by the user, so a user could point it at another customer's folder.</p></details>
+<details><summary>7. Why keep stable files first when building instructions?</summary><p>Providers can cache an unchanged prompt prefix, making turns faster and cheaper. Changing parts go last.</p></details>
+<details><summary>8. Why doesn't pasting the whole fact sheet into AGENTS.md fix "dishwasher-safe"?</summary><p>A size cap cuts the file and can drop the line that matters; without a cap, every turn carries every fact, which is slow, costly and buries the important line.</p></details>
+
+<h3 id="reading">Further reading</h3>
+<ul>
+  <li><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener">Building effective agents</a> (Anthropic): workflows versus agents, and when to use each.</li>
+  <li><a href="https://docs.agno.com" target="_blank" rel="noopener">Agno documentation</a>: agents, tools, sessions, teams.</li>
+  <li><a href="https://docs.openclaw.ai/concepts/agent-workspace" target="_blank" rel="noopener">OpenClaw: agent workspace</a>: the workspace files and what loads when.</li>
+</ul>
+
+<h3 id="facilitators">For facilitators</h3>
+<details><summary>Sources for every Pencil claim (scribble-orchestration, commit c64658145)</summary>
+<div class="tbl"><table>
+  <tr><th>Claim</th><th>Source</th></tr>
+  <tr><td>Engine on Agno 2.5.17; the main Agent call</td><td><code>runtime/engine.py:6973</code>, <code>9531-9640</code>; <code>pyproject.toml:14</code></td></tr>
+  <tr><td>Last 5 turns to the model</td><td><code>runtime/store/agno_db.py:44</code></td></tr>
+  <tr><td>Agent cache, rebuilt on file edits</td><td><code>runtime/engine.py:9088-9154</code>, <code>7435-7439</code></td></tr>
+  <tr><td>Breaker: by name, 2 / 3 / 12, soft default</td><td><code>runtime/tool_loop_guard.py</code>; <code>config.py:217-223</code></td></tr>
+  <tr><td>The ~50 calls / ~14 minutes incident</td><td><code>architecture/adr/2026-07-20-tool-failure-loop-breaker.md</code></td></tr>
+  <tr><td>Time limits 1800 / 2400 / 3600 s</td><td><code>runtime/engine.py:935-943</code>; <code>runtime/streaming/manager.py:30-39</code></td></tr>
+  <tr><td>Credit check before paid media</td><td><code>runtime/engine.py:24740-24770</code></td></tr>
+  <tr><td>deliver_final refuses later tool calls</td><td><code>runtime/engine.py:5730-5736</code>; <code>config.py:1290-1302</code></td></tr>
+  <tr><td>Blank-answer retry on the same model</td><td><code>architecture/adr/2026-08-03-blank-turn-guard.md</code></td></tr>
+  <tr><td>Model fallback when not enabled</td><td><code>runtime/models/resolver.py:364-366</code></td></tr>
+  <tr><td>SOUL and BOOT admin-only</td><td><code>runtime/engine.py:6725</code>; <code>runtime/instructions.py:669</code></td></tr>
+  <tr><td>Workspace memory needs confirmation</td><td><code>runtime/instructions.py:672-702</code></td></tr>
+  <tr><td>AGENTS.md is a generated roster, not in the prompt</td><td><code>runtime/engine.py:9295-9301</code>; <code>runtime/instructions.py:1264-1270</code></td></tr>
+  <tr><td>Memory notes cut to a short summary (160 chars)</td><td><code>runtime/memory_store.py:231</code></td></tr>
+  <tr><td>Identity from a signed token; membership check</td><td><code>gateway/auth.py:57-77</code>, <code>168-246</code> (dev mode skips the check for non-token users)</td></tr>
+  <tr><td>Per-user paths from the signed-in user</td><td><code>runtime/user_scope.py:1-6</code>, <code>77</code></td></tr>
+</table></div>
+<p>Don't claim: that the model resolver "fails loudly"; that Pencil loads AGENTS.md or keeps rules in it; that Scribble has a step cap; that the agent edits its own SOUL; any documented reason for choosing Agno.</p>
+</details>
+</section>
+
+<footer>LaunchKit, Harbor and Ember Coffee Co. are fictional. OpenClaw details are from its public documentation. Pencil details are simplified for teaching.</footer>
+</main>
+</div>
+
+</body></html>
