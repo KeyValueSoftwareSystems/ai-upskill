@@ -14,7 +14,7 @@ from launchkit.settings import settings as default_settings
 
 
 class Colour(BaseModel):
-    name: str = Field(description="The colour's name as the brand calls it, for example Deep Tide.")
+    name: str = Field(description="The colour's name as the brand calls it, for example navy.")
     hex: str = Field(description="Six-digit hex with a leading #, for example #0f2f4a. Make a sensible guess if the pack gives none.")
 
 

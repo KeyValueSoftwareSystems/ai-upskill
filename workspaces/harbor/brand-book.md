@@ -28,7 +28,7 @@ Headlines in Archivo Semibold. Body in Source Sans. Headlines are never longer t
 
 ## The logo
 
-The Harbor wordmark sits bottom-right on every poster with clear space equal to the height of the H on all sides. Never on a photo without the Foam plate behind it. Never rotated. Never smaller than 24 mm on an A3 poster.
+The Harbor wordmark sits bottom-right on every poster with clear space equal to the height of the H on all sides. Never on a photo without the sand plate behind it. Never rotated. Never smaller than 24 mm on an A3 poster.
 
 ## Photography
 
