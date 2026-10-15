@@ -16,7 +16,7 @@ import os
 import sys
 import tempfile
 
-from .paths import OUT, ROOT
+from .poster import OUT, ROOT
 
 NEXT_BRANCH = "session-01-llm-call"
 WIDTH = 38          # label + dots, so every status lines up in one column
@@ -48,32 +48,32 @@ class Check:
 
 def _scrub(text: str) -> str:
     """Never echo the key, even inside an error message."""
-    key = os.getenv("OPENAI_API_KEY", "").strip()
+    key = os.getenv("LITELLM_API_KEY", "").strip()
     if key:
         text = text.replace(key, "<your key>")
     return " ".join(text.split())[:160]
 
 
 def _api_fix(err: Exception, model: str, env_var: str) -> str:
-    """Turn an OpenAI error into one line telling the trainee what to do."""
+    """Turn an API error into one line telling the trainee what to do."""
     import openai
 
     if isinstance(err, openai.AuthenticationError):
-        return "OpenAI rejected the key. Check OPENAI_API_KEY in .env (no quotes or spaces) or ask the trainer for a new one"
+        return "The LiteLLM proxy rejected the key. Check LITELLM_API_KEY in .env (no quotes or spaces) or ask the trainer for a new one"
     if isinstance(err, (openai.PermissionDeniedError, openai.NotFoundError)):
         return f"Your key has no access to model '{model}'. Ask the trainer, or set {env_var} in .env to a model your key can use"
     if isinstance(err, openai.RateLimitError):
         if getattr(err, "code", None) == "insufficient_quota":
             return "The key's account has no credit left (insufficient_quota). Ask the trainer to top it up or for another key"
-        return "Rate limited by OpenAI. Wait a minute and run this again"
+        return "Rate limited by the LiteLLM proxy. Wait a minute and run this again"
     if isinstance(err, openai.APITimeoutError):
-        return "OpenAI did not answer in time. Check your network (VPN, proxy, wifi) and run this again"
+        return "The LiteLLM proxy did not answer in time. Check your network (VPN, proxy, wifi) and run this again"
     if isinstance(err, openai.APIConnectionError):
-        return "Could not reach OpenAI. Check your network (VPN, proxy, wifi), or OPENAI_BASE_URL in .env if you set one"
+        return "Could not reach the LiteLLM proxy. Check LITELLM_BASE_URL in .env and your network (VPN, wifi)"
     if isinstance(err, openai.BadRequestError):
-        return f"OpenAI refused the request for '{model}': {_scrub(str(getattr(err, 'message', err)))}. Check {env_var} in .env"
+        return f"The LiteLLM proxy refused the request for '{model}': {_scrub(str(getattr(err, 'message', err)))}. Check {env_var} in .env"
     if isinstance(err, openai.APIStatusError):
-        return f"OpenAI returned an error (HTTP {err.status_code}). Run this again; if it repeats, show the trainer"
+        return f"The LiteLLM proxy returned an error (HTTP {err.status_code}). Run this again; if it repeats, show the trainer"
     return f"Unexpected error ({type(err).__name__}): {_scrub(str(err))}"
 
 
@@ -115,19 +115,20 @@ def check_env_file(c: Check) -> None:
     if (ROOT / ".env").is_file():
         c.ok()
     else:
-        c.fail(f"No .env in {ROOT}. Run `cp .env.example .env` there and add your OPENAI_API_KEY")
+        c.fail(f"No .env in {ROOT}. Run `cp .env.example .env` there and add LITELLM_API_KEY and LITELLM_BASE_URL")
 
 
 def check_key(c: Check, deps_ok: bool) -> bool:
-    c.start("OPENAI_API_KEY set")
+    c.start("LiteLLM key and URL set")
     if deps_ok:
         from dotenv import load_dotenv
 
         load_dotenv(ROOT / ".env")
-    if os.getenv("OPENAI_API_KEY", "").strip():
+    missing = [v for v in ("LITELLM_API_KEY", "LITELLM_BASE_URL") if not os.getenv(v, "").strip()]
+    if not missing:
         c.ok()
         return True
-    c.fail("Add OPENAI_API_KEY to .env in the repo root (copy .env.example first)")
+    c.fail(f"Add {' and '.join(missing)} to .env in the repo root (copy .env.example first)")
     return False
 
 
