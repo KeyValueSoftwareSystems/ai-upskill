@@ -202,7 +202,7 @@ PAGE = r"""<!doctype html>
     <div class="chips" id="chips"></div>
     <div class="hint">Harbor's four requests. Run R1 then R2 (or R3 then R4) in the same conversation.</div>
     <div class="opts">
-      <label><input type="checkbox" id="noimage" checked> Skip the paid image call (draw a placeholder)</label>
+      <label><input type="checkbox" id="noimage"> Skip the paid image call (draw a placeholder)</label>
       <label><input type="checkbox" id="photo"> Attach Harbor's photo <img src="/__PHOTO__" alt=""></label>
       <label>Approach
         <select id="approach"><option value="llm">one LLM call (approach_llm)</option>
@@ -245,7 +245,8 @@ $("form").onsubmit = async e => {
   e.preventDefault();
   const text = $("text").value.trim();
   if (!text) return $("text").focus();
-  $("go").disabled = true; $("go").textContent = "Calling the model…";
+  $("go").disabled = true;
+  $("go").textContent = $("noimage").checked ? "Calling the model…" : "Making the poster… (a real picture takes about a minute)";
   try {
     const res = await fetch("/run", {method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({text, conversation, approach: $("approach").value,
@@ -273,7 +274,9 @@ function render(r, typed) {
         h("div", {class: "poster"}, h("img", {src: "/" + r.images[0].path, alt: "poster picture"}),
           h("div", {class: "copy"}, h("div", {class: "h", text: field("headline")}),
                                     h("div", {class: "s", text: field("subheadline")}))),
-        h("div", {class: "caption", text: "Preview: the copy is laid over the picture by code, not drawn by the image model."})));
+        h("div", {class: "caption", text: r.images[0].placeholder
+          ? "Placeholder picture, drawn by code: no image model was called. Untick \u201cSkip the paid image call\u201d (and remove LAUNCHKIT_IMAGES=placeholder from .env, if set) for a real one."
+          : "Preview: the copy is laid over the picture by code, not drawn by the image model."})));
     }
     const table = h("table");
     for (const s of r.spec) {
@@ -296,7 +299,8 @@ function render(r, typed) {
       grid.append(h("a", {href: "/" + img.path, target: "_blank"},
         h("img", {src: "/" + img.path, alt: img.path, loading: "lazy"}),
         h("div", {class: "size", text: `${img.size[0]}×${img.size[1]}`}),
-        h("div", {class: "caption", text: img.resized_from ? "resized by code" : "made by the image model"})));
+        h("div", {class: "caption", text: img.resized_from ? "resized by code"
+                                         : img.placeholder ? "placeholder (no image model call)" : "made by the image model"})));
     }
     card.append(h("h2", {text: `Images (${r.images.length})`}), grid);
     const made = r.images.find(i => i.prompt);

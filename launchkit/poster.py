@@ -68,6 +68,7 @@ class Picture:
     prompt: str | None = None        # what the image model was asked for
     reference: str | None = None     # the uploaded photo it started from, if any
     resized_from: str | None = None  # set when code resized another picture instead
+    placeholder: bool = False        # drawn by code instead of the image model (no paid call)
 
 
 @dataclass

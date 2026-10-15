@@ -54,7 +54,8 @@ def run(text: str, *, handle, workspace: str = "harbor", conversation_id: str = 
         out["problems"] = validate_spec(spec, brand)
     for p in images:
         out["images"].append({"path": os.path.relpath(p.path, ROOT), "size": list(p.size), "prompt": p.prompt,
-                              "resized_from": p.resized_from and os.path.basename(p.resized_from)})
+                              "resized_from": p.resized_from and os.path.basename(p.resized_from),
+                              "placeholder": p.placeholder})
     return out
 
 
@@ -106,8 +107,13 @@ def main():
         heading("Images")
         for img in r["images"]:
             w, h = img["size"]
-            how = f"resized by code from {img['resized_from']}" if img["resized_from"] else \
-                f"made by the image model from: {img['prompt']}"
+            if img["resized_from"]:
+                how = f"resized by code from {img['resized_from']}"
+            elif img["placeholder"]:
+                how = ("PLACEHOLDER drawn by code, no image model call (--no-image or LAUNCHKIT_IMAGES=placeholder). "
+                       f"The image model would have been asked for: {img['prompt']}")
+            else:
+                how = f"made by the image model from: {img['prompt']}"
             print(f"  {img['path']}  ({w}x{h})\n      {how}")
 
 

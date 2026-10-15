@@ -17,7 +17,7 @@ Harbor has sent four requests, and every approach we build is scored on them:
 
 ## The session
 
-1. **This branch, one LLM call** (`HANDS_ON.md`): how far does a single model call get us? Pretty far for R1, and nowhere for R2 to R4.
+1. **This branch, one LLM call** (snippets on the hands-on sheet from your trainer): how far does a single model call get us? Pretty far for R1, and nowhere for R2 to R4.
 2. **`session-01-langgraph`**: we add the memory and steps around the model that R2 to R4 need.
 
 ## Setup
