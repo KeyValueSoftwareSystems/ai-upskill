@@ -11,7 +11,7 @@ HARBOR_SPEC = {
     "headline": "Cold for 24 hours",
     "subheadline": "Tidal keeps the lake in the bottle",
     "body": "Fill it at dawn and drink it cold at dusk. Built for long days outside.",
-    "image_prompt": "A steel bottle on a misty lakeshore at dawn, Deep Tide navy and Foam white, soft light",
+    "image_prompt": "A steel bottle on a misty lakeshore at dawn, navy water, sea glass and sand tones, soft light",
     "format": "A3 portrait",
 }
 
@@ -99,7 +99,7 @@ def section(system: str, header: str) -> str:
 def picture_phase(messages: list) -> ModelResponse:
     if has_tool_result(messages):
         return text_response("done", messages)
-    return tool_call_response("render_image", {"image_prompt": last_user_text(messages)}, "call_1")
+    return tool_call_response("generate_image", {"image_prompt": last_user_text(messages)}, "call_1")
 
 
 def previous_spec(messages: list) -> dict | None:
@@ -167,7 +167,7 @@ class EndlessModel(FakeModel):
         if not tools:
             return text_response(json.dumps(HARBOR_SPEC), messages)
         self.asks += 1
-        return tool_call_response("render_image", {"image_prompt": f"the same lakeshore, better sky, try {self.asks}"}, f"call_{self.asks}")
+        return tool_call_response("generate_image", {"image_prompt": f"the same lakeshore, better sky, try {self.asks}"}, f"call_{self.asks}")
 
 
 class ProfileModel(FakeModel):

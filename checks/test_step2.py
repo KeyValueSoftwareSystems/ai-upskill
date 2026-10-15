@@ -35,6 +35,6 @@ def test_copy_never_reaches_the_image_prompt(settings, images, trace, request_fo
     """The copy never reaches the image prompt: no image call, and the leaked headline is caught."""
     with pytest.raises(SpecError) as raised:
         run_request(request_for(), settings=settings, model=malformed, images=images, trace=trace)
-    assert trace.tool_calls("render_image") == []
+    assert trace.tool_calls("generate_image") == []
     assert images.calls == []
     assert any("image_prompt" in e for e in raised.value.errors)

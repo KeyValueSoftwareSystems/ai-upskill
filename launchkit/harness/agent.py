@@ -10,7 +10,7 @@ SPEC_TASK = """Write the words for one poster ad from the marketer's request.
 Fill every field of the form. Headline up to 6 words, subheadline up to 12, body up to 25.
 The image_prompt describes only the picture: subject, setting, light, colours. It contains no words to print."""
 
-PICTURE_TASK = """Make the poster picture. Call render_image once with the scene description you were given.
+PICTURE_TASK = """Make the poster picture. Call generate_image once with the scene description you were given.
 When the tool returns a file, reply with that file path and nothing else."""
 
 
@@ -34,5 +34,5 @@ def build_copy_agent(ws: Workspace, ctx: ContextBuilder, model, settings) -> Age
 
 
 def build_picture_agent(spec: PosterSpec, model, images, colours: dict, trace: Trace, settings) -> Agent | None:
-    # TODO step 3: an Agent with tools=[make_render_image(images, colours, trace)] and tool_hooks=[make_leash(settings.limits, trace)]
+    # TODO step 3: an Agent with tools=[make_generate_image(images, colours, trace)] and tool_hooks=[make_leash(settings.limits, trace)]
     return None

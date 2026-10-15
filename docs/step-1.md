@@ -1,7 +1,7 @@
 # Step 1 · The agent reads its rules from files
 
-Today the model knows nothing about Harbor. We tell it who it is with two files, not with Python.
-`SOUL.md` says who the agent is and how it talks. `AGENTS.md` says what it must and must not do.
+Today the model knows nothing about Harbor. We tell it who it is with three files, not with Python.
+`SOUL.md` says who the agent is and how it talks. `AGENTS.md` says what it must and must not do. `rules.yaml` holds the rules the code checks.
 The harness reads them when a request arrives, the way an app reads a config file. Nobody deploys to change Harbor's tone.
 
 ## The slot

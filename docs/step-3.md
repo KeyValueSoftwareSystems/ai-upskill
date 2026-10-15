@@ -11,27 +11,27 @@ The picture phase only gets the image prompt. The headline never reaches the ima
 
 ## The slot
 
-- `launchkit/harness/tools.py` · `render_image`. Today it returns "not built".
+- `launchkit/harness/tools.py` · `generate_image`. Today it returns "not built".
 - `launchkit/harness/limits.py` · `make_leash`. Today the hook just passes the call through.
 - `launchkit/harness/agent.py` · `build_picture_agent`. Today it returns None, so the picture phase is skipped.
 
 ## Prompt card, for your coding agent
 
 ```
-In launchkit/harness/tools.py, make render_image(image_prompt) call
+In launchkit/harness/tools.py, make generate_image(image_prompt) call
 images.generate(image_prompt, colours) and return {"file": str(path)}.
 The docstring is what the model reads: it says the picture contains no words.
 
 In launchkit/harness/limits.py, implement make_leash(limits, trace). It returns an Agno
 tool hook with the signature (function_name, function_call, arguments). Count every call.
 When the count passes limits.step_cap, record trace.stop(...) and raise
-agno.exceptions.StopAgentRun. When render_image is asked more than limits.image_budget
+agno.exceptions.StopAgentRun. When generate_image is asked more than limits.image_budget
 times, do not call it; record trace.refused(...) and return
 {"status": "refused", "reason": "image budget of 3 spent"}. Otherwise call the function,
 record trace.tool(name, arguments, result), and return the result.
 
 In launchkit/harness/agent.py, build_picture_agent returns an Agent with
-system_message=PICTURE_TASK, tools=[make_render_image(images, colours, trace)] and
+system_message=PICTURE_TASK, tools=[make_generate_image(images, colours, trace)] and
 tool_hooks=[make_leash(settings.limits, trace)].
 ```
 

@@ -6,8 +6,9 @@ banned_claims:
   - cold forever
   - fully dishwasher-safe
 colours:
-  primary: "#0f2f4a"
-  secondary: "#f2f5f7"
+  navy: "#1F3A5F"
+  sea_glass: "#A8D5BA"
+  sand: "#EFE6D8"
 placements:
   feed: ["1080x1080", "1080x1350"]
   story: ["1080x1920"]

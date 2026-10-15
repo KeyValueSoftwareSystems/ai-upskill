@@ -4,5 +4,5 @@ banned_claims:
   - world's best
   - cheap
 colours:
-  primary: "#c2541c"
-  secondary: "#4a2e1f"
+  ember_orange: "#c2541c"
+  roast_brown: "#4a2e1f"

@@ -16,9 +16,10 @@ class FakeImages:
         self.calls.append((prompt, colours))
         self.out_dir.mkdir(parents=True, exist_ok=True)
         width, height = 768, 1024
-        image = Image.new("RGB", (width, height), colours.get("primary", "#2f3b45"))
+        shades = list(colours.values())
+        image = Image.new("RGB", (width, height), shades[0] if shades else "#2f3b45")
         draw = ImageDraw.Draw(image)
-        ink = colours.get("secondary", "#f2f2f2")
+        ink = shades[-1] if len(shades) > 1 else "#f2f2f2"
         font = ImageFont.load_default(size=26)
         draw.text((40, 40), "FAKE PICTURE", fill=ink, font=ImageFont.load_default(size=40))
         y = 140

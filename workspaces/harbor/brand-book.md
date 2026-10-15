@@ -20,7 +20,7 @@ Eco-friendly. Sustainable. Unbreakable. Lifetime guarantee. Cold forever. Fully 
 
 ## Colours
 
-Deep Tide (navy, #0f2f4a) is our ground. Foam (white, #f2f5f7) is our light. Kelp (green, #2f6b4f) is for small accents only. Never put Kelp behind text. Never use a gradient.
+Navy (#1F3A5F) is our ground. Sand (#EFE6D8) is our light. Sea glass (#A8D5BA) is for small accents only. Never put sea glass behind text. Never use a gradient.
 
 ## Type
 
@@ -40,79 +40,79 @@ The picture never contains words. Headlines, subheadlines and body text are set 
 
 ## Placement: A3 poster
 
-297 × 420 mm, portrait, 3 mm bleed, CMYK, 300 dpi. Headline top third. Logo bottom-right. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+297 × 420 mm, portrait, 3 mm bleed, CMYK, 300 dpi. Headline top third. Logo bottom-right. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Placement: A2 poster
 
-420 × 594 mm, portrait, 3 mm bleed, CMYK, 300 dpi. Same grid as A3, scaled. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+420 × 594 mm, portrait, 3 mm bleed, CMYK, 300 dpi. Same grid as A3, scaled. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Placement: 6-sheet
 
-1200 × 1800 mm, portrait. Headline must read from 10 m. Minimum type 120 pt. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+1200 × 1800 mm, portrait. Headline must read from 10 m. Minimum type 120 pt. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Placement: 48-sheet
 
-6096 × 3048 mm, landscape. Six words maximum on the whole sheet. Logo right. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+6096 × 3048 mm, landscape. Six words maximum on the whole sheet. Logo right. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Placement: Instagram square
 
-1080 × 1080 px. Logo bottom-right. Keep 120 px clear at the bottom for the caption bar. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+1080 × 1080 px. Logo bottom-right. Keep 120 px clear at the bottom for the caption bar. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Placement: Instagram story
 
-1080 × 1920 px. Keep the top 250 px and bottom 300 px free of text. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+1080 × 1920 px. Keep the top 250 px and bottom 300 px free of text. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Placement: Facebook feed
 
-1200 × 628 px. Headline left, bottle right. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+1200 × 628 px. Headline left, bottle right. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Placement: LinkedIn
 
-1200 × 627 px. Same as Facebook feed. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+1200 × 627 px. Same as Facebook feed. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Placement: YouTube thumbnail
 
-1280 × 720 px. Headline no more than four words. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+1280 × 720 px. Headline no more than four words. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Placement: Digital 6-sheet
 
-1080 × 1920 px, 10 second loop. No motion on the logo. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+1080 × 1920 px, 10 second loop. No motion on the logo. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Placement: Retail shelf strip
 
-1200 × 100 mm. Wordmark and one line only. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+1200 × 100 mm. Wordmark and one line only. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Placement: Point of sale A5
 
-148 × 210 mm, portrait. Price and one fact. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+148 × 210 mm, portrait. Price and one fact. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Placement: Email header
 
-600 × 200 px. One line. No body text. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+600 × 200 px. One line. No body text. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Placement: Web hero
 
-1920 × 800 px. Headline left third. Bottle right third. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+1920 × 800 px. Headline left third. Bottle right third. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Placement: Trade show banner
 
-850 × 2000 mm, roll-up. Headline at eye height, 1500 mm from the floor. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+850 × 2000 mm, roll-up. Headline at eye height, 1500 mm from the floor. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Placement: Bus side
 
-4000 × 1000 mm. Headline and logo only. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+4000 × 1000 mm. Headline and logo only. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Placement: Print ad, full page
 
-210 × 297 mm plus 5 mm bleed. Body text allowed, 25 words. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+210 × 297 mm plus 5 mm bleed. Body text allowed, 25 words. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Placement: Print ad, half page
 
-210 × 148 mm. Headline and subheadline only. Use the Deep Tide ground unless the placement is on a dark site, then use Foam. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
+210 × 148 mm. Headline and subheadline only. Use the navy ground unless the placement is on a dark site, then use sand. Type and logo follow the rules above. Send the final file as PDF/X-4 for print and PNG for screens.
 
 ## Product facts: Flask Trail 750, Tidal colourway
 
-The Flask Trail 750 is a 750 ml insulated steel bottle. It keeps drinks cold for 24 hours and hot for 12 hours. The body is dishwasher-safe. The lid is hand-wash only. The lid is leak-proof. The warranty is 5 years. Tidal is the new colourway, launching in six weeks: Deep Tide and Foam.
+The Flask Trail 750 is a 750 ml insulated steel bottle. It keeps drinks cold for 24 hours and hot for 12 hours. The body is dishwasher-safe. The lid is hand-wash only. The lid is leak-proof. The warranty is 5 years. Tidal is the new colourway, launching in six weeks: navy with sea glass.
 
 ## Launch timeline: Tidal
 
