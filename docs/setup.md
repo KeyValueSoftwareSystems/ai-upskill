@@ -17,7 +17,7 @@ git clone <this repository> && cd ai-upskill
 uv sync
 cp .env.example .env            # paste your key after OPENAI_API_KEY=
 uv run launchkit check 0        # prints two PASS lines
-uv run launchkit ui             # open http://localhost:8000 and send a request
+uv run launchkit ui             # open http://localhost:8000, sign in as Maya at Harbor, say hi, then ask for a poster
 ```
 
 If port 8000 is taken: `uv run launchkit ui --port 8010`.

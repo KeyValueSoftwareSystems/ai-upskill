@@ -34,7 +34,7 @@ uv run launchkit check 1
 
 ## See it
 
-Run `uv run launchkit ui`, send a Harbor request, then switch the picker to Ember and send it again.
+Run `uv run launchkit ui`, sign in as Maya at Harbor, send a request, then sign in as Jonas at Ember and send it again.
 Harbor's calm voice, then Ember's warm one. The trace shows the three files read each time.
 
 ## Stuck?

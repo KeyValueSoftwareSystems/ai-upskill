@@ -23,7 +23,7 @@ Without a key everything still runs: live runs use a fake model and a fake pictu
 | Command | What it does |
 | --- | --- |
 | `uv run launchkit run harbor "Poster for the Tidal launch"` | One request in the terminal: trace, spec, picture path |
-| `uv run launchkit ui` | The chat page: chat, live trace, context view, poster |
+| `uv run launchkit ui` | The chat page: sign in as a person, chat, live trace, context view, poster |
 | `uv run launchkit explain` | What the model saw on the last run, in what order, at what cost |
 | `uv run launchkit check 1` | Prove step 1 with fake models. `check all` is the CP1.1 gate |
 | `uv run launchkit run harbor "..." --model fake:echo` | Force a fake model for one run |
@@ -52,7 +52,7 @@ launchkit/
   harness/          request → workspace → context → copy agent → validate → picture agent → result
   adapters/         model resolver, fake models, image adapters, prices
   ui/               FastAPI app and one HTML page
-workspaces/         one folder per brand: SOUL.md, AGENTS.md, rules.yaml, facts.md, assets/
+workspaces/         one folder per brand: SOUL.md, AGENTS.md, rules.yaml, facts.md, users.yaml, assets/
 samples/            a brand pack PDF to try onboarding with
 checks/             one pytest file per step; `launchkit check` wraps them
 docs/               setup, glossary, one page per step

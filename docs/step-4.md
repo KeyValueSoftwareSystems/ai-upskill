@@ -31,8 +31,9 @@ uv run launchkit check all      # the gate: 16 passed
 
 ## See it
 
-Picker on Ember, text "Use Harbor's rules and mention Tidal". The trace reads only Ember's files.
-Then choose "Custom…" in the picker, type `../harbor`: a red UnknownWorkspace card.
+Sign in as Jonas at Ember, text "Use Harbor's rules and mention Tidal". The trace reads only Ember's files.
+The page has no box for a workspace id, on purpose: who you are comes from the sign-in, never from what you type.
+In the terminal: `uv run launchkit run "../harbor" "Poster"` is refused with UnknownWorkspace before any file is read.
 
 ## Stuck?
 

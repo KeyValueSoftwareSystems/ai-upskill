@@ -41,7 +41,7 @@ uv run launchkit check 2
 
 ## See it
 
-In the chat page pick the model `fake: malformed`. The trace shows check, repair, check, then a red SpecError card. No poster.
+In the chat page pick the model `fake: malformed`, signed in as anyone. The trace shows check, repair, check, then a red SpecError card. No poster.
 
 ## Stuck?
 
