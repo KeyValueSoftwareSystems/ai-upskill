@@ -31,6 +31,9 @@ def cmd_run(args):
         console.print(f"\n[red]{type(error).__name__}[/red]  {error}")
         return 1
     print_trace(trace)
+    if result.reply:
+        console.print(f"\n[bold]reply[/bold]  {result.reply}")
+        return 0
     console.print("\n[bold]the spec the model filled in[/bold]")
     for name, value in result.spec.model_dump().items():
         console.print(f"  {name:<13} {value}", highlight=False)

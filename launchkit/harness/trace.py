@@ -76,6 +76,8 @@ class Trace:
                     out.append(f"note      {d['text']}")
                 case "written":
                     out.append(f"wrote     {_relative(d['path'])}")
+                case "reply":
+                    out.append(f"reply     {_short(d['text'], 80)}  (no poster this turn)")
                 case "context":
                     parts = " · ".join(
                         f"{s['section']}: " + ("empty" if s['tokens'] == 0 else f"{s['tokens']} tokens" + (" (cut to fit)" if s['trimmed'] else ""))

@@ -1,0 +1,8 @@
+brand: Harbor
+users:
+  - id: maya
+    name: Maya
+    role: marketer
+  - id: sam
+    name: Sam
+    role: intern

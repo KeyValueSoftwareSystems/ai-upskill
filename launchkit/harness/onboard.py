@@ -60,7 +60,15 @@ def render_files(profile: BrandProfile, brand_text: str) -> dict[str, str]:
         allow_unicode=True,
     )
     facts = "\n".join(profile.facts) + "\n"
-    return {"SOUL.md": soul, "AGENTS.md": agents, "rules.yaml": rules, "facts.md": facts, "brand-book.md": brand_text + "\n"}
+    users = yaml.safe_dump({"brand": profile.brand_name, "users": [{"id": "owner", "name": "Owner", "role": "owner"}]}, sort_keys=False, allow_unicode=True)
+    return {
+        "SOUL.md": soul,
+        "AGENTS.md": agents,
+        "rules.yaml": rules,
+        "facts.md": facts,
+        "brand-book.md": brand_text + "\n",
+        "users.yaml": users,
+    }
 
 
 def onboard_workspace(workspace_id: str, pdf_path: Path, *, settings=default_settings, model=None, trace: Trace | None = None) -> list[Path]:

@@ -52,6 +52,22 @@ class FakeModel(Model):
         return response
 
 
+POSTER_WORDS = ("poster", "headline", "copy", "ad ", "campaign", "launch", "mention", "shorter", "bigger", "variant", "tagline", "subheadline", "slogan")
+
+
+def wants_a_poster(text: str) -> bool:
+    lowered = text.lower() + " "
+    return any(word in lowered for word in POSTER_WORDS)
+
+
+def poster_turn(spec: dict) -> str:
+    return json.dumps({"kind": "poster", "reply": None, "spec": spec})
+
+
+def reply_turn(reply: str) -> str:
+    return json.dumps({"kind": "reply", "reply": reply, "spec": None})
+
+
 def text_response(content: str, messages: list) -> ModelResponse:
     sent = " ".join(str(m.content or "") for m in messages)
     return ModelResponse(
@@ -106,9 +122,11 @@ def previous_spec(messages: list) -> dict | None:
     for m in reversed(messages):
         if getattr(m, "role", None) == "assistant" and getattr(m, "from_history", False) and m.content:
             try:
-                return json.loads(str(m.content))
+                turn = json.loads(str(m.content))
             except ValueError:
                 continue
+            if isinstance(turn, dict) and turn.get("spec"):
+                return turn["spec"]
     return None
 
 
@@ -119,12 +137,15 @@ class GoodModel(FakeModel):
     def answer(self, messages, tools):
         if tools:
             return picture_phase(messages)
+        asked = last_user_text(messages)
+        if not wants_a_poster(asked):
+            return text_response(reply_turn("Hello. I write posters for this brand. Tell me the concept and I will draft one."), messages)
         spec = dict(HARBOR_SPEC)
         earlier = previous_spec(messages)
-        if "shorter" in last_user_text(messages).lower() and earlier:
+        if "shorter" in asked.lower() and earlier:
             words = earlier["headline"].split()
             spec = {**earlier, "headline": " ".join(words[:-1]) if len(words) > 1 else words[0]}
-        return text_response(json.dumps(spec), messages)
+        return text_response(poster_turn(spec), messages)
 
 
 class EchoModel(FakeModel):
@@ -137,7 +158,7 @@ class EchoModel(FakeModel):
         rules = section(system_text(messages), "# Rules")
         first = next((line.strip() for line in rules.splitlines() if line.strip()), "No rules were given.")
         spec = {**HARBOR_SPEC, "subheadline": f"rules section is {len(rules)} characters", "body": first}
-        return text_response(json.dumps(spec), messages)
+        return text_response(poster_turn(spec), messages)
 
 
 class MalformedModel(FakeModel):
@@ -155,7 +176,7 @@ class MalformedModel(FakeModel):
             "image_prompt": f"A bottle on a lakeshore with the words '{headline}' printed across the sky",
             "format": "A3 portrait",
         }
-        return text_response(json.dumps(spec), messages)
+        return text_response(poster_turn(spec), messages)
 
 
 class EndlessModel(FakeModel):
@@ -165,7 +186,7 @@ class EndlessModel(FakeModel):
 
     def answer(self, messages, tools):
         if not tools:
-            return text_response(json.dumps(HARBOR_SPEC), messages)
+            return text_response(poster_turn(HARBOR_SPEC), messages)
         self.asks += 1
         return tool_call_response("generate_image", {"image_prompt": f"the same lakeshore, better sky, try {self.asks}"}, f"call_{self.asks}")
 

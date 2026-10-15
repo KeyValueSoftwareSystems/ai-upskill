@@ -59,9 +59,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 <body>
 <header>
   <h1>LaunchKit</h1>
-  <label>Workspace <select id="workspace"></select></label>
-  <label>Custom id <input id="custom" placeholder="only with Custom" size="12"></label>
-  <label>User <select id="user"><option>maya</option><option>sam</option></select></label>
+  <label>Signed in as <select id="login"></select></label>
   <label>Model <select id="model">
     <option value="">real (from .env)</option>
     <option value="fake:good">fake: good</option>
@@ -84,7 +82,7 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 </section>
 <main>
   <section class="chat">
-    <div class="messages" id="messages"><div class="msg empty">Pick a workspace, type a request, press Run. Try: Poster for the Tidal launch. The bottle on a misty lakeshore. Headline: Cold for 24 hours.</div></div>
+    <div class="messages" id="messages"><div class="msg empty">Pick who you are, type a request, press Run. Try: Poster for the Tidal launch. The bottle on a misty lakeshore. Headline: Cold for 24 hours.</div></div>
     <form class="compose" id="form">
       <input id="text" placeholder="What should the poster say?" autocomplete="off">
       <button id="send">Run</button>
@@ -121,7 +119,7 @@ $("onboardForm").onsubmit = async e => {
     if (ev.type === "trace") traceLine(ev);
     if (ev.type === "onboarded") {
       $("onboardFiles").innerHTML = Object.entries(ev.files).map(([name, body]) => `<div><b>workspaces/${esc(ev.workspace_id)}/${esc(name)}</b><pre>${esc(body)}</pre></div>`).join("");
-      fetch("/workspaces").then(r => r.json()).then(list => { const sel = $("workspace"); if (![...sel.options].some(o => o.value === ev.workspace_id)) { const o = document.createElement("option"); o.value = ev.workspace_id; o.textContent = ev.workspace_id; sel.insertBefore(o, sel.lastElementChild); } sel.value = ev.workspace_id; });
+      loadLogins(ev.workspace_id);
     }
     if (ev.type === "error") add("error", `<b>${esc(ev.kind)}</b>\n${esc(ev.message)}`);
   };
@@ -132,11 +130,16 @@ document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
   document.querySelectorAll(".panel").forEach(p => p.classList.toggle("on", p.id === b.dataset.tab));
 });
-fetch("/workspaces").then(r => r.json()).then(list => {
-  const sel = $("workspace");
-  list.forEach(w => { const o = document.createElement("option"); o.value = w; o.textContent = w; sel.appendChild(o); });
-  const c = document.createElement("option"); c.value = "__custom__"; c.textContent = "Custom…"; sel.appendChild(c);
-});
+let LOGINS = [];
+function loadLogins(select) {
+  return fetch("/logins").then(r => r.json()).then(list => {
+    LOGINS = list; const sel = $("login"); const current = sel.value; sel.innerHTML = "";
+    list.forEach((l, i) => { const o = document.createElement("option"); o.value = i; o.textContent = l.label; sel.appendChild(o); });
+    if (select) { const i = list.findIndex(l => l.workspace_id === select); if (i >= 0) sel.value = i; } else if (current) sel.value = current;
+  });
+}
+loadLogins();
+$("login").onchange = () => { session = newSession(); $("messages").innerHTML = ""; };
 function add(cls, html){ const d = document.createElement("div"); d.className = "msg " + cls; d.innerHTML = html; $("messages").appendChild(d); $("messages").scrollTop = 1e9; return d; }
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 function traceLine(ev){ const d = document.createElement("div"); d.className = ev.kind; d.textContent = ev.line; $("trace").appendChild(d); $("trace").scrollTop = 1e9; }
@@ -153,16 +156,17 @@ function showContext(x){
 $("form").onsubmit = async e => {
   e.preventDefault();
   const text = $("text").value.trim(); if (!text) return;
-  let workspace = $("workspace").value; if (workspace === "__custom__") workspace = $("custom").value;
+  const who = LOGINS[$("login").value]; if (!who) return;
   add("user", esc(text)); $("text").value = "";
   $("trace").innerHTML = ""; $("send").disabled = true;
-  const body = { workspace_id: workspace, user_id: $("user").value, session_id: session, text, model: $("model").value || null };
+  const body = { workspace_id: who.workspace_id, user_id: who.user_id, session_id: session, text, model: $("model").value || null };
   const { run_id } = await (await fetch("/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json();
   const es = new EventSource(`/events/${run_id}`);
   es.onmessage = m => {
     const ev = JSON.parse(m.data);
     if (ev.type === "trace") traceLine(ev);
-    if (ev.type === "result") {
+    if (ev.type === "result" && ev.reply) { add("", esc(ev.reply)); }
+    if (ev.type === "result" && ev.spec) {
       const s = ev.spec;
       const d = add("", `<span class="k">headline</span>${esc(s.headline)}\n<span class="k">subheadline</span>${esc(s.subheadline)}\n<span class="k">body</span>${esc(s.body)}\n<span class="k">image prompt</span>${esc(s.image_prompt)}\n<span class="k">format</span>${esc(s.format)}`);
       if (ev.image) { d.innerHTML += `<img src="${ev.image}" alt="poster picture">`; $("poster").innerHTML = `<img src="${ev.image}" alt="poster picture">`; }

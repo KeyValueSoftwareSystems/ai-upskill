@@ -11,7 +11,7 @@ def test_pdf_is_stored_and_four_files_are_written(settings, trace, brand_pdf):
     written = onboard_workspace("moss", brand_pdf, settings=settings, model=ProfileModel(), trace=trace)
     root = settings.workspaces_dir / "moss"
     assert (root / "assets" / "moss-brand-pack.pdf").exists()
-    assert {p.name for p in written} >= {"SOUL.md", "AGENTS.md", "rules.yaml", "facts.md", "brand-book.md"}
+    assert {p.name for p in written} >= {"SOUL.md", "AGENTS.md", "rules.yaml", "facts.md", "brand-book.md", "users.yaml"}
     assert "Moss and Fern" in (root / "SOUL.md").read_text()
     rules = yaml.safe_load((root / "rules.yaml").read_text())
     assert "cheap" in rules["banned_claims"]
@@ -22,7 +22,7 @@ def test_extracted_text_reaches_the_model(settings, trace, brand_pdf):
     """The model receives the PDF text, and the trace shows pages, tokens and every file written."""
     onboard_workspace("moss", brand_pdf, settings=settings, model=ProfileModel(), trace=trace)
     kinds = [e.kind for e in trace.events]
-    assert kinds.count("written") == 5
+    assert kinds.count("written") == 6
     assert any(e.kind == "model" and e.detail["phase"] == "onboard" for e in trace.events)
     assert any(e.kind == "note" and "1 page" in e.detail["text"] for e in trace.events)
 

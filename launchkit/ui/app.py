@@ -15,6 +15,7 @@ from launchkit.harness.request import Request, UnknownWorkspace
 from launchkit.harness.run import run_request
 from launchkit.harness.spec import SpecError
 from launchkit.harness.trace import Trace
+from launchkit.harness.users import list_logins
 from launchkit.settings import settings
 
 app = FastAPI(title="LaunchKit")
@@ -41,6 +42,11 @@ def workspaces():
     return sorted(p.name for p in settings.workspaces_dir.iterdir() if p.is_dir())
 
 
+@app.get("/logins")
+def logins():
+    return list_logins(settings)
+
+
 @app.post("/run")
 def start_run(body: RunBody):
     run_id = uuid.uuid4().hex[:8]
@@ -60,7 +66,8 @@ def _worker(body: RunBody, queue: Queue):
         queue.put(
             {
                 "type": "result",
-                "spec": result.spec.model_dump(),
+                "reply": result.reply,
+                "spec": result.spec.model_dump() if result.spec else None,
                 "image": f"/outputs/{result.image.name}" if result.image else None,
                 "explain": json.loads((current.data_dir / "last_run.json").read_text(encoding="utf-8")),
             }

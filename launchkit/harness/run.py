@@ -8,7 +8,7 @@ from launchkit.adapters.pricing import cost_usd
 from launchkit.harness.agent import build_copy_agent, build_picture_agent
 from launchkit.harness.context import ContextBuilder, approx_tokens
 from launchkit.harness.request import Request, resolve_workspace_id
-from launchkit.harness.spec import PosterSpec, SpecError, repair_message, validate_spec
+from launchkit.harness.spec import PosterSpec, SpecError, Turn, repair_message, validate_spec
 from launchkit.harness.trace import Trace
 from launchkit.harness.workspace import load_workspace
 from launchkit.settings import settings as default_settings
@@ -17,6 +17,7 @@ from launchkit.settings import settings as default_settings
 @dataclass
 class Result:
     spec: PosterSpec | None = None
+    reply: str | None = None
     image: Path | None = None
     trace: Trace = field(default_factory=Trace)
     context: list[dict] = field(default_factory=list)
@@ -48,7 +49,13 @@ def run_request(
     trace.model("copy", model_name(model), run.metrics)
     result.history_tokens, result.history_messages = history_size(run)
 
-    spec = as_spec(run.content)
+    turn = as_turn(run.content)
+    if turn.kind == "reply" or turn.spec is None:
+        result.reply = turn.reply or "I can help with posters. Tell me the concept."
+        trace.add("reply", text=result.reply)
+        write_explain(settings, result, wid, model_name(model))
+        return result
+    spec = turn.spec
     errors = validate_spec(spec, ws.rules)
     if errors:
         # TODO step 2: trace.validation(errors, 1); one repair run with repair_message(errors); validate again; raise SpecError if errors remain
@@ -70,14 +77,16 @@ def run_request(
     return result
 
 
-def as_spec(content) -> PosterSpec:
-    if isinstance(content, PosterSpec):
+def as_turn(content) -> Turn:
+    if isinstance(content, Turn):
         return content
+    if isinstance(content, PosterSpec):
+        return Turn(kind="poster", spec=content)
     if isinstance(content, dict):
-        return PosterSpec.model_validate(content)
+        return Turn.model_validate(content)
     if isinstance(content, str):
-        return PosterSpec.model_validate_json(content)
-    raise SpecError([f"the model returned {type(content).__name__}, not a poster spec"])
+        return Turn.model_validate_json(content)
+    raise SpecError([f"the model returned {type(content).__name__}, not a turn"])
 
 
 def history_size(run) -> tuple[int, int]:

@@ -1,0 +1,5 @@
+brand: Ember Coffee Co.
+users:
+  - id: jonas
+    name: Jonas
+    role: marketer

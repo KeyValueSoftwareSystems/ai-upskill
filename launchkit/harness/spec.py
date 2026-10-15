@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -7,6 +9,12 @@ class PosterSpec(BaseModel):
     body: str = Field(description="One short paragraph. Up to 25 words.")
     image_prompt: str = Field(description="What the picture shows: subject, setting, light, colours. No words to print.")
     format: str = Field(default="A3 portrait", description="Poster format, for example A3 portrait.")
+
+
+class Turn(BaseModel):
+    kind: Literal["poster", "reply"] = Field(description="poster when the marketer asks for a poster or a change to one. reply for anything else: a greeting, a question, small talk.")
+    reply: str | None = Field(default=None, description="When kind is reply: a short, helpful message in the brand's voice. Otherwise null.")
+    spec: PosterSpec | None = Field(default=None, description="When kind is poster: the filled poster form. Otherwise null.")
 
 
 class SpecError(Exception):
