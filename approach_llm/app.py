@@ -12,13 +12,7 @@ from launchkit.poster import Result, SpecError, brand_rules_text, load_brand, pa
 
 def build_prompt(text: str, brand: dict) -> list[dict]:
     """TODO 1: tell the model Harbor's rules and the shape of answer we need."""
-    system = (
-        "You write poster ads.\n"
-        f"{brand_rules_text(brand)}\n"
-        "Reply with ONLY a JSON object with the keys headline, subheadline, body and visual_concept. "
-        "visual_concept describes the picture only and never contains words to draw."
-    )
-    return [{"role": "system", "content": system}, {"role": "user", "content": text}]
+    return [{"role": "user", "content": text}]
 
 
 def handle(text: str, *, workspace: str, conversation_id: str, attachments: list[str]) -> Result:
