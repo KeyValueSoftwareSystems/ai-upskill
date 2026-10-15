@@ -1,162 +1,151 @@
-"""A LangGraph pipeline.
+"""A LangGraph pipeline: last session's LLM call, with memory, a router and a review loop around it.
 
-Work through TODO 1 to 3 in order, rerunning the scoreboard after each:
+    START -> route --"write"--> write -> check --"ok"-----> picture -> END
+               |                  ^        |
+               |                  +-retry--+--"fail"--> give_up -> END
+               +--"resize"--> resize -> END
+
+Each box is a node: a plain Python function that reads the state and returns the fields it changes.
+The arrows are edges. The graph, not the model, decides what runs next.
+
+You fill in four TODOs (HANDS_ON.md has the code). After each one, score it:
     uv run python -m launchkit.scoreboard --approach graph
-TODO 4 is a stretch.
-
-    START -> start_turn -> write_spec -> validate --ok--> generate_image -> END
-                               ^            |
-                               +--retry-----+--fail--> give_up -> END
-
-The graph gives us structure the plain call didn't have: a validate-and-retry
-loop, and (with a checkpointer) state that survives between turns.
 """
-import json
+import json  # noqa: F401  (TODO 1)
+import os
 
-from langgraph.checkpoint.memory import MemorySaver  # noqa: F401  (TODO 3)
+# Only load back the types State declares below (LangGraph's future default); set before importing it.
+os.environ.setdefault("LANGGRAPH_STRICT_MSGPACK", "true")
+
+from langgraph.checkpoint.memory import MemorySaver  # noqa: F401  (TODO 1)
 from langgraph.graph import END, START, StateGraph
 from typing_extensions import TypedDict
 
-from launchkit.brand import brand_rules_text, load_brand
-from launchkit.images import generate_image, resize_image  # noqa: F401  (TODO 4)
+from approach_llm.app import build_prompt  # last session's prompt, reused as is
+from launchkit.images import generate_image, resize_image
 from launchkit.llm import complete
-from launchkit.result import Result
-from launchkit.spec import PosterSpec, SpecError, validate_spec
+from launchkit.poster import Picture, PosterSpec, Result, SpecError, load_brand, parse_spec, validate_spec
 
-MAX_ATTEMPTS = 2  # the first try plus one repair
+MAX_ATTEMPTS = 2  # the first try, then one fix
 
 
 class State(TypedDict, total=False):
-    # input for this turn
+    # this request
     request: str
+    attachments: list[str]
     workspace: str
     conversation_id: str
-    attachments: list[str]
-    # working state for this turn
     brand: dict
-    raw: str
-    spec: dict | None
+    # worked out while handling it
+    route: str
+    reply: str
+    spec: PosterSpec | None
     problems: list[str]
     attempts: int
-    image: str | None
+    images: list[Picture]
     error: str | None
-    # carried between turns by the checkpointer
-    last_spec: dict | None
-    last_image: str | None
+    # remembered from one request to the next (only once the graph has a checkpointer)
+    last_spec: PosterSpec | None
+    last_picture: Picture | None
 
 
-def start_turn(state: State) -> dict:
-    """Reset per-turn fields. Fields a checkpointer keeps (last_*) are left alone."""
-    return {"brand": load_brand(state["workspace"]), "raw": "", "spec": None,
-            "problems": [], "attempts": 0, "image": None, "error": None}
+# ---- nodes
+
+def route(state: State) -> dict:
+    """TODO 3: decide what this request needs: a new or edited poster ("write"), or only new sizes ("resize")."""
+    return {"route": "write"}
 
 
-def write_spec(state: State) -> dict:
-    brand = state["brand"]
-    system = (
-        "You write poster ad specs.\n"
-        f"{brand_rules_text(brand)}\n"
-        "Reply with ONLY a JSON object with the keys headline, subheadline, body and visual_concept. "
-        "visual_concept describes the picture only and must never contain words to be drawn."
-    )
-    # TODO 3 (part b): if state has a "last_spec", append it to the system message, e.g.
-    #   "Previous poster spec (edit this one if the user asks for changes):\n" + json.dumps(...)
-    messages = [{"role": "system", "content": system}, {"role": "user", "content": state["request"]}]
-    if state.get("problems"):
+def write(state: State) -> dict:
+    """Last session's LLM call: Harbor's rules in the prompt, a JSON poster back."""
+    messages = build_prompt(state["request"], state["brand"])
+    # TODO 1 (part b): show the model the poster we're working on, so it can edit it.
+    if state.get("problems"):  # we're back here from check: show the model what was wrong
         messages += [
-            {"role": "assistant", "content": state["raw"]},
-            {"role": "user", "content": "Fix these problems and reply with only the corrected JSON:\n- " + "\n- ".join(state["problems"])},
+            {"role": "assistant", "content": state["reply"]},
+            {"role": "user", "content": "Fix these problems and reply with only the corrected JSON:\n- "
+                                        + "\n- ".join(state["problems"])},
         ]
-    return {"raw": complete(messages), "attempts": state.get("attempts", 0) + 1}
+    return {"reply": complete(messages), "attempts": state["attempts"] + 1}
 
 
-def parse_spec(raw: str) -> PosterSpec:
-    start, end = raw.find("{"), raw.rfind("}")
-    if start == -1 or end <= start:
-        raise SpecError("no JSON object in the model's reply")
+def check(state: State) -> dict:
+    """Turn the reply into a poster spec and list anything wrong with it."""
     try:
-        return PosterSpec.from_dict(json.loads(raw[start:end + 1]))
-    except json.JSONDecodeError as e:
-        raise SpecError(f"invalid JSON: {e}") from e
+        spec = parse_spec(state["reply"])
+    except SpecError as e:
+        return {"spec": None, "problems": [str(e)]}
+    problems = validate_spec(spec, state["brand"])  # the written rules: word limits, banned words
+    problems += review_claims(spec, state["brand"])  # TODO 4: the rules we can't write down
+    return {"spec": spec, "problems": problems}
 
 
-def validate(state: State) -> dict:
-    """TODO 1: Parse the reply and validate it. Store the spec and any problems.
-
-    Use parse_spec(state["raw"]) and validate_spec(spec, state["brand"]).
-    Return {"spec": spec.to_dict(), "problems": [...]}. If parsing raises
-    SpecError, return {"spec": None, "problems": [str(error)]}.
-    """
-    raise NotImplementedError("TODO 1: validate in approach_graph/graph.py")
+def review_claims(spec: PosterSpec, brand: dict) -> list[str]:
+    """TODO 4: a second model call checks every claim in the copy against the brand's facts."""
+    return []
 
 
-def route_after_validate(state: State) -> str:
-    """TODO 2: Decide where to go after validate: "ok", "retry" or "fail".
+def picture(state: State) -> dict:
+    """The image model makes the picture. Placement sizes come from the resize route, when asked for."""
+    spec, brand, conv = state["spec"], state["brand"], state["conversation_id"]
+    # TODO 2: start from the uploaded photo, if there is one.
+    photo = None
+    pic = generate_image(spec.visual_concept, brand, conversation_id=conv, reference=photo)
+    return {"images": [pic], "last_spec": spec, "last_picture": pic}
 
-    "ok" when there are no problems; "retry" while state["attempts"] < MAX_ATTEMPTS;
-    otherwise "fail". The edges for these three names are already wired in build_graph.
-    """
-    raise NotImplementedError("TODO 2: route_after_validate in approach_graph/graph.py")
 
-
-def generate(state: State) -> dict:
-    spec = state["spec"]
-    image = generate_image(spec["visual_concept"], state["brand"], conversation_id=state["conversation_id"])
-    return {"image": image, "last_spec": spec, "last_image": image}
+def resize(state: State) -> dict:
+    """No model at all: the poster we already made, in every placement size."""
+    pic, conv = state["last_picture"], state["conversation_id"]
+    sizes = [resize_image(pic, tuple(size), conversation_id=conv) for size in state["brand"]["placements"].values()]
+    return {"spec": state["last_spec"], "images": sizes}
 
 
 def give_up(state: State) -> dict:
-    return {"error": "still invalid after one repair: " + "; ".join(state["problems"])}
+    return {"error": f"still not right after {state['attempts']} tries: " + "; ".join(state["problems"])}
 
 
-def route_request(state: State) -> str:
-    """TODO 4 (stretch): return "resize" for resize-only requests, otherwise "write".
+# ---- edges: what runs after what
 
-    A request is resize-only if it mentions "story size", "1080x1920" or "resize"
-    AND there is a state["last_image"] to resize.
-    """
-    raise NotImplementedError("TODO 4: route_request in approach_graph/graph.py")
-
-
-def resize_last(state: State) -> dict:
-    """TODO 4 (stretch): resize state["last_image"] to (1080, 1920) with resize_image.
-
-    No model call. Return {"image": new_path, "spec": state["last_spec"]}.
-    Then in build_graph: add this node, replace the start_turn -> write_spec edge with
-    g.add_conditional_edges("start_turn", route_request, {"write": "write_spec", "resize": "resize_last"}),
-    and add g.add_edge("resize_last", END).
-    """
-    raise NotImplementedError("TODO 4: resize_last in approach_graph/graph.py")
+def after_check(state: State) -> str:
+    if not state["problems"]:
+        return "ok"
+    return "retry" if state["attempts"] < MAX_ATTEMPTS else "fail"
 
 
 def build_graph(checkpointer=None):
     g = StateGraph(State)
-    g.add_node("start_turn", start_turn)
-    g.add_node("write_spec", write_spec)
-    g.add_node("validate", validate)
-    g.add_node("generate_image", generate)
+    g.add_node("route", route)
+    g.add_node("write", write)
+    g.add_node("check", check)
+    g.add_node("picture", picture)
+    g.add_node("resize", resize)
     g.add_node("give_up", give_up)
-    g.add_edge(START, "start_turn")
-    g.add_edge("start_turn", "write_spec")
-    g.add_edge("write_spec", "validate")
-    g.add_conditional_edges("validate", route_after_validate,
-                            {"ok": "generate_image", "retry": "write_spec", "fail": "give_up"})
-    g.add_edge("generate_image", END)
+
+    g.add_edge(START, "route")
+    g.add_conditional_edges("route", lambda state: state["route"], {"write": "write", "resize": "resize"})
+    g.add_edge("write", "check")
+    g.add_conditional_edges("check", after_check, {"ok": "picture", "retry": "write", "fail": "give_up"})
+    g.add_edge("picture", END)
+    g.add_edge("resize", END)
     g.add_edge("give_up", END)
     return g.compile(checkpointer=checkpointer)
 
 
-# TODO 3 (part a): pass checkpointer=MemorySaver() so state survives between turns
-# of the same conversation (handle() already passes the conversation ID as thread_id).
-GRAPH = build_graph(checkpointer=None)
+# TODO 1 (part a): give the graph a memory. A checkpointer saves the state after every request,
+# per conversation (the thread_id below), so the next request in that conversation starts from it.
+GRAPH = build_graph()
 
 
 def handle(text: str, *, workspace: str, conversation_id: str, attachments: list[str]) -> Result:
+    """Run one request through the graph. Used by `ask`, the UI and the scoreboard."""
     out = GRAPH.invoke(
-        {"request": text, "workspace": workspace, "attachments": attachments, "conversation_id": conversation_id},
+        {"request": text, "attachments": attachments, "workspace": workspace, "conversation_id": conversation_id,
+         "brand": load_brand(workspace),
+         # a clean slate for this request; last_spec and last_picture are left as they were
+         "route": "", "reply": "", "spec": None, "problems": [], "attempts": 0, "images": [], "error": None},
         config={"configurable": {"thread_id": conversation_id}},
     )
-    if out.get("error"):
+    if out["error"]:
         return Result(error=out["error"])
-    spec = PosterSpec.from_dict(out["spec"]) if out.get("spec") else None
-    return Result(spec=spec, images=[out["image"]] if out.get("image") else [])
+    return Result(spec=out["spec"], images=out["images"])

@@ -1,6 +1,6 @@
 # LaunchKit session opener
 
-LaunchKit is the mini-Pencil we build in this upskill: a marketing assistant platform that turns one campaign concept into on-brand poster ads. Our first customer is **Harbor**, launching the Flask Trail 750 in its new **Tidal** colourway.
+LaunchKit is the mini-Pencil we build in this upskill: a marketing assistant that turns one campaign concept into on-brand poster ads. Our first customer is **Harbor**, launching the Flask Trail 750 water bottle in its new **Tidal** colour.
 
 In this opener you'll try the two approaches most teams start with, a plain LLM call and a LangGraph pipeline, and score both against the same four Harbor requests.
 
@@ -8,47 +8,60 @@ In this opener you'll try the two approaches most teams start with, a plain LLM 
 
 > Given a campaign concept (text, a photo, or both) and a brand's workspace, LaunchKit must produce on-brand poster ads: copy that obeys the brand's rules, a picture with no words drawn into it, every placement size, and follow-up edits, reliably and for any brand.
 
-## Definition of done: four Harbor requests
+Harbor has sent four requests, and every approach we build is scored on them:
 
-| ID | Request | Passes when |
-|---|---|---|
-| R1 | "Poster for the Tidal bottle on a misty lakeshore at dawn. Headline idea: cold for 24 hours." | Valid copy (word limits, no banned claims) and an image prompt with no copy in it |
-| R2 | "Make the headline shorter." (same conversation as R1) | The headline is shorter and the concept is kept |
-| R3 | "Use this photo of the bottle…" with `assets/tidal_photo.png` | The poster is built from the uploaded photo |
-| R4 | "Now give me the story size (1080x1920) of that poster." (same conversation as R3) | The existing poster is resized, not regenerated |
+| | Request | Tests |
+| --- | --- | --- |
+| R1 | Poster for the Tidal bottle on a misty lakeshore at dawn. Headline idea: cold for 24 hours. | a concept becomes an on-brand poster |
+| R2 | Make the headline shorter. | follow-up edits |
+| R3 | Use this photo of the bottle. Make the bottle bigger and the lake moodier. | a concept given as a photo |
+| R4 | Now give me the story size (1080x1920) of that poster. | resizing the poster we just made |
 
-Harbor's rules live in `workspaces/harbor/brand.json`.
+## The session
+
+Each branch starts from the previous branch's solution, so you can always jump ahead if you fall behind.
+
+| Branch | What you do | Scoreboard |
+| --- | --- | --- |
+| `session-01-llm-call` | One LLM call, in `approach_llm/app.py` | 1/4: R1 only |
+| **`session-01-langgraph`** (you are here) | A graph around that call, in `approach_graph/graph.py` (`HANDS_ON.md`) | 1/4 at the start, 4/4 when done |
+| `session-01-harness` | Next segment: the agent harness | |
 
 ## Setup
 
-You need Python 3.12 or newer, [`uv`](https://docs.astral.sh/uv/), git with access to the KeyValue repo, the coding agent you already use, and a LiteLLM key from KeyValue.
+You need Python 3.12 or newer, [`uv`](https://docs.astral.sh/uv/), and a key for KeyValue's LiteLLM proxy (ask the trainer).
 
 ```bash
 uv sync
-cp .env.example .env      # then add your LITELLM_API_KEY and LITELLM_BASE_URL
+cp .env.example .env      # then add your LITELLM_API_KEY
+uv run python -m launchkit.check_setup
 ```
 
-Images use `gpt-image-1` by default. To skip paid image calls, set `LAUNCHKIT_IMAGES=placeholder` in `.env`.
+It should end with **Setup complete**. Anything marked FAIL comes with a fix printed under it. Add `--no-image` to skip the one paid image call. To skip paid image calls during the session, pass `--no-image` to `ask`, or set `LAUNCHKIT_IMAGES=placeholder` in `.env`.
 
-## Branches
-
-Each branch contains the previous branch's solution, so you can always start from the next branch if you fall behind.
-
-| Branch | What you do | Starts with |
-|---|---|---|
-| `session-01-llm-call` | Fill in the TODOs in `approach_llm/app.py` | The shared code |
-| `session-01-langgraph` | Fill in the TODOs in `approach_graph/graph.py` | The LLM-call TODOs already solved |
-| `session-01-harness` | Next segment: the agent harness | The LangGraph TODOs already solved |
-
-Each branch has a `HANDS_ON.md` with the code to paste for every TODO.
-
-## Commands
+## Try it in your browser
 
 ```bash
-uv run python -m launchkit.scoreboard --approach llm      # score the LLM call
-uv run python -m launchkit.scoreboard --approach graph    # score the LangGraph pipeline
-uv run python -m launchkit.ask --approach llm "Poster for the Tidal bottle on a beach"
-uv run python -m launchkit.ask --approach graph --conv mine "Make the headline shorter"
+uv run python -m launchkit.ui     # opens http://localhost:8000
 ```
 
-Outputs, and how each image was made, are written to `out/`.
+Pick **LangGraph** under *Approach*, paste a request, click **Make poster**, and see every model call, the poster, Harbor's rules checked and every image. Keep it running while you work: it picks up changes to `approach_graph/graph.py` on the next request, and it remembers each conversation, so R1 then R2 works as a follow-up. If port 8000 is busy, it tells you to add `--port 8001`; the address is then http://localhost:8001. It only accepts connections from your own machine.
+
+## What's in the repo
+
+```
+approach_graph/graph.py       ← the file you edit on this branch
+approach_llm/app.py           last session's LLM call, solved; the graph reuses its prompt
+workspaces/harbor/brand.json  Harbor's rules: voice, facts, banned claims, word limits, colours, sizes
+assets/tidal_photo.png        the photo for R3
+launchkit/                    supplied code, worth a read but no need to change it
+  llm.py                        complete(messages) -> text: one LLM call
+  images.py                     generate_image (image model) and resize_image (plain code)
+  poster.py                     Harbor's rules, the poster data, and the checks: plain code, no model
+  ask.py                        uv run python -m launchkit.ask --approach graph R1: try one request, see every call
+  ui.py                         uv run python -m launchkit.ui: the same, in your browser
+  scoreboard.py                 Harbor's four requests and how each is checked
+  check_setup.py                checks your setup before the session
+```
+
+Everything you make lands in `out/`.
