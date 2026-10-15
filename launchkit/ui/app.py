@@ -26,8 +26,7 @@ DONE = object()
 
 class RunBody(BaseModel):
     workspace_id: str
-    user_id: str = "maya"
-    session_id: str = "web"
+    user_id: str
     text: str
     model: str | None = None
 
@@ -47,6 +46,38 @@ def logins():
     return list_logins(settings)
 
 
+def _conversation_file(workspace_id: str, user_id: str) -> Path:
+    safe = Path(workspace_id).name, Path(user_id).name
+    return settings.data_dir / "conversations" / safe[0] / f"{safe[1]}.json"
+
+
+def _load_conversation(workspace_id: str, user_id: str) -> dict:
+    path = _conversation_file(workspace_id, user_id)
+    if path.exists():
+        return json.loads(path.read_text(encoding="utf-8"))
+    return {"session_id": uuid.uuid4().hex[:6], "turns": []}
+
+
+def _save_conversation(workspace_id: str, user_id: str, data: dict):
+    path = _conversation_file(workspace_id, user_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+@app.get("/conversations/{workspace_id}/{user_id}")
+def conversation(workspace_id: str, user_id: str):
+    data = _load_conversation(workspace_id, user_id)
+    _save_conversation(workspace_id, user_id, data)
+    return data
+
+
+@app.post("/conversations/{workspace_id}/{user_id}/new")
+def new_conversation(workspace_id: str, user_id: str):
+    data = {"session_id": uuid.uuid4().hex[:6], "turns": []}
+    _save_conversation(workspace_id, user_id, data)
+    return data
+
+
 @app.post("/run")
 def start_run(body: RunBody):
     run_id = uuid.uuid4().hex[:8]
@@ -60,23 +91,28 @@ def _worker(body: RunBody, queue: Queue):
     trace = Trace()
     trace.listeners.append(lambda event: queue.put({"type": "trace", "kind": event.kind, "detail": event.detail, "line": trace.lines()[-1]}))
     current = replace(settings, model=body.model) if body.model else settings
-    req = Request(workspace_id=body.workspace_id, user_id=body.user_id, session_id=body.session_id, text=body.text)
+    conversation = _load_conversation(body.workspace_id, body.user_id)
+    req = Request(workspace_id=body.workspace_id, user_id=body.user_id, session_id=conversation["session_id"], text=body.text)
+    conversation["turns"].append({"role": "user", "text": body.text})
     try:
         result = run_request(req, settings=current, trace=trace)
-        queue.put(
-            {
-                "type": "result",
-                "reply": result.reply,
-                "spec": result.spec.model_dump() if result.spec else None,
-                "image": f"/outputs/{result.image.name}" if result.image else None,
-                "explain": json.loads((current.data_dir / "last_run.json").read_text(encoding="utf-8")),
-            }
-        )
+        answer = {
+            "type": "result",
+            "reply": result.reply,
+            "spec": result.spec.model_dump() if result.spec else None,
+            "image": f"/outputs/{result.image.name}" if result.image else None,
+            "explain": json.loads((current.data_dir / "last_run.json").read_text(encoding="utf-8")),
+        }
+        conversation["turns"].append({"role": "assistant", "reply": answer["reply"], "spec": answer["spec"], "image": answer["image"]})
+        queue.put(answer)
     except (UnknownWorkspace, SpecError) as error:
+        conversation["turns"].append({"role": "error", "kind": type(error).__name__, "message": str(error)})
         queue.put({"type": "error", "kind": type(error).__name__, "message": str(error), "errors": getattr(error, "errors", None)})
     except Exception as error:
+        conversation["turns"].append({"role": "error", "kind": type(error).__name__, "message": str(error)})
         queue.put({"type": "error", "kind": type(error).__name__, "message": str(error)})
     finally:
+        _save_conversation(body.workspace_id, body.user_id, conversation)
         queue.put(DONE)
 
 

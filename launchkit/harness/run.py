@@ -43,7 +43,7 @@ def run_request(
     agent = build_copy_agent(ws, ctx, model, settings)
     result.context = ctx.report()
     trace.context(result.context)
-    session = f"{wid}:{req.session_id}"
+    session = f"{wid}:{req.user_id}:{req.session_id}"
     run = agent.run(req.text, session_id=session, user_id=req.user_id)
     result.runs.append(run)
     trace.model("copy", model_name(model), run.metrics)

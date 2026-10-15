@@ -43,3 +43,11 @@ def test_logins_come_from_each_workspace(settings):
     assert "Jonas · Ember Coffee Co." in labels
     maya = next(login for login in logins if login["user_id"] == "maya")
     assert maya["workspace_id"] == "harbor"
+
+
+def test_conversations_are_per_user_per_workspace(settings, images, trace, request_for, good):
+    """Two people at the same brand never share a conversation, even with the same conversation id."""
+    run_request(request_for(user_id="maya", session_id="c1"), settings=settings, model=good, images=images)
+    sam = run_request(request_for(text="Make the headline shorter.", user_id="sam", session_id="c1"), settings=settings, model=good, images=images, trace=trace)
+    assert sam.history_messages == 0
+    assert len(sam.spec.headline.split()) == 4
