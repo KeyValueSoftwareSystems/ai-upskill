@@ -16,9 +16,9 @@ def _env(name: str, default: str) -> str:
 
 @dataclass(frozen=True)
 class Settings:
-    model: str = _env("LAUNCHKIT_MODEL", "openai:gpt-5.4-mini")
+    model: str = _env("LAUNCHKIT_MODEL", "gpt-4.1-mini")
     image_mode: str = _env("LAUNCHKIT_IMAGE", "real")
-    image_model: str = _env("LAUNCHKIT_IMAGE_MODEL", "gpt-image-2")
+    image_model: str = _env("LAUNCHKIT_IMAGE_MODEL", "gpt-image-1")
     image_size: str = _env("LAUNCHKIT_IMAGE_SIZE", "1024x1536")
     workspaces_dir: Path = Path(_env("LAUNCHKIT_WORKSPACES_DIR", str(ROOT / "workspaces")))
     data_dir: Path = ROOT / "data"

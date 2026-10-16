@@ -51,7 +51,7 @@ launchkit/
   settings.py       env, paths, limits, section budgets
   harness/          request → workspace → context → copy agent → validate → picture agent → result
   adapters/         model resolver, fake models, image adapters, prices
-  ui/               FastAPI app and one HTML page
+  web/              FastAPI app and one HTML page
 workspaces/         one folder per brand: SOUL.md, AGENTS.md, rules.yaml, facts.md, users.yaml, assets/
 samples/            a brand pack PDF to try onboarding with
 checks/             one pytest file per step; `launchkit check` wraps them

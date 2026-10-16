@@ -95,7 +95,8 @@ def cmd_explain(args):
 
 
 def cmd_check(args):
-    names = [f"step{n}" for n in range(5)] + ["onboard"] if args.step == "all" else [("onboard" if args.step == "onboard" else f"step{args.step}")]
+    extra = ["onboard", "setup"]
+    names = [f"step{n}" for n in range(5)] + extra if args.step == "all" else [args.step if args.step in extra else f"step{args.step}"]
     targets = [ROOT / "checks" / f"test_{name}.py" for name in names]
     command = [sys.executable, "-m", "pytest", "-q", "--tb=no", "-rN", "-p", "no:cacheprovider", *map(str, targets)]
     proc = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
@@ -115,7 +116,7 @@ def cmd_ui(args):
     import uvicorn
 
     console.print(f"LaunchKit chat page: http://localhost:{args.port}")
-    uvicorn.run("launchkit.ui.app:app", host="127.0.0.1", port=args.port, log_level="warning")
+    uvicorn.run("launchkit.web.app:app", host="127.0.0.1", port=args.port, log_level="warning")
     return 0
 
 
@@ -143,7 +144,7 @@ def main(argv=None):
     explain.set_defaults(func=cmd_explain)
 
     check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all")
-    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "all"])
+    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all"])
     check.set_defaults(func=cmd_check)
 
     ui = sub.add_parser("ui", help="start the chat page")

@@ -89,7 +89,7 @@ def onboard_workspace(pdf_path: Path, *, workspace_id: str | None = None, settin
     trace.note(f"read {pages} page{'s' if pages != 1 else ''} of {pdf_path.name}, about {approx_tokens(text)} tokens of text")
 
     model = model if model is not None else resolve_model(settings, trace)
-    agent = Agent(model=model, system_message=ONBOARD_TASK, output_schema=BrandProfile, telemetry=False)
+    agent = Agent(model=model, system_message=ONBOARD_TASK, output_schema=BrandProfile, retries=2, telemetry=False)
     run = agent.run(text)
     trace.model("onboard", model_name(model), run.metrics)
     profile = run.content if isinstance(run.content, BrandProfile) else BrandProfile.model_validate_json(str(run.content))

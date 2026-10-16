@@ -46,7 +46,7 @@ def test_the_chat_page_wires_the_upload_form():
     """The chat page's upload form has a submit handler that posts the PDF to /onboard and shows the drafted files."""
     from launchkit.settings import ROOT
 
-    page = (ROOT / "launchkit" / "ui" / "index.html").read_text(encoding="utf-8")
+    page = (ROOT / "launchkit" / "web" / "index.html").read_text(encoding="utf-8")
     assert 'id="onboardForm"' in page
     assert '$("onboardForm").onsubmit' in page
     assert 'fetch("/onboard"' in page

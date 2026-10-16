@@ -37,14 +37,20 @@ class RealImages:
         self.out_dir = Path(out_dir)
         self.calls: list[tuple[str, dict]] = []
 
-    def generate(self, prompt: str, colours: dict) -> Path:
+    def client(self):
         from openai import OpenAI
 
+        key, url = os.environ.get("LITELLM_API_KEY"), os.environ.get("LITELLM_BASE_URL")
+        if key and url:
+            return OpenAI(api_key=key, base_url=url, max_retries=2)
+        return OpenAI(max_retries=2)
+
+    def generate(self, prompt: str, colours: dict) -> Path:
         self.calls.append((prompt, colours))
         self.out_dir.mkdir(parents=True, exist_ok=True)
         palette = ", ".join(f"{name} {value}" for name, value in colours.items())
         full_prompt = f"{prompt}. Colour palette: {palette}. No text, no letters, no logos." if palette else f"{prompt}. No text, no letters, no logos."
-        response = OpenAI().images.generate(model=self.settings.image_model, prompt=full_prompt, size=self.settings.image_size, n=1)
+        response = self.client().images.generate(model=self.settings.image_model, prompt=full_prompt, size=self.settings.image_size, n=1)
         path = self.out_dir / f"poster-{int(time() * 1000)}.png"
         path.write_bytes(base64.b64decode(response.data[0].b64_json))
         return path
@@ -52,6 +58,8 @@ class RealImages:
 
 def make_images(settings):
     out_dir = settings.data_dir / "outputs"
-    if settings.image_mode == "fake" or not os.environ.get("OPENAI_API_KEY"):
+    has_key = (os.environ.get("LITELLM_API_KEY") and os.environ.get("LITELLM_BASE_URL")) or os.environ.get("OPENAI_API_KEY")
+    placeholder = settings.image_mode == "fake" or os.environ.get("LAUNCHKIT_IMAGES") == "placeholder"
+    if placeholder or not has_key:
         return FakeImages(out_dir)
     return RealImages(settings, out_dir)
