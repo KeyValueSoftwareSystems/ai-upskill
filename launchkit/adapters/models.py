@@ -1,5 +1,7 @@
 import os
 
+from agno.models.openai import OpenAIChat
+
 from launchkit.adapters.fakes import EchoModel, EndlessModel, GoodModel, MalformedModel, ProfileModel
 from launchkit.harness.trace import Trace
 
@@ -18,6 +20,13 @@ def proxy() -> tuple[str, str] | None:
     return (key, url) if key and url else None
 
 
+class ProxyChat(OpenAIChat):
+    """Through the proxy a 401 is usually its upstream key having a bad moment, not ours, so it is worth another try."""
+
+    def _is_retryable_error(self, error) -> bool:
+        return error.status_code == 401 or super()._is_retryable_error(error)
+
+
 def resolve_model(settings, trace: Trace):
     provider, sep, model_id = settings.model.partition(":")
     if not sep:
@@ -27,10 +36,8 @@ def resolve_model(settings, trace: Trace):
             raise ValueError(f"unknown fake model {model_id!r}; choose one of {sorted(FAKES)}")
         return FAKES[model_id]()
     if provider == "openai" and proxy():
-        from agno.models.openai import OpenAIChat
-
         key, url = proxy()
-        return OpenAIChat(id=model_id, api_key=key, base_url=url, max_retries=2, extra_body={"cache": {"no-cache": True}})
+        return ProxyChat(id=model_id, api_key=key, base_url=url, max_retries=2, retries=3, delay_between_retries=1, extra_body={"cache": {"no-cache": True}})
     key = PROVIDER_KEYS.get(provider)
     if key and not os.environ.get(key):
         trace.note(

@@ -22,7 +22,7 @@ uv run launchkit ui             # open http://localhost:8000, sign in as Maya at
 
 If port 8000 is taken: `uv run launchkit ui --port 8010`.
 
-Keep `LAUNCHKIT_IMAGES=placeholder` in `.env` during the session: a real picture takes about a minute through the proxy. The trainer shows real ones.
+Keep `LAUNCHKIT_IMAGES=placeholder` in `.env` during the session: a real picture takes about 30 seconds through the proxy. The trainer shows real ones.
 
 Without a key everything still runs. Live runs use a fake model and a fake picture, and the trace says so.
 

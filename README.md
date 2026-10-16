@@ -24,7 +24,7 @@ uv run launchkit check 0    # prints PASS
 uv run launchkit ui         # the harness chat page on http://localhost:8000
 ```
 
-Keys go through KeyValue's LiteLLM proxy: `LITELLM_API_KEY` and `LITELLM_BASE_URL`. Without a key everything still runs: live runs use a fake model and a fake picture, and say so in the trace. `LAUNCHKIT_IMAGES=placeholder` keeps pictures fake even with a key; a real image takes about a minute through the proxy.
+Keys go through KeyValue's LiteLLM proxy: `LITELLM_API_KEY` and `LITELLM_BASE_URL`. Without a key everything still runs: live runs use a fake model and a fake picture, and say so in the trace. `LAUNCHKIT_IMAGES=placeholder` keeps pictures fake even with a key; a real image takes about 30 seconds through the proxy.
 
 The opener's own commands still work on this branch: `uv run python -m launchkit.check_setup`, `uv run python -m launchkit.scoreboard --approach graph`, `uv run python -m launchkit.ui` (the opener's page, also port 8000, so run one at a time).
 

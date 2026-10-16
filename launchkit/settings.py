@@ -20,6 +20,7 @@ class Settings:
     image_mode: str = _env("LAUNCHKIT_IMAGE", "real")
     image_model: str = _env("LAUNCHKIT_IMAGE_MODEL", "gpt-image-1")
     image_size: str = _env("LAUNCHKIT_IMAGE_SIZE", "1024x1536")
+    image_quality: str = _env("LAUNCHKIT_IMAGE_QUALITY", "medium")
     workspaces_dir: Path = Path(_env("LAUNCHKIT_WORKSPACES_DIR", str(ROOT / "workspaces")))
     data_dir: Path = ROOT / "data"
     limits: Limits = Limits()

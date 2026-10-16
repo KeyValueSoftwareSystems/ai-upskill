@@ -40,17 +40,35 @@ class RealImages:
     def client(self):
         from openai import OpenAI
 
-        key, url = os.environ.get("LITELLM_API_KEY"), os.environ.get("LITELLM_BASE_URL")
-        if key and url:
+        if self.via_proxy():
+            key, url = os.environ.get("LITELLM_API_KEY"), os.environ.get("LITELLM_BASE_URL")
             return OpenAI(api_key=key, base_url=url, max_retries=2)
         return OpenAI(max_retries=2)
+
+    @staticmethod
+    def via_proxy() -> bool:
+        return bool(os.environ.get("LITELLM_API_KEY") and os.environ.get("LITELLM_BASE_URL"))
+
+    def call(self, full_prompt: str):
+        from openai import AuthenticationError
+
+        client = self.client()
+        tries = 3 if self.via_proxy() else 1
+        for attempt in range(1, tries + 1):
+            try:
+                return client.images.generate(
+                    model=self.settings.image_model, prompt=full_prompt, size=self.settings.image_size, quality=self.settings.image_quality, n=1
+                )
+            except AuthenticationError:
+                if attempt == tries:
+                    raise
 
     def generate(self, prompt: str, colours: dict) -> Path:
         self.calls.append((prompt, colours))
         self.out_dir.mkdir(parents=True, exist_ok=True)
         palette = ", ".join(f"{name} {value}" for name, value in colours.items())
         full_prompt = f"{prompt}. Colour palette: {palette}. No text, no letters, no logos." if palette else f"{prompt}. No text, no letters, no logos."
-        response = self.client().images.generate(model=self.settings.image_model, prompt=full_prompt, size=self.settings.image_size, n=1)
+        response = self.call(full_prompt)
         path = self.out_dir / f"poster-{int(time() * 1000)}.png"
         path.write_bytes(base64.b64decode(response.data[0].b64_json))
         return path
