@@ -5,7 +5,7 @@ A marketing assistant built in steps across the session. A marketer asks for a p
 | Branch | What it holds |
 | --- | --- |
 | `session-01-00-setup` | shared code and the setup check |
-| `session-01-llm-call` | one LLM call, `approach_llm/app.py` (`HANDS_ON.md`) |
+| `session-01-llm-call` | one LLM call, `approach_llm/app.py`; hands-on sheet in the trainer notes |
 | `session-01-langgraph` | a LangGraph pipeline, `approach_graph/graph.py` |
 | **`session-01-harness`** (you are here) | the agent harness on Agno, built in four steps; the opener's code stays in the repo |
 | `session-01-harness-step1` … `step4` | each step's answer |
