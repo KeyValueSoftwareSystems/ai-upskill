@@ -1,8 +1,16 @@
 # LaunchKit
 
-A marketing assistant built as a harness on [Agno](https://docs.agno.com), one step at a time.
-A marketer asks for a poster. LaunchKit answers with the poster's words (the copy) and its picture,
-following that brand's rules. Brands are workspaces: a folder of plain files, no code.
+A marketing assistant built in steps across the session. A marketer asks for a poster. LaunchKit answers with the poster's words (the copy) and its picture, following that brand's rules. Brands are workspaces: a folder of plain files, no code.
+
+| Branch | What it holds |
+| --- | --- |
+| `session-01-00-setup` | shared code and the setup check |
+| `session-01-llm-call` | one LLM call, `approach_llm/app.py` (`HANDS_ON.md`) |
+| `session-01-langgraph` | a LangGraph pipeline, `approach_graph/graph.py` |
+| **`session-01-harness`** (you are here) | the agent harness on Agno, built in four steps; the opener's code stays in the repo |
+| `session-01-harness-step1` … `step4` | each step's answer |
+
+Each branch contains the previous branch's solution. Fall behind, check out the next one.
 
 ## Setup
 
@@ -11,12 +19,14 @@ Needs Python 3.12+ and [uv](https://docs.astral.sh/uv/).
 ```
 git clone <this repo> && cd ai-upskill
 uv sync
-cp .env.example .env        # add your OPENAI_API_KEY
+cp .env.example .env        # add your LITELLM_API_KEY (KeyValue's proxy)
 uv run launchkit check 0    # prints PASS
-uv run launchkit ui         # opens the chat page on http://localhost:8000
+uv run launchkit ui         # the harness chat page on http://localhost:8000
 ```
 
-Without a key everything still runs: live runs use a fake model and a fake picture, and say so in the trace.
+Keys go through KeyValue's LiteLLM proxy: `LITELLM_API_KEY` and `LITELLM_BASE_URL`. Without a key everything still runs: live runs use a fake model and a fake picture, and say so in the trace. `LAUNCHKIT_IMAGES=placeholder` keeps pictures fake even with a key; a real image takes about a minute through the proxy.
+
+The opener's own commands still work on this branch: `uv run python -m launchkit.check_setup`, `uv run python -m launchkit.scoreboard --approach graph`, `uv run python -m launchkit.ui` (the opener's page, also port 8000, so run one at a time).
 
 ## Commands
 
@@ -47,7 +57,9 @@ Prompt cards for each step are in `docs/`.
 
 ```
 launchkit/
-  cli.py            run · ui · explain · check
+  cli.py            run · ui · explain · check · onboard   (the harness)
+  llm.py, images.py, poster.py, scoreboard.py, ui.py, check_setup.py, ask.py   (the opener's shared code)
+approach_llm/, approach_graph/   the opener's two approaches
   settings.py       env, paths, limits, section budgets
   harness/          request → workspace → context → copy agent → validate → picture agent → result
   adapters/         model resolver, fake models, image adapters, prices

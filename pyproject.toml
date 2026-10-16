@@ -1,7 +1,7 @@
 [project]
 name = "launchkit"
 version = "0.1.0"
-description = "LaunchKit: a marketing assistant harness built on Agno, step by step"
+description = "LaunchKit: a marketing assistant built in steps. Opener (one LLM call, LangGraph), then the agent harness on Agno"
 requires-python = ">=3.12"
 dependencies = [
     "agno[openai,sqlite]==3.1.3",
