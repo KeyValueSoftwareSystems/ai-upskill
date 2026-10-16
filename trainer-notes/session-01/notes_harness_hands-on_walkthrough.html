@@ -185,7 +185,7 @@ footer{color:var(--muted);font-size:13.5px;border-top:1px solid var(--line);padd
     <span><b>Build</b> checkpoint CP1.1, four steps</span>
     <span><b>Talk</b> context engineering, after the build</span>
     <span><b>Stack</b> Python, uv, Agno 3.1</span>
-    <span><b>Status</b> <span class="pill verify">four step branches built locally · awaiting push go</span></span>
+    
   </div>
 </header>
 
@@ -202,7 +202,7 @@ footer{color:var(--muted);font-size:13.5px;border-top:1px solid var(--line);padd
     </div>
     <div class="card">
       <h3>The customers</h3>
-      <p><b>Harbor</b> sells outdoor drinkware. <b>Tidal</b> is Harbor's new insulated bottle, and "the Tidal launch" is the campaign for it. <b>Ember Coffee Co.</b> is the second customer: same software, different voice and rules.</p>
+      <p><b>Harbor</b> makes insulated bottles for people who hike at the weekend and commute in the week. <b>Tidal</b> is the new colourway of its Flask Trail 750 bottle, launching in six weeks, and "the Tidal launch" is the campaign for it. <b>Ember Coffee Co.</b> is the second customer: same software, different voice and rules.</p>
     </div>
     <div class="card">
       <h3>Our part</h3>
@@ -242,7 +242,7 @@ footer{color:var(--muted);font-size:13.5px;border-top:1px solid var(--line);padd
   </div>
   <div class="brief">
     <blockquote>Poster for the Tidal launch. The bottle on a misty lakeshore. Headline: Cold for 24 hours.</blockquote>
-    <div class="from">A marketer at Harbor asks for a poster for the launch of Tidal, their new insulated bottle. Harbor's workspace knows: colours Deep Tide and Foam, a calm and factual tone, the banned claim "eco-friendly", and the fact that the lid is hand-wash only. Ember Coffee Co. is the second customer, warm and playful, different files, same code.</div>
+    <div class="from">A marketer at Harbor asks for a poster for the launch of Tidal, the new colourway of its Flask Trail 750 bottle. Harbor's workspace knows: colours navy, sea glass and sand, a calm, outdoorsy and quietly confident tone, six banned claims from the series brand pack (eco-friendly, sustainable, unbreakable, lifetime guarantee, cold forever, fully dishwasher-safe), and the fact that the lid is leak-proof and hand-wash only. Ember Coffee Co. is the second customer, warm and playful, different files, same code.</div>
     <div class="chain">
       <span class="step grey">request</span><span class="arrow">→</span>
       <span class="step">read workspace files</span><span class="arrow">→</span>
@@ -307,6 +307,7 @@ footer{color:var(--muted);font-size:13.5px;border-top:1px solid var(--line);padd
 │   ├── harness/
 │   │   ├── request.py           <i>Request model · </i><b>resolve_workspace_id  ← step 4</b>
 │   │   ├── workspace.py         <i>Workspace model · </i><b>load_workspace  ← step 1</b>
+│   │   ├── onboard.py           <i>PDF → BrandProfile form → SOUL.md, AGENTS.md, rules.yaml, facts.md</i>
 │   │   ├── context.py           <i>ContextBuilder: sections, budgets, render, report</i>
 │   │   ├── spec.py              <i>PosterSpec · </i><b>validate_spec  ← step 2</b>
 │   │   ├── tools.py             <b>generate_image  ← step 3</b>
@@ -323,11 +324,12 @@ footer{color:var(--muted);font-size:13.5px;border-top:1px solid var(--line);padd
 │       ├── app.py               <i>FastAPI: POST /run · GET /events (SSE) · GET /explain</i>
 │       └── index.html           <i>chat · trace · context · poster · workspace + user picker</i>
 ├── workspaces/
-│   ├── harbor/   SOUL.md  AGENTS.md  rules.yaml  facts.md  brand-book.md
+│   ├── harbor/   SOUL.md  AGENTS.md  rules.yaml  facts.md  brand-book.md  assets/
 │   └── ember/    SOUL.md  AGENTS.md  rules.yaml  facts.md
+├── samples/moss-and-fern-brand-pack.pdf   <i>a brand pack for a brand that does not exist yet</i>
 ├── checks/
 │   ├── conftest.py              <i>fakes, temp workspace copies</i>
-│   ├── test_step0.py … test_step4.py
+│   ├── test_step0.py … test_step4.py  test_onboard.py
 ├── demos/                       <i>the other owners' plain-model and LangGraph scripts</i>
 └── docs/
     ├── glossary.md  setup.md  step-1.md … step-4.md   <i>prompt cards live here too</i></div>
@@ -349,7 +351,10 @@ footer{color:var(--muted);font-size:13.5px;border-top:1px solid var(--line);padd
         <li><b>Session state</b>: Agno's SQLite db, <code>add_history_to_context=True</code>, last 3 runs. Turn 2 remembers turn 1.</li>
         <li><b>Fakes</b>: subclass Agno's <code>Model</code> the way Agno's own benchmarks do. Four scripted models.</li>
         <li><b>Images</b>: real adapter calls OpenAI images. Fake adapter draws a PNG with the brand colour and the prompt text.</li>
-        <li><b>UI</b>: one page, server-sent events for the live trace.</li>
+        <li><b>UI</b>: one page, server-sent events for the live trace. An "Onboard a brand" panel: upload a PDF, get the four files drafted.</li>
+        <li><b>A turn is a poster or a reply.</b> The copy form is a <code>Turn</code>: the model says whether the message asks for a poster or deserves a plain reply. "hi" gets a greeting and no picture. Added 15 Oct at Ajay's request.</li>
+        <li><b>Brand and person, two lists.</b> The chat page has a brand list and a person list from each workspace's <code>users.yaml</code> (Maya and Sam at Harbor, Jonas at Ember). Each brand-and-person pair has its own stored conversation it comes back to. The harness keys sessions by brand, person and conversation, so two people never share history. No id boxes. Added 15 Oct.</li>
+        <li><b>Onboarding</b>: the PDF is stored under <code>assets/</code>, its text goes to the model with a <code>BrandProfile</code> form, code writes the files. The marketer owns them after that. Added 15 Oct at Ajay's request.</li>
       </ul>
     </div>
   </div>
@@ -462,10 +467,10 @@ the spec the model filled in
   <div class="row do"><h3>They do</h3><div class="body">
     <ul>
       <li>Give <code>uv run launchkit check 0</code>. Get one PASS line. It proves their machine runs the skeleton. Helpers walk the room.</li>
-      <li>Give <code>uv run launchkit ui</code>, open the page, type the same request. Get the same generic answer in the browser, with the trace beside it.</li>
+      <li>Give <code>uv run launchkit ui</code>, open the page, sign in as Maya at Harbor, say "hi". Get a greeting, no poster. Type the request. Get the same generic spec in the browser, with the trace beside it.</li>
     </ul>
   </div></div>
-  <div class="row branch"><h3>Branch</h3><div class="body"><code>master</code></div></div>
+  <div class="row branch"><h3>Branch</h3><div class="body"><code>session-01-harness</code></div></div>
 </section>
 
 <!-- ───────────────── Step 1 ───────────────── -->
@@ -481,6 +486,7 @@ the spec the model filled in
       <li>Open <code>workspaces/harbor/SOUL.md</code> and <code>AGENTS.md</code>. Read two lines of each aloud.</li>
       <li>"The harness reads these when a request arrives, like an app reads a config file. Nobody deploys to change Harbor's tone. In OpenClaw the folder lives in your home directory. In a product it lives in storage, one per customer."</li>
       <li>"The model returns a form, not prose. Agno's <code>output_schema</code> makes the model fill our <code>PosterSpec</code>."</li>
+      <li>"Where do these files come from for a real brand?" Press "Onboard a brand" on the page, upload <code>samples/moss-and-fern-brand-pack.pdf</code>. Watch the trace: one page read, one model call, a new folder named after the brand, six files written. "The model drafts them. A human owns them. A new brand is a new folder."</li>
     </ul>
   </div></div>
   <div class="row do"><h3>They do</h3><div class="body">
@@ -531,7 +537,7 @@ def build_copy_agent(ws: Workspace, ctx: ContextBuilder) -> Agent:
       <div class="after"><h4>After</h4><span>Harbor's calm voice. Deep Tide and Foam in the image prompt. Trace: SOUL.md, AGENTS.md, rules.yaml read. Switch the picker to Ember: warm, playful, different rules.</span></div>
     </div>
   </div></div>
-  <div class="row branch"><h3>Branch</h3><div class="body"><code>cp1.1-step1-agent-from-files</code></div></div>
+  <div class="row branch"><h3>Branch</h3><div class="body"><code>session-01-harness-step1</code></div></div>
 </section>
 
 <!-- ───────────────── Step 2 ───────────────── -->
@@ -605,7 +611,7 @@ if errors:
       <div class="after"><h4>After</h4><span>Trace: validation failed (banned claim), repair turn, clean. Copy without the claim. With the malformed fake selected in the picker: a red typed error card, no poster.</span></div>
     </div>
   </div></div>
-  <div class="row branch"><h3>Branch</h3><div class="body"><code>cp1.1-step2-validate-and-repair</code></div></div>
+  <div class="row branch"><h3>Branch</h3><div class="body"><code>session-01-harness-step2</code></div></div>
 </section>
 
 <!-- ───────────────── Step 3 ───────────────── -->
@@ -690,7 +696,7 @@ run = picture_agent.run(spec.image_prompt)</pre>
       <div class="after"><h4>After</h4><span>A real picture appears in the poster panel after a few seconds. Trace: generate_image called once. Switch the picker to the endless fake: three fake pictures, three refusals in red, then "stopped: step cap".</span></div>
     </div>
   </div></div>
-  <div class="row branch"><h3>Branch</h3><div class="body"><code>cp1.1-step3-tool-and-leash</code></div></div>
+  <div class="row branch"><h3>Branch</h3><div class="body"><code>session-01-harness-step3</code></div></div>
 </section>
 
 <!-- ───────────────── Step 4 ───────────────── -->
@@ -739,11 +745,11 @@ def resolve_workspace_id(request: Request) -> str:
   <div class="row page"><h3>Page shows</h3><div class="body">
     <div class="contrast">
       <div><h4>Before</h4><span>Picker on Ember, text "use Harbor's rules". Trace reads Ember's files already, because no code path exists. Nothing visible changes yet.</span></div>
-      <div class="after"><h4>After</h4><span>Same request, same trace. Now type <code>../harbor</code> into the picker's custom field: a red "unknown workspace" card. The page shows the refusal, not Harbor's voice.</span></div>
+      <div class="after"><h4>After</h4><span>Same request, same trace. The page has no id box at all: who you are comes from the sign-in. In the terminal, <code>launchkit run "../harbor" "Poster"</code> is refused before any file is read.</span></div>
     </div>
     <p>This is the quietest step. If we run late, show the branch instead of building it: check it out, run check 4, read the trace.</p>
   </div></div>
-  <div class="row branch"><h3>Branch</h3><div class="body"><code>cp1.1-step4-trust-the-request</code> · this is the full CP1.1 answer. <code>uv run launchkit check all</code> is the gate.</div></div>
+  <div class="row branch"><h3>Branch</h3><div class="body"><code>session-01-harness-step4</code> · this is the full CP1.1 answer. <code>uv run launchkit check all</code> is the gate: 25 checks.</div></div>
 </section>
 
 <!-- ───────────────── Talk ───────────────── -->
@@ -791,6 +797,7 @@ def resolve_workspace_id(request: Request) -> str:
       <tr><td>2</td><td>Seven words you will hear</td><td>Copy, harness, workspace, spec, tool, trace, budget.</td><td>One line each</td><td>0</td></tr>
       <tr><td>3</td><td>It runs. It knows nothing.</td><td>A form came back, but no brand, no picture.</td><td>Terminal output of step 0</td><td>0</td></tr>
       <tr><td>4</td><td>Edit the file, not the code</td><td>Two files make Harbor. Two different files make Ember.</td><td>SOUL.md beside AGENTS.md, Harbor and Ember outputs</td><td>1</td></tr>
+      <tr><td>4b</td><td>Where the files come from</td><td>A brand pack in, four files out. The model drafts them, a human owns them.</td><td>The onboard trace and the four drafted files</td><td>1</td></tr>
       <tr><td>5</td><td>Ask once more, then stop</td><td>The model fills the form. Code checks it. One repair, then a clear error.</td><td>Form → check → repair → error, as a strip</td><td>2</td></tr>
       <tr><td>6</td><td>Every tool needs a leash</td><td>Three pictures, six calls, then the harness says stop.</td><td>Trace with the refused line in red</td><td>3</td></tr>
       <tr><td>7</td><td>The text is not who you are</td><td>The request says Ember. The text says Harbor. Ember wins.</td><td>Request fields beside the typed text</td><td>4</td></tr>
@@ -833,120 +840,9 @@ def resolve_workspace_id(request: Request) -> str:
   </div>
 </section>
 
-<!-- ───────────────── Owner notes ───────────────── -->
-<details class="owner" id="owner">
-  <summary>Owner notes · decisions, open items, build order, ledger</summary>
-  <div class="owner-body">
-<section id="cards">
-  <div class="section-head"><h2>Cards to validate</h2><p>One reply per card: the card and yes, or what to change. Code starts when every row is yes.</p></div>
-  <div class="tablewrap"><table>
-    <thead><tr><th>Card</th><th>Covers</th><th>Status</th></tr></thead>
-    <tbody>
-      <tr><td>S</td><td>Skeleton: layout, shipped parts, two-phase flow, workspace files</td><td><span class="pill done">yes · 14 Oct</span></td></tr>
-      <tr><td>0</td><td>See it run</td><td><span class="pill done">yes · 14 Oct</span></td></tr>
-      <tr><td>1</td><td>Rules from files</td><td><span class="pill done">yes · 14 Oct</span></td></tr>
-      <tr><td>2</td><td>Validate and repair</td><td><span class="pill done">yes · 14 Oct</span></td></tr>
-      <tr><td>3</td><td>Tool and leash</td><td><span class="pill done">yes · 14 Oct</span></td></tr>
-      <tr><td>4</td><td>Trust the request</td><td><span class="pill done">yes · 14 Oct</span></td></tr>
-      <tr><td>T</td><td>Talk arc and what explain prints</td><td><span class="pill done">yes · 14 Oct</span></td></tr>
-      <tr><td>D</td><td>Slide list</td><td><span class="pill done">yes · 14 Oct</span></td></tr>
-    </tbody>
-  </table></div>
-</section>
-
-<!-- ───────────────── Decisions ───────────────── -->
-<section id="decisions">
-  <div class="section-head">
-    <h2>Decided today</h2>
-    <p>From the grilling on 13 Oct 2026. Change any line here and the cards below move with it.</p>
-  </div>
-  <div class="tablewrap"><table>
-    <thead><tr><th>Topic</th><th>Decision</th></tr></thead>
-    <tbody>
-      <tr><td>Our scope</td><td>The build (CP1.1) and the context engineering talk, in that order. The harness talk, the OpenClaw discussion and the RAG part belong to others.</td></tr>
-      <tr><td>Repo skeleton</td><td>We make it, on a branch, locally first. The demo owners add their scripts under <code>demos/</code>. No dependency either way.</td></tr>
-      <tr><td>Model provider</td><td>OpenAI first, because KeyValue gives the keys. The model is one env var, <code>LAUNCHKIT_MODEL</code>, in Agno's <code>provider:model</code> form. Switch providers by changing the var.</td></tr>
-      <tr><td>How they build</td><td>Prompt cards for any coding agent (Cursor, Claude Code, other). The skeleton has TODO slots. Each slot has a dumb default, so the app always runs. Each step has a paste-ready answer.</td></tr>
-      <tr><td>Branches</td><td>Nothing lands on <code>master</code> directly. The skeleton goes on a <code>skeleton</code> branch, is pushed, reviewed, and merged to <code>master</code> only after Ajay's go. Then one branch per step, each from the previous. The last step branch is the full CP1.1 answer.</td></tr>
-      <tr><td>Pictures</td><td>Real by default, OpenAI image model. A fake adapter takes over with no key, with <code>LAUNCHKIT_IMAGE=fake</code>, and in every check.</td></tr>
-      <tr><td>Proof</td><td><code>uv run launchkit check N</code> in the terminal. Fakes only, no key, seconds. One line per check in the page's own words.</td></tr>
-      <tr><td>Chat page</td><td>Our own, shipped in the skeleton. FastAPI plus one HTML file. Chat, live trace, context view, poster. Workspace and user picker.</td></tr>
-      <tr><td>Layout</td><td>Harness at the repo root, because Session 2 builds on it.</td></tr>
-      <tr><td>Agno</td><td>Pinned to the latest 3.1.x (3.1.3 on 12 Oct 2026). Python 3.12 or newer, uv.</td></tr>
-      <tr><td>Slides</td><td>A <code>.pptx</code>, merged later with the first part. Pencil and Scribble may be named in slides, never in code.</td></tr>
-      <tr><td>This plan</td><td>A private Claude page plus an HTML copy on the Desktop. It is also the task ledger.</td></tr>
-      <tr><td>Local repo</td><td><code>/Users/ajaysukumar/Pencil AI upskill/ai-upskill</code>. Git identity for this repo only: ajaysukumar998, ajay.sukumar@keyvalue.systems. Push to KeyValue is the last step, after your go.</td></tr>
-      <tr><td>Two phases</td><td>Phase A writes the copy, phase B makes the picture under the leash. Confirmed 14 Oct 2026.</td></tr>
-      <tr><td>Other owners</td><td>No deadlines tracked here. Each dependency is listed under <a href="#open">Open items</a> as we hit it.</td></tr>
-    </tbody>
-  </table></div>
-</section>
-
-<!-- ───────────────── Open items ───────────────── -->
-<section id="open">
-  <div class="section-head">
-    <h2>Open items and other owners</h2>
-    <p>What we depend on, and what depends on us. Added to as we build.</p>
-  </div>
-  <div class="tablewrap"><table>
-    <thead><tr><th>With</th><th>Item</th><th>Why it matters</th></tr></thead>
-    <tbody>
-      <tr><td>Demo owner</td><td>The four Harbor requests they show failing.</td><td>The CP1 gate reruns them through the harness. If they include a photo upload or a resize, those need Session 2 tools. Agree the wording or the gate.</td></tr>
-      <tr><td>Harness talk owner</td><td>Name the six things a harness owns in the same words as our steps.</td><td>We send them our step list and the glossary so the build matches the talk.</td></tr>
-      <tr><td>OpenClaw owner</td><td>File names SOUL.md and AGENTS.md match OpenClaw's. <code>rules.yaml</code> is ours, not OpenClaw's.</td><td>They should say so, or we do at step 1.</td></tr>
-      <tr><td>RAG owner</td><td>They get <code>ctx.set("facts", …)</code>, the budgets, and <code>explain</code>.</td><td>Their CP1.2 must plug in without touching our files.</td></tr>
-      <tr><td>Session 2 owners</td><td>Tool shape (plain function plus hook), the chat page, the workspace folder layout.</td><td>They add skills, memory and more tools on top.</td></tr>
-      <tr><td>KeyValue</td><td>Which OpenAI chat model id the key allows, and the image model. <code>gpt-image-1</code> sunsets on 23 Oct 2026; <code>gpt-image-2</code> is current. Default set to <code>gpt-5.4-mini</code> ($0.75 in, $4.50 out per million); <code>gpt-5.5</code> is $5 in, $30 out.</td><td>Sets <code>LAUNCHKIT_MODEL</code> and the price table.</td></tr>
-    </tbody>
-  </table></div>
-  <div class="card">
-    <h3>Verify when we build</h3>
-    <ul>
-      <li><span class="pill done">done</span> <code>StopAgentRun</code> raised from inside a wrapping tool hook ends the run cleanly. Seen in check 3 and in a live run with the endless fake.</li>
-      <li><span class="pill done">done</span> A fake model that returns a JSON string is parsed into <code>PosterSpec</code> by <code>output_schema</code>.</li>
-      <li>The streaming event names for the live trace (<code>ToolCallStarted</code>, <code>ToolCallCompleted</code>, <code>RunCompleted</code>).</li>
-      <li>The OpenAI images call shape and sizes for <code>gpt-image-2</code>.</li>
-      <li><span class="pill done">done</span> Price numbers for the chosen models, dated 14 Oct 2026, in <code>pricing.py</code>.</li>
-    </ul>
-  </div>
-</section>
-
-<!-- ───────────────── Build order ───────────────── -->
-<section id="order">
-  <div class="section-head">
-    <h2>Build order, once the cards are validated</h2>
-    <p>Each line ends with a proof. Nothing is pushed until the last line and your go.</p>
-  </div>
-  <ol>
-    <li><b>Local repo.</b> Init at the chosen path with the KeyValue identity. The skeleton goes on the <code>skeleton</code> branch. Proof: <code>check 0</code> green, the chat page runs with a fake. Live test with the real key once the setup is done, by Ajay in the UI.</li>
-    <li><b>Step branches.</b> One at a time, each from the previous. Proof: that step's check green, and all earlier checks still green.</li>
-    <li><b>Docs in the repo.</b> README, setup, glossary, one page per step with its prompt card and check.</li>
-    <li><b>Slides.</b> The 13 slides as a <code>.pptx</code>, screenshots from real runs.</li>
-    <li><b>This page.</b> Updated with what changed, HTML copy on the Desktop refreshed.</li>
-    <li><b>Push and merge.</b> Each branch is pushed after a go. Ajay reviews. Merge to <code>master</code> only after a second go.</li>
-  </ol>
-  <div class="note fail"><b>Cut order if the room runs late.</b> First, step 4 becomes a shown branch. Then step 3's picture agent becomes a direct call with the budget hook only. Never cut: step 1, step 2, and the explain demo.</div>
-</section>
-
-<!-- ───────────────── Ledger ───────────────── -->
-<section id="ledger">
-  <div class="section-head"><h2>Ledger</h2></div>
-  <div class="ledger">
-    <div><span>14 Oct 2026</span><p>Line 2 built. Ajay chose to keep <code>skeleton</code> as the base, unmerged. Four step branches, each from the previous, each committed locally: step 1 (files to instructions), step 2 (validate, repair once, SpecError), step 3 (image tool, leash hook, picture agent), step 4 (workspace id allow-list). <code>check all</code> on step 4: 16 passed. Verified: <code>StopAgentRun</code> raised inside a wrapping tool hook ends the run cleanly. Waiting for the go to push the four branches.</p></div>
-    <div><span>14 Oct 2026</span><p>Ajay reviewed the skeleton in Cursor and said go. Committed as 726a277 and pushed to <code>origin/skeleton</code>. <code>master</code> is still empty. Waiting for the merge go. Trace lines rewritten in plain words first.</p></div>
-    <div><span>14 Oct 2026</span><p>Line 1 built on the local <code>skeleton</code> branch, not committed. Checks written first: check 0 passes, checks 1 to 4 fail for the right reasons. CLI run, explain, check and ui work. The brand book (1923 tokens) is cut by the 1500 facts budget and the hand-wash line falls out, as the talk needs. Verified: a fake model returning JSON text is parsed into PosterSpec by output_schema. Still to verify: StopAgentRun from a hook (step 3), the gpt-image-2 call (needs a key). Default model set to gpt-5.4-mini for cost; gpt-5.5 is $5 in / $30 out per million.</p></div>
-    <div><span>14 Oct 2026</span><p>Go for build order line 1. Rule added: no direct commits to master, every branch is reviewed and merged after a go. Live UI test with the real key after setup.</p></div>
-    <div><span>14 Oct 2026</span><p>All cards validated by Ajay: S, 0, 1, 2, 3, 4, T, D. Slides reworked to one idea per title. Waiting for the go to start the build order.</p></div>
-    <div><span>14 Oct 2026</span><p>Clock references removed. Header rewritten for sharing. Story, glossary word "copy", and a plain-box flow added. Internal notes moved to the end. Two-phase flow confirmed by Ajay.</p></div>
-    <div><span>13 Oct 2026</span><p>Read both session pages, the Day 2 plan from last week, and the Agno 3.1 docs and source. Grilled 15 decisions. Found that Agno's tool call limit does not stop the loop, so the harness owns the step cap. Wrote this plan. Nothing built.</p></div>
-  </div>
-</section>
-
-  </div>
-</details>
-
 <footer>LaunchKit, Harbor and Ember Coffee Co. are fictional. OpenClaw is an open-source agent runtime; its workspace convention is from its public docs. Agno facts are from docs.agno.com and the v3.1.3 source. Owner: Ajay Sukumar.</footer>
 
 </main>
+
 </body>
 </html>
