@@ -27,8 +27,19 @@ WORD_LIMITS = {"headline": 6, "subheadline": 12, "body": 25}
 
 
 def validate_spec(spec: PosterSpec, rules: dict) -> list[str]:
-    # TODO step 2: word limits, banned claims from rules["banned_claims"], copy leaking into image_prompt
-    return []
+    errors = []
+    for field, limit in WORD_LIMITS.items():
+        words = len(getattr(spec, field).split())
+        if words > limit:
+            errors.append(f"{field} has {words} words, limit is {limit}")
+    copy = f"{spec.headline} {spec.subheadline} {spec.body}".lower()
+    for claim in rules.get("banned_claims", []):
+        if claim.lower() in copy:
+            errors.append(f"banned claim: {claim}")
+    for field in ("headline", "subheadline"):
+        if getattr(spec, field).lower() in spec.image_prompt.lower():
+            errors.append(f"{field} text leaked into image_prompt")
+    return errors
 
 
 def repair_message(errors: list[str]) -> str:
