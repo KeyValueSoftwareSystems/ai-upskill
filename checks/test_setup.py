@@ -86,3 +86,17 @@ def test_real_pictures_send_the_quality_and_try_a_proxy_401_again(settings, tmp_
     assert path.read_bytes() == b"png bytes"
     assert len(calls) == 2
     assert calls[0]["quality"] == "medium"
+
+
+def test_calls_give_up_after_two_minutes(settings, monkeypatch):
+    """A tunnel restart leaves a call waiting on a dead line. Both clients give up after two minutes, so the retry can start fresh."""
+    monkeypatch.setenv("LITELLM_API_KEY", "test-key")
+    monkeypatch.setenv("LITELLM_BASE_URL", "https://proxy.example/v1")
+    assert settings.timeout == 120
+    model = resolve_model(replace(settings, model="gpt-4.1-mini"), Trace())
+    assert model.timeout == 120
+    pictures = RealImages(replace(settings, image_mode="real"), settings.data_dir / "outputs")
+    assert pictures.client().timeout == 120
+    monkeypatch.delenv("LITELLM_API_KEY")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    assert pictures.client().timeout == 120

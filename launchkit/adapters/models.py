@@ -37,7 +37,10 @@ def resolve_model(settings, trace: Trace):
         return FAKES[model_id]()
     if provider == "openai" and proxy():
         key, url = proxy()
-        return ProxyChat(id=model_id, api_key=key, base_url=url, max_retries=2, retries=3, delay_between_retries=1, extra_body={"cache": {"no-cache": True}})
+        return ProxyChat(
+            id=model_id, api_key=key, base_url=url, timeout=settings.timeout, max_retries=2, retries=3, delay_between_retries=1,
+            extra_body={"cache": {"no-cache": True}},
+        )
     key = PROVIDER_KEYS.get(provider)
     if key and not os.environ.get(key):
         trace.note(
