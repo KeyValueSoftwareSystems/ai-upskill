@@ -69,3 +69,15 @@ samples/            a brand pack PDF to try onboarding with
 checks/             one pytest file per step; `launchkit check` wraps them
 docs/               setup, glossary, one page per step
 ```
+
+## Hand-over to retrieval (CP1.2)
+
+Branch from `session-01-harness-step4`. It is the full CP1.1 harness: `uv run launchkit check all` passes every check.
+
+Where retrieval plugs in:
+
+- `launchkit/harness/agent.py` · `build_copy_agent`: add your `get_brand_details` tool to `tools=[...]` on the copy agent. Every tool call goes through the trace and shows its result size in tokens.
+- `launchkit/harness/context.py` · `ContextBuilder`: `ctx.set("facts", text)` fills the facts section. Budgets live in `launchkit/settings.py` (`budgets`). A trimmed section says so inside the prompt.
+- `uv run launchkit explain` prints what the model saw on the last run, section by section, with tool results as a row.
+- `workspaces/harbor/brand-book.md` and `facts.md` hold Harbor's text with clear headings; Ember's are in `workspaces/ember/`.
+- `launchkit/harness/request.py`: the workspace id is already resolved from the trusted request. Your tool takes no workspace argument.
