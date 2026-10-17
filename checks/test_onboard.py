@@ -51,6 +51,8 @@ def test_the_chat_page_wires_the_upload_form():
     assert '$("onboardForm").onsubmit' in page
     assert 'fetch("/onboard"' in page
     assert "onboardFiles" in page
+    assert 'id="onboardClose"' in page and '$("onboardClose").onclick' in page, "the panel needs a Close control"
+
 
 
 def test_agents_md_states_each_rule_once():

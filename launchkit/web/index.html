@@ -69,7 +69,8 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
   <form id="onboardForm">
     <label>Brand pack (PDF) <input id="onboardPdf" type="file" accept="application/pdf" required></label>
     <button id="onboardRun">Upload and draft the files</button>
-    <span class="hint">A new brand gets a new folder, named after the brand in the pack. The PDF is stored under its assets. The model drafts SOUL.md, AGENTS.md, rules.yaml and facts.md. You own them after that.</span>
+    <button type="button" class="quiet" id="onboardClose">Close</button>
+    <span class="hint">A new brand gets a new folder, named after the brand in the pack. The PDF is stored under its assets. The model drafts six files: SOUL.md, AGENTS.md, rules.yaml, facts.md, brand-book.md and users.yaml. You own them after that. The new brand appears in the Brand list; press Close to go back to the chat.</span>
   </form>
   <div class="files" id="onboardFiles"></div>
 </section>
@@ -131,6 +132,7 @@ $("brand").onchange = () => { fillPeople(); loadConversation(); };
 $("person").onchange = loadConversation;
 $("new").onclick = async () => { const w = who(); const data = await (await fetch(`/conversations/${w.workspace_id}/${w.user_id}/new`, { method: "POST" })).json(); session = data.session_id; $("session").textContent = session; $("messages").innerHTML = ""; };
 $("onboardToggle").onclick = () => { $("onboard").hidden = !$("onboard").hidden; };
+$("onboardClose").onclick = () => { $("onboard").hidden = true; };
 $("onboardForm").onsubmit = async e => {
   e.preventDefault();
   const file = $("onboardPdf").files[0]; if (!file) return;
