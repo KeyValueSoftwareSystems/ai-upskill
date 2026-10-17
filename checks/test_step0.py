@@ -51,3 +51,11 @@ def test_conversations_are_per_user_per_workspace(settings, images, trace, reque
     sam = run_request(request_for(text="Make the headline shorter.", user_id="sam", session_id="c1"), settings=settings, model=good, images=images, trace=trace)
     assert sam.history_messages == 0
     assert len(sam.spec.headline.split()) == 4
+
+
+def test_prompt_line_names_only_the_sections_with_text(settings, images, trace, request_for, good):
+    """The prompt line on the trace lists the sections that carry text; an empty facts section is not mentioned."""
+    run_request(request_for(), settings=settings, model=good, images=images, trace=trace)
+    prompt_lines = [line for line in trace.lines() if line.startswith("prompt")]
+    assert prompt_lines and "task" in prompt_lines[0]
+    assert "facts" not in prompt_lines[0] and "empty" not in prompt_lines[0]

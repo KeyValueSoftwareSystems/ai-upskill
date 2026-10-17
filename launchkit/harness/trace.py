@@ -80,8 +80,8 @@ class Trace:
                     out.append(f"reply     {_short(d['text'], 80)}  (no poster this turn)")
                 case "context":
                     parts = " · ".join(
-                        f"{s['section']}: " + ("empty" if s['tokens'] == 0 else f"{s['tokens']} tokens" + (" (cut to fit)" if s['trimmed'] else ""))
-                        for s in d["sections"]
+                        f"{s['section']}: {s['tokens']} tokens" + (" (cut to fit)" if s['trimmed'] else "")
+                        for s in d["sections"] if s['tokens']
                     )
                     out.append(f"prompt    {parts}")
                 case "model":
