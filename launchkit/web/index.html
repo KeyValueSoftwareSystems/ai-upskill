@@ -61,13 +61,6 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
   <h1>LaunchKit</h1>
   <label>Brand <select id="brand"></select></label>
   <label>Person <select id="person"></select></label>
-  <label>Model <select id="model">
-    <option value="">real (from .env)</option>
-    <option value="fake:good">fake: good</option>
-    <option value="fake:echo">fake: echo</option>
-    <option value="fake:malformed">fake: malformed</option>
-    <option value="fake:endless">fake: endless</option>
-  </select></label>
   <label>Conversation <span id="session" style="font:12px ui-monospace,Menlo,monospace;color:var(--ink-2)"></span></label>
   <button class="quiet" id="new">New conversation</button>
   <button class="quiet" id="onboardToggle">Onboard a brand</button>
@@ -142,7 +135,6 @@ $("onboardForm").onsubmit = async e => {
   e.preventDefault();
   const file = $("onboardPdf").files[0]; if (!file) return;
   const fd = new FormData();
-  fd.append("model", $("model").value ? "fake:profile" : "");
   fd.append("pdf", file);
   $("trace").innerHTML = ""; $("onboardFiles").innerHTML = ""; $("onboardRun").disabled = true;
   const { run_id } = await (await fetch("/onboard", { method: "POST", body: fd })).json();
@@ -181,7 +173,7 @@ $("form").onsubmit = async e => {
   const w = who(); if (!w.workspace_id || !w.user_id) return;
   add("user", esc(text)); $("text").value = "";
   $("trace").innerHTML = ""; $("send").disabled = true;
-  const body = { ...w, text, model: $("model").value || null };
+  const body = { ...w, text };
   const { run_id } = await (await fetch("/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json();
   const es = new EventSource(`/events/${run_id}`);
   es.onmessage = m => {
