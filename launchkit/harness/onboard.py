@@ -29,14 +29,20 @@ class BrandProfile(BaseModel):
 
 
 ONBOARD_TASK = """You read a brand pack and fill a BrandProfile form for a poster copywriting agent.
-Take every value from the pack. Do not invent claims or facts. Keep each line short.
-If the pack sets word limits for copy, include them in rules."""
+Take every value from the pack. Do not invent claims or facts. Keep each line short."""
 
 
 def extract_text(pdf_path: Path) -> tuple[str, int]:
     reader = PdfReader(str(pdf_path))
     pages = [page.extract_text() or "" for page in reader.pages]
     return "\n\n".join(pages).strip(), len(pages)
+
+
+def restates_a_fixed_rule(rule: str) -> bool:
+    text = rule.lower()
+    limits = "words" in text and any(part in text for part in ("headline", "subheadline", "body"))
+    no_words = "contains words" in text or "no words" in text or "without words" in text
+    return limits or no_words
 
 
 def render_files(profile: BrandProfile, brand_text: str) -> dict[str, str]:
@@ -48,7 +54,7 @@ def render_files(profile: BrandProfile, brand_text: str) -> dict[str, str]:
         "- Headline up to 6 words. Subheadline up to 12. Body up to 25.\n"
         f"- Use the colours {colours} when you describe the picture.\n"
         f"- Never claim {banned}.\n"
-        + "".join(f"- {rule}\n" for rule in profile.rules)
+        + "".join(f"- {rule}\n" for rule in profile.rules if not restates_a_fixed_rule(rule))
         + "- The picture never contains words. Copy goes in the spec, not the image prompt.\n\n"
         "## Memory\n- If the marketer corrects you, follow the correction for the rest of the conversation.\n"
     )

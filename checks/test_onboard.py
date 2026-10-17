@@ -1,7 +1,7 @@
 import yaml
 
 from launchkit.adapters.fakes import ProfileModel
-from launchkit.harness.onboard import onboard_workspace
+from launchkit.harness.onboard import BrandProfile, Colour, render_files, onboard_workspace
 from launchkit.harness.request import UnknownWorkspace
 import pytest
 
@@ -51,3 +51,17 @@ def test_the_chat_page_wires_the_upload_form():
     assert '$("onboardForm").onsubmit' in page
     assert 'fetch("/onboard"' in page
     assert "onboardFiles" in page
+
+
+def test_agents_md_states_each_rule_once():
+    """AGENTS.md states the word limits and the no-words rule once, even when the pack's own rules repeat them."""
+    profile = BrandProfile(
+        brand_name="Moss and Fern", voice=["You are warm."],
+        rules=["Headline up to 6 words.", "Subheadline up to 12 words.", "Body copy up to 25 words.", "Picture never contains words.", "Talk to one person."],
+        banned_claims=["cheap"], colours=[Colour(name="Fern", hex="#2f6b4f")], facts=["Pots ship in 3 days."],
+    )
+    lines = [line for line in render_files(profile, "pack text")["AGENTS.md"].splitlines() if line.startswith("- ")]
+    assert len(lines) == len(set(lines))
+    assert sum(("headline" in line.lower() or "body" in line.lower()) and "words" in line.lower() for line in lines) == 1
+    assert sum("contains words" in line.lower() for line in lines) == 1
+    assert "- Talk to one person." in lines
