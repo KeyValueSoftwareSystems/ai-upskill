@@ -26,6 +26,7 @@ def read_text(path: Path, trace: Trace) -> str:
 
 def load_workspace(workspace_id: str, settings, trace: Trace) -> Workspace:
     root = settings.workspaces_dir / workspace_id
-    # TODO step 1: read SOUL.md, AGENTS.md and rules.yaml with read_text and fill the Workspace
-    trace.note("no workspace files read yet, step 1 fills this")
-    return Workspace(id=workspace_id, root=root)
+    soul = read_text(root / "SOUL.md", trace)
+    agents = read_text(root / "AGENTS.md", trace)
+    rules = yaml.safe_load(read_text(root / "rules.yaml", trace)) or {}
+    return Workspace(id=workspace_id, root=root, soul=soul, agents=agents, rules=rules)
