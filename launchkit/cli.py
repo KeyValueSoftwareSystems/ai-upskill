@@ -10,6 +10,8 @@ from rich.console import Console
 from rich.table import Table
 
 from launchkit.adapters.pricing import PRICES_AS_OF
+from agno.exceptions import ModelProviderError
+
 from launchkit.harness.request import Request, UnknownWorkspace
 from launchkit.harness.run import run_request
 from launchkit.harness.spec import SpecError
@@ -29,6 +31,10 @@ def cmd_run(args):
     except (UnknownWorkspace, SpecError) as error:
         print_trace(trace)
         console.print(f"\n[red]{type(error).__name__}[/red]  {error}")
+        return 1
+    except ModelProviderError as error:
+        print_trace(trace)
+        console.print(f"\n[red]model error[/red]  {error.message}", highlight=False)
         return 1
     print_trace(trace)
     if result.reply:

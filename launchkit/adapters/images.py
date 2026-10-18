@@ -42,8 +42,8 @@ class RealImages:
 
         if self.via_proxy():
             key, url = os.environ.get("LITELLM_API_KEY"), os.environ.get("LITELLM_BASE_URL")
-            return OpenAI(api_key=key, base_url=url, timeout=self.settings.timeout, max_retries=2)
-        return OpenAI(timeout=self.settings.timeout, max_retries=2)
+            return OpenAI(api_key=key, base_url=url, timeout=self.settings.timeout, max_retries=1)
+        return OpenAI(timeout=self.settings.timeout, max_retries=1)
 
     @staticmethod
     def via_proxy() -> bool:

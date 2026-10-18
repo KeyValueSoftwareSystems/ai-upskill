@@ -38,7 +38,7 @@ def resolve_model(settings, trace: Trace):
     if provider == "openai" and proxy():
         key, url = proxy()
         return ProxyChat(
-            id=model_id, api_key=key, base_url=url, timeout=settings.timeout, max_retries=2, retries=3, delay_between_retries=1,
+            id=model_id, api_key=key, base_url=url, timeout=settings.timeout, max_retries=1, retries=3, delay_between_retries=1,
             extra_body={"cache": {"no-cache": True}},
         )
     key = PROVIDER_KEYS.get(provider)
@@ -48,6 +48,8 @@ def resolve_model(settings, trace: Trace):
             f"LAUNCHKIT_MODEL={settings.model} cannot run, so this is the Good fake model."
         )
         return GoodModel()
+    if provider == "openai":
+        return OpenAIChat(id=model_id, timeout=settings.timeout, max_retries=1)
     return f"{provider}:{model_id}"
 
 

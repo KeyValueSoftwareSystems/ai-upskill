@@ -5,6 +5,9 @@ from pathlib import Path
 from launchkit.adapters.images import make_images
 from launchkit.adapters.models import model_name, resolve_model
 from launchkit.adapters.pricing import cost_usd
+from agno.exceptions import ModelProviderError
+from agno.run.base import RunStatus
+
 from launchkit.harness.agent import build_copy_agent, build_picture_agent
 from launchkit.harness.context import ContextBuilder, approx_tokens
 from launchkit.harness.request import Request, resolve_workspace_id
@@ -46,6 +49,7 @@ def run_request(
     session = f"{wid}:{req.user_id}:{req.session_id}"
     run = agent.run(req.text, session_id=session, user_id=req.user_id)
     result.runs.append(run)
+    raise_if_failed(run)
     trace.model("copy", model_name(model), run.metrics)
     result.history_tokens, result.history_messages = history_size(run)
 
@@ -69,12 +73,19 @@ def run_request(
         return result
     picture_run = picture_agent.run(spec.image_prompt, session_id=f"{session}:picture", user_id=req.user_id)
     result.runs.append(picture_run)
+    raise_if_failed(picture_run)
     trace.model("picture", model_name(model), picture_run.metrics)
     files = [e.detail["result"].get("file") for e in trace.tool_calls("generate_image") if e.kind == "tool"]
     files = [f for f in files if f]
     result.image = Path(files[-1]) if files else None
     trace.picture("done" if result.image else "none", file=str(result.image) if result.image else None)
     return result
+
+
+def raise_if_failed(run) -> None:
+    """Agno hands a provider error back as a failed run with the message as its content; make it an error again."""
+    if getattr(run, "status", None) == RunStatus.error:
+        raise ModelProviderError(str(run.content))
 
 
 def as_turn(content) -> Turn:
@@ -85,7 +96,10 @@ def as_turn(content) -> Turn:
     if isinstance(content, dict):
         return Turn.model_validate(content)
     if isinstance(content, str):
-        return Turn.model_validate_json(content)
+        try:
+            return Turn.model_validate_json(content)
+        except ValueError:
+            raise ModelProviderError(content)
     raise SpecError([f"the model returned {type(content).__name__}, not a turn"])
 
 

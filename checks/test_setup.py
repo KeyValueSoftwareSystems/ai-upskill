@@ -1,4 +1,6 @@
 import base64
+
+import pytest
 from dataclasses import replace
 from types import SimpleNamespace
 
@@ -28,7 +30,9 @@ def test_provider_prefix_still_works_without_the_proxy(settings, monkeypatch):
     """Without the proxy, provider:model and OPENAI_API_KEY work as before."""
     monkeypatch.delenv("LITELLM_API_KEY", raising=False)
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    assert resolve_model(replace(settings, model="openai:gpt-5.4-mini"), Trace()) == "openai:gpt-5.4-mini"
+    model = resolve_model(replace(settings, model="openai:gpt-5.4-mini"), Trace())
+    assert isinstance(model, OpenAIChat) and model.id == "gpt-5.4-mini"
+    assert model.timeout == 120 and model.max_retries == 1
 
 
 def test_no_key_falls_back_to_the_good_fake(settings, monkeypatch):
@@ -100,3 +104,24 @@ def test_calls_give_up_after_two_minutes(settings, monkeypatch):
     monkeypatch.delenv("LITELLM_API_KEY")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     assert pictures.client().timeout == 120
+    assert model.max_retries == 1 and pictures.client().max_retries == 1
+
+
+def test_a_clear_error_is_not_retried(settings, images, trace, request_for):
+    """A 4xx the provider means (a spent budget, a bad key) ends the run after one call, with the provider's words; nothing retries it."""
+    from agno.exceptions import ModelProviderError
+    from launchkit.adapters.fakes import GoodModel
+    from launchkit.harness.run import run_request
+
+    class BrokenModel(GoodModel):
+        calls = 0
+
+        def invoke(self, *args, **kwargs):
+            BrokenModel.calls += 1
+            raise ModelProviderError("Budget has been exceeded! Current cost: 2.04, Max budget: 2.0", status_code=400)
+
+        invoke_stream = ainvoke = ainvoke_stream = invoke
+
+    with pytest.raises(ModelProviderError, match="Budget has been exceeded"):
+        run_request(request_for(), settings=settings, model=BrokenModel(), images=images, trace=trace)
+    assert BrokenModel.calls == 1
