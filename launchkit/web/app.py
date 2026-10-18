@@ -87,6 +87,13 @@ def start_run(body: RunBody):
     return {"run_id": run_id}
 
 
+def _previous_picture(conversation: dict, current) -> dict | None:
+    for turn in reversed(conversation["turns"]):
+        if turn.get("role") == "assistant" and turn.get("spec") and turn.get("image"):
+            return {"image_prompt": turn["spec"].get("image_prompt"), "image": str(current.data_dir / "outputs" / Path(turn["image"]).name)}
+    return None
+
+
 def _worker(body: RunBody, queue: Queue):
     trace = Trace()
     trace.listeners.append(lambda event: queue.put({"type": "trace", "kind": event.kind, "detail": event.detail, "line": trace.lines()[-1]}))
@@ -95,7 +102,7 @@ def _worker(body: RunBody, queue: Queue):
     req = Request(workspace_id=body.workspace_id, user_id=body.user_id, session_id=conversation["session_id"], text=body.text)
     conversation["turns"].append({"role": "user", "text": body.text})
     try:
-        result = run_request(req, settings=current, trace=trace)
+        result = run_request(req, settings=current, trace=trace, previous=_previous_picture(conversation, current))
         answer = {
             "type": "result",
             "reply": result.reply,

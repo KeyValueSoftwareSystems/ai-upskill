@@ -1,4 +1,5 @@
 from launchkit.harness.run import run_request
+from launchkit.harness.trace import Trace
 from launchkit.harness.spec import PosterSpec
 
 
@@ -59,3 +60,17 @@ def test_prompt_line_names_only_the_sections_with_text(settings, images, trace, 
     prompt_lines = [line for line in trace.lines() if line.startswith("prompt")]
     assert prompt_lines and "task" in prompt_lines[0]
     assert "facts" not in prompt_lines[0] and "empty" not in prompt_lines[0]
+
+
+def test_an_unchanged_image_prompt_reuses_the_picture(settings, images, trace, request_for, good, tmp_path):
+    """When the new spec's image prompt is the same as the previous turn's, the previous picture is kept and no picture phase runs; a different prompt is not reused."""
+    first = run_request(request_for(), settings=settings, model=good, images=images, trace=Trace())
+    kept = tmp_path / "kept.png"
+    kept.write_bytes(b"png")
+    previous = {"image_prompt": first.spec.image_prompt, "image": str(kept)}
+    again = run_request(request_for(), settings=settings, model=good, images=images, trace=trace, previous=previous)
+    assert again.image == kept
+    assert any(e.kind == "picture" and e.detail["status"] == "reused" for e in trace.events)
+    assert "reused" in " ".join(trace.lines())
+    other = run_request(request_for(), settings=settings, model=good, images=images, trace=Trace(), previous={"image_prompt": "something else", "image": str(kept)})
+    assert other.image != kept

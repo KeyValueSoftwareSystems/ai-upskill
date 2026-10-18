@@ -100,6 +100,8 @@ class Trace:
                         out.append(f"picture   skipped, {d.get('reason', '')}")
                     elif d["status"] == "done":
                         out.append(f"picture   saved {_relative(d['file'])}")
+                    elif d["status"] == "reused":
+                        out.append(f"picture   reused {_relative(d['file'])}, {d.get('reason', '')}")
                     else:
                         out.append("picture   none, the tool returned no file")
                 case _:

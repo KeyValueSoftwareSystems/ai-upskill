@@ -30,7 +30,14 @@ class Result:
 
 
 def run_request(
-    req: Request, *, settings=default_settings, model=None, images=None, trace: Trace | None = None, facts: str | None = None
+    req: Request,
+    *,
+    settings=default_settings,
+    model=None,
+    images=None,
+    trace: Trace | None = None,
+    facts: str | None = None,
+    previous: dict | None = None,
 ) -> Result:
     trace = trace if trace is not None else Trace()
     settings.data_dir.mkdir(parents=True, exist_ok=True)
@@ -66,6 +73,12 @@ def run_request(
         pass
     result.spec = spec
     write_explain(settings, result, wid, model_name(model))
+
+    kept = Path(previous["image"]) if previous and previous.get("image") else None
+    if kept and previous.get("image_prompt") == spec.image_prompt and kept.exists():
+        result.image = kept
+        trace.picture("reused", file=str(kept), reason="the image prompt did not change")
+        return result
 
     picture_agent = build_picture_agent(spec, model, images, ws.colours, trace, settings)
     if picture_agent is None:
