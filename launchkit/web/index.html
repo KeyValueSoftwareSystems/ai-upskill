@@ -24,6 +24,7 @@ main{flex:1;display:grid;grid-template-columns:minmax(320px,1fr) minmax(360px,1.
 .msg{max-width:92%;padding:10px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--line);white-space:pre-wrap;word-break:break-word}
 .msg.user{align-self:flex-end;background:var(--accent-soft);border-color:transparent}
 .msg.error{background:var(--fail-soft);border-color:var(--fail);color:var(--ink)}
+.msg.pending{color:var(--muted);font-style:italic;border-style:dashed}
 .msg .k{display:inline-block;width:110px;color:var(--muted);font-size:12.5px}
 .msg img{display:block;max-width:100%;border-radius:6px;margin-top:8px}
 .compose{display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line);background:var(--surface)}
@@ -175,12 +176,24 @@ $("form").onsubmit = async e => {
   const w = who(); if (!w.workspace_id || !w.user_id) return;
   add("user", esc(text)); $("text").value = "";
   $("trace").innerHTML = ""; $("send").disabled = true;
+  const pending = add("pending", "Working… 0s");
+  const t0 = Date.now(); let stage = "";
+  const show = () => { pending.textContent = `Working… ${Math.round((Date.now() - t0) / 1000)}s${stage}`; };
+  const tick = setInterval(show, 1000);
+  let answered = false;
+  const finish = () => { clearInterval(tick); pending.remove(); $("send").disabled = false; };
   const body = { ...w, text };
-  const { run_id } = await (await fetch("/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json();
+  let run_id;
+  try {
+    ({ run_id } = await (await fetch("/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json());
+  } catch (err) {
+    finish(); add("error", `<b>No answer</b>\nThe page could not reach its server. Is <code>uv run launchkit ui</code> still running?`); return;
+  }
   const es = new EventSource(`/events/${run_id}`);
   es.onmessage = m => {
     const ev = JSON.parse(m.data);
-    if (ev.type === "trace") traceLine(ev);
+    if (ev.type === "trace") { traceLine(ev); stage = " · " + ev.line.replace(/\s+/g, " ").slice(0, 70); show(); }
+    if (ev.type === "result" || ev.type === "error") answered = true;
     if (ev.type === "result" && ev.reply) { add("", esc(ev.reply)); }
     if (ev.type === "result" && ev.spec) {
       renderTurn({ role: "assistant", spec: ev.spec, image: ev.image });
@@ -189,8 +202,11 @@ $("form").onsubmit = async e => {
     if (ev.type === "result" && ev.reply) showContext(ev.explain);
     if (ev.type === "error") add("error", `<b>${esc(ev.kind)}</b>\n${esc(ev.message)}`);
   };
-  es.addEventListener("done", () => { es.close(); $("send").disabled = false; });
-  es.onerror = () => { es.close(); $("send").disabled = false; };
+  es.addEventListener("done", () => { es.close(); finish(); });
+  es.onerror = () => {
+    es.close(); finish();
+    if (!answered) add("error", `<b>No answer</b>\nThe page lost the connection to its server before the run finished. Check the page server and the proxy, then send again.`);
+  };
 };
 </script>
 </body>

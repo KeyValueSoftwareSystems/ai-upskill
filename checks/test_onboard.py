@@ -67,3 +67,13 @@ def test_agents_md_states_each_rule_once():
     assert sum(("headline" in line.lower() or "body" in line.lower()) and "words" in line.lower() for line in lines) == 1
     assert sum("contains words" in line.lower() for line in lines) == 1
     assert "- Talk to one person." in lines
+
+
+def test_the_chat_page_shows_a_working_state():
+    """While a run is in flight the chat shows a Working bubble with the elapsed time; it goes away on the answer, an error, or a lost connection."""
+    from launchkit.settings import ROOT
+
+    page = (ROOT / "launchkit" / "web" / "index.html").read_text(encoding="utf-8")
+    assert 'add("pending"' in page and "Working" in page
+    assert "setInterval" in page and "clearInterval" in page
+    assert "lost the connection" in page.lower()
