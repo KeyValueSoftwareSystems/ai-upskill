@@ -19,7 +19,7 @@ rules filled.
 
 In launchkit/harness/agent.py, build_copy_agent already creates the Agno Agent. Make the
 context "rules" section the SOUL.md text followed by the AGENTS.md text, using
-ctx.set("rules", ...). Keep output_schema=PosterSpec.
+ctx.set("rules", ...). Keep output_schema=Turn.
 ```
 
 ## Prove it

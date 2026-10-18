@@ -16,13 +16,13 @@ Do this before the day. It takes about ten minutes. At the start of the build we
 git clone <this repository> && cd ai-upskill
 uv sync
 cp .env.example .env            # paste your key after LITELLM_API_KEY=
-uv run launchkit check 0        # prints two PASS lines
+uv run launchkit run harbor "Poster for the Tidal bottle on a misty lakeshore at dawn."   # prints a trace and a spec
 uv run launchkit ui             # open http://localhost:8000, sign in as Maya at Harbor, say hi, then ask for a poster
 ```
 
 If port 8000 is taken: `uv run launchkit ui --port 8010`.
 
-Keep `LAUNCHKIT_IMAGES=placeholder` in `.env` during the session: a real picture takes about 30 seconds through the proxy. The trainer shows real ones.
+Everyone makes real pictures: about 30 to 60 seconds each through the proxy. If you only want to see the words, `LAUNCHKIT_IMAGES=placeholder` draws a stand-in picture instead.
 
 Without a key everything still runs. Live runs use a fake model and a fake picture, and the trace says so.
 

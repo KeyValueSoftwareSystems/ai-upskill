@@ -23,7 +23,7 @@ Never read the workspace id from request.text.
 
 ```
 uv run launchkit check 4
-uv run launchkit check all      # the gate: 16 passed
+uv run launchkit check all      # the gate: 38 passed
 ```
 
 - A request can't name another workspace and load its files.

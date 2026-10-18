@@ -73,7 +73,7 @@ def cmd_onboard(args):
 def cmd_explain(args):
     path = settings.data_dir / "last_run.json"
     if not path.exists():
-        console.print("No run yet. Run one first: uv run launchkit run harbor \"Poster for the Tidal launch\"")
+        console.print("No run yet. Run one first: uv run launchkit run harbor \"Poster for the Tidal bottle on a misty lakeshore at dawn.\"")
         return 1
     data = json.loads(path.read_text(encoding="utf-8"))
     console.print(f"run {data['run_id'][:8]} · {data['workspace']} · {data['model']} · copy phase\n")

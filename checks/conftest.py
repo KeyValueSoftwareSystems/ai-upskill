@@ -10,7 +10,7 @@ from launchkit.harness.request import Request
 from launchkit.harness.trace import Trace
 from launchkit.settings import ROOT, settings as base_settings
 
-BRIEF = "Poster for the Tidal launch. The bottle on a misty lakeshore. Headline: Cold for 24 hours."
+BRIEF = "Poster for the Tidal bottle on a misty lakeshore at dawn. Headline idea: cold for 24 hours."
 
 
 @pytest.fixture

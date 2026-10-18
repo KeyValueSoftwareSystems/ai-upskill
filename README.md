@@ -20,11 +20,11 @@ Needs Python 3.12+ and [uv](https://docs.astral.sh/uv/).
 git clone <this repo> && cd ai-upskill
 uv sync
 cp .env.example .env        # add your LITELLM_API_KEY (KeyValue's proxy)
-uv run launchkit check 0    # prints PASS
+uv run launchkit run harbor "Poster for the Tidal bottle on a misty lakeshore at dawn."   # prints a trace and a spec
 uv run launchkit ui         # the harness chat page on http://localhost:8000
 ```
 
-Keys go through KeyValue's LiteLLM proxy: `LITELLM_API_KEY` and `LITELLM_BASE_URL`. Without a key everything still runs: live runs use a fake model and a fake picture, and say so in the trace. `LAUNCHKIT_IMAGES=placeholder` keeps pictures fake even with a key; a real image takes about 30 seconds through the proxy.
+Keys go through KeyValue's LiteLLM proxy: `LITELLM_API_KEY` and `LITELLM_BASE_URL`. Everyone runs the real model and real pictures; a picture takes 30 to 60 seconds through the proxy. `LAUNCHKIT_IMAGES=placeholder` draws a stand-in picture when you want speed over pictures.
 
 The opener's own commands still work on this branch: `uv run python -m launchkit.check_setup`, `uv run python -m launchkit.scoreboard --approach graph`, `uv run python -m launchkit.ui` (the opener's page, also port 8000, so run one at a time).
 
@@ -32,7 +32,7 @@ The opener's own commands still work on this branch: `uv run python -m launchkit
 
 | Command | What it does |
 | --- | --- |
-| `uv run launchkit run harbor "Poster for the Tidal launch"` | One request in the terminal: trace, spec, picture path |
+| `uv run launchkit run harbor "Poster for the Tidal bottle on a misty lakeshore at dawn."` | One request in the terminal: trace, spec, picture path |
 | `uv run launchkit ui` | The chat page: sign in as a person, chat, live trace, context view, poster |
 | `uv run launchkit explain` | What the model saw on the last run, in what order, at what cost |
 | `uv run launchkit check 1` | Prove step 1 with fake models. `check all` is the CP1.1 gate |
