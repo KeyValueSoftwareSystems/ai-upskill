@@ -83,6 +83,30 @@ def slug(name: str) -> str:
     return cleaned[:32].strip("-") or "brand"
 
 
+DRAFTED = ("SOUL.md", "AGENTS.md", "rules.yaml", "facts.md", "brand-book.md")
+
+
+def brand_of(root: Path) -> str | None:
+    users = root / "users.yaml"
+    if not users.is_file():
+        return None
+    try:
+        data = yaml.safe_load(users.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError:
+        return None
+    return str(data["brand"]) if isinstance(data, dict) and data.get("brand") else None
+
+
+def workspace_of_brand(brand_name: str, settings) -> str | None:
+    """The folder a brand already has, found by the brand line in its users.yaml, whatever the folder is called."""
+    wanted = slug(brand_name)
+    for folder in sorted(p for p in settings.workspaces_dir.iterdir() if p.is_dir()):
+        current = brand_of(folder)
+        if current and slug(current) == wanted:
+            return folder.name
+    return None
+
+
 def onboard_workspace(pdf_path: Path, *, workspace_id: str | None = None, settings=default_settings, model=None, trace: Trace | None = None) -> list[Path]:
     trace = trace if trace is not None else Trace()
     pdf_path = Path(pdf_path)
@@ -100,9 +124,19 @@ def onboard_workspace(pdf_path: Path, *, workspace_id: str | None = None, settin
     trace.model("onboard", model_name(model), run.metrics)
     profile = run.content if isinstance(run.content, BrandProfile) else BrandProfile.model_validate_json(str(run.content))
 
-    workspace_id = workspace_id or slug(profile.brand_name)
+    if workspace_id is None:
+        found = workspace_of_brand(profile.brand_name, settings)
+        if found and found != slug(profile.brand_name):
+            trace.note(f"brand '{profile.brand_name}' already has workspace '{found}'")
+        workspace_id = found or slug(profile.brand_name)
     root = settings.workspaces_dir / workspace_id
     if root.is_dir():
+        current = brand_of(root)
+        if current and slug(current) != slug(profile.brand_name):
+            raise ValueError(
+                f"this pack is for '{profile.brand_name}', but workspace '{workspace_id}' is '{current}'. "
+                f"Upload it as a new brand, or into its own workspace."
+            )
         trace.note(f"brand '{profile.brand_name}' replaces the drafted files of workspace '{workspace_id}'")
     else:
         trace.note(f"brand '{profile.brand_name}' gets the new workspace '{workspace_id}'")
@@ -121,6 +155,10 @@ def onboard_workspace(pdf_path: Path, *, workspace_id: str | None = None, settin
         path = root / name
         if name == "users.yaml" and path.exists():
             continue
+        if name in DRAFTED and path.exists():
+            backup = path.with_name(path.name + ".bak")
+            shutil.copyfile(path, backup)
+            trace.note(f"kept the previous {name} as {backup.name}")
         path.write_text(body, encoding="utf-8")
         trace.written(path)
         written.append(path)
