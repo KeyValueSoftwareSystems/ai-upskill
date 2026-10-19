@@ -252,7 +252,8 @@ function showContext(x){
   const cost = x.cost_usd == null ? "price unknown" : "$" + x.cost_usd.toFixed(4);
   $("context").innerHTML = `<p><b>${esc(x.workspace)}</b> · ${esc(x.model)} · copy phase</p>
     <table><tr><th>section</th><th class="n">tokens</th><th class="n">budget</th><th></th></tr>${rows}
-    <tr><td>history</td><td class="n">${x.history_tokens}</td><td class="n">2000</td><td>${x.history_messages} earlier messages</td></tr></table>
+    <tr><td>history</td><td class="n">${x.history_tokens}</td><td class="n">2000</td><td>${x.history_messages} earlier messages</td></tr>
+    <tr><td>tool results</td><td class="n">${x.tool_tokens ?? 0}</td><td class="n">–</td><td>${x.tool_results ?? 0} tool calls this turn</td></tr></table>
     <p>input ${x.input_tokens} · cached ${x.cached_tokens} · output ${x.output_tokens} · ${cost}</p>
     <p class="empty">Section tokens are approximate (4 characters each). Totals are the provider's.</p>
     <details><summary>System message as sent</summary><pre>${esc(x.system_message)}</pre></details>`;

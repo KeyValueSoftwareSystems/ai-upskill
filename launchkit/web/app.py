@@ -104,9 +104,16 @@ def refuse_bad_workspace(body: RunBody, current) -> str | None:
     return None
 
 
+def _echo(trace: Trace, heading: str):
+    """Print the trace in the terminal that runs `launchkit ui`, line by line as it happens, the same lines as the Trace tab."""
+    print(f"\n{heading}", flush=True)
+    trace.listeners.append(lambda event: print("  " + trace.lines()[-1], flush=True))
+
+
 def _worker(body: RunBody, queue: Queue):
     trace = Trace()
     trace.listeners.append(lambda event: queue.put({"type": "trace", "kind": event.kind, "detail": event.detail, "line": trace.lines()[-1]}))
+    _echo(trace, f'run · {body.workspace_id} · {body.user_id} · "{body.text}"')
     current = replace(settings, model=body.model) if body.model else settings
     refusal = refuse_bad_workspace(body, current)
     if refusal:
@@ -160,6 +167,7 @@ async def start_onboard(model: str = Form(""), workspace_id: str = Form(""), pdf
 def _onboard_worker(path: Path, workspace_id: str | None, model: str | None, queue: Queue):
     trace = Trace()
     trace.listeners.append(lambda event: queue.put({"type": "trace", "kind": event.kind, "detail": event.detail, "line": trace.lines()[-1]}))
+    _echo(trace, f"onboard · {workspace_id or 'new brand'} · {path.name}")
     current = replace(settings, model=model) if model else settings
     try:
         written = onboard_workspace(path, workspace_id=workspace_id, settings=current, trace=trace)

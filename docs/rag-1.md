@@ -53,6 +53,18 @@ To show the class exactly what the model reads, call the tool yourself, the way 
 uv run launchkit lookup harbor          # the first 40 lines; --full prints all 135
 ```
 
+## Prove the cost on the page
+
+Start `uv run launchkit ui`. Every run's trace is also printed in that terminal, the same lines as the Trace tab.
+
+1. Press **New conversation**, then ask a fact question: "What is my brand colour theme?". The trace shows
+   `tool get_brand_details() → … · N tokens back`: the whole guide. The Context tab has a **tool results** row with the same N,
+   next to the rules and task sections (about 500 tokens together).
+2. Ask anything else in the same conversation: "What day is it?". No tool call this time, yet the model is sent almost as many tokens:
+   the **history** row carries the whole guide from the first turn. Every later turn pays for it.
+3. After `git checkout session-01-rag-step2`, restart `launchkit ui` (it does not reload code), press **New conversation** and ask the
+   same question. The tool results row drops to a few hundred tokens.
+
 ## Stuck?
 
 The answer is on the branch `session-01-rag-step1`.
