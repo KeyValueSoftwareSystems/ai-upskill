@@ -30,7 +30,7 @@ def test_provider_prefix_still_works_without_the_proxy(settings, monkeypatch):
     """Without the proxy, provider:model and OPENAI_API_KEY work as before."""
     monkeypatch.delenv("LITELLM_API_KEY", raising=False)
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    model = resolve_model(replace(settings, model="openai:gpt-5.4-mini"), Trace())
+    model = resolve_model(replace(settings, model="openai:gpt-5.4-mini", timeout=120), Trace())
     assert isinstance(model, OpenAIChat) and model.id == "gpt-5.4-mini"
     assert model.timeout == 120 and model.max_retries == 1
 
@@ -66,9 +66,12 @@ def test_proxy_model_tries_a_401_again(settings, monkeypatch):
     assert not OpenAIChat(id="gpt-4.1-mini", api_key="sk-test")._is_retryable_error(bad_key)
 
 
-def test_pictures_ask_for_medium_quality(settings):
-    """Pictures ask for medium quality: the proxy never answers a portrait at the default (high) quality, medium comes back in about 30 seconds."""
-    assert settings.image_quality == "medium"
+def test_pictures_ask_for_medium_quality(monkeypatch):
+    """Pictures ask for medium quality by default: the proxy never answers a portrait at the default (high) quality, medium comes back in about 30 seconds. A trainee's own .env may say otherwise."""
+    from launchkit.settings import Settings
+
+    monkeypatch.delenv("LAUNCHKIT_IMAGE_QUALITY", raising=False)
+    assert Settings().image_quality == "medium"
 
 
 def test_real_pictures_send_the_quality_and_try_a_proxy_401_again(settings, tmp_path, monkeypatch):
@@ -93,18 +96,23 @@ def test_real_pictures_send_the_quality_and_try_a_proxy_401_again(settings, tmp_
 
 
 def test_calls_give_up_after_two_minutes(settings, monkeypatch):
-    """A tunnel restart leaves a call waiting on a dead line. Both clients give up after two minutes, so the retry can start fresh."""
+    """A tunnel restart leaves a call waiting on a dead line. Both clients give up after two minutes by default, so the retry can start fresh. A trainee's own .env may say otherwise."""
+    from launchkit.settings import Settings
+
+    monkeypatch.delenv("LAUNCHKIT_TIMEOUT", raising=False)
+    assert Settings().timeout == 120
     monkeypatch.setenv("LITELLM_API_KEY", "test-key")
     monkeypatch.setenv("LITELLM_BASE_URL", "https://proxy.example/v1")
-    assert settings.timeout == 120
-    model = resolve_model(replace(settings, model="gpt-4.1-mini"), Trace())
+    two_minutes = replace(settings, timeout=120)
+    model = resolve_model(replace(two_minutes, model="gpt-4.1-mini"), Trace())
     assert model.timeout == 120
-    pictures = RealImages(replace(settings, image_mode="real"), settings.data_dir / "outputs")
+    pictures = RealImages(replace(two_minutes, image_mode="real"), two_minutes.data_dir / "outputs")
     assert pictures.client().timeout == 120
     monkeypatch.delenv("LITELLM_API_KEY")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     assert pictures.client().timeout == 120
     assert model.max_retries == 1 and pictures.client().max_retries == 1
+
 
 
 def test_a_clear_error_is_not_retried(settings, images, trace, request_for):

@@ -77,3 +77,10 @@ def test_the_chat_page_shows_a_working_state():
     assert 'add("pending"' in page and "Working" in page
     assert "setInterval" in page and "clearInterval" in page
     assert "lost the connection" in page.lower()
+
+
+def test_an_id_with_a_trailing_newline_is_refused(settings, trace, brand_pdf):
+    """The allow-list is matched in full for onboarding too: 'moss' plus a newline makes no folder."""
+    with pytest.raises(UnknownWorkspace):
+        onboard_workspace(brand_pdf, workspace_id="moss\n", settings=settings, model=ProfileModel(), trace=trace)
+    assert not any(p.name.startswith("moss") for p in settings.workspaces_dir.iterdir())

@@ -48,7 +48,7 @@ uv run launchkit check 3
 ## See it
 
 Send a Harbor request with the real model. A picture appears in the poster panel after a few seconds.
-Then pick the model `fake: endless`: three fake pictures, three refusals in red, then "stop".
+To see the leash fire, in the terminal: `LAUNCHKIT_IMAGES=placeholder uv run launchkit run harbor "Poster for the Tidal bottle" --model fake:endless`: three pictures, three refusals, then "stop".
 
 ## Stuck?
 

@@ -2,6 +2,7 @@ from agno.agent import Agent
 from agno.db.sqlite import SqliteDb
 
 from launchkit.harness.context import ContextBuilder
+from launchkit.harness.limits import make_leash
 from launchkit.harness.spec import PosterSpec, Turn
 from launchkit.harness.trace import Trace
 from launchkit.harness.workspace import Workspace
@@ -21,7 +22,7 @@ def session_db(settings) -> SqliteDb:
     return SqliteDb(db_file=str(settings.data_dir / "sessions.db"))
 
 
-def build_copy_agent(ws: Workspace, ctx: ContextBuilder, model, settings) -> Agent:
+def build_copy_agent(ws: Workspace, ctx: ContextBuilder, model, settings, trace: Trace) -> Agent:
     # TODO step 1: ctx.set("rules", ws.soul followed by ws.agents)
     ctx.set("task", SPEC_TASK)
     return Agent(
@@ -31,6 +32,7 @@ def build_copy_agent(ws: Workspace, ctx: ContextBuilder, model, settings) -> Age
         db=session_db(settings),
         add_history_to_context=True,
         num_history_runs=5,
+        tool_hooks=[make_leash(settings.limits, trace)],
         telemetry=False,
     )
 

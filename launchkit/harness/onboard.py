@@ -86,7 +86,7 @@ def slug(name: str) -> str:
 def onboard_workspace(pdf_path: Path, *, workspace_id: str | None = None, settings=default_settings, model=None, trace: Trace | None = None) -> list[Path]:
     trace = trace if trace is not None else Trace()
     pdf_path = Path(pdf_path)
-    if workspace_id is not None and not WORKSPACE_ID.match(workspace_id):
+    if workspace_id is not None and not WORKSPACE_ID.fullmatch(workspace_id):
         raise UnknownWorkspace(workspace_id)
 
     text, pages = extract_text(pdf_path)

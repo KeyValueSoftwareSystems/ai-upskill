@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Streamin
 from pydantic import BaseModel
 
 from launchkit.harness.onboard import onboard_workspace
-from launchkit.harness.request import Request, UnknownWorkspace
+from launchkit.harness.request import Request, UnknownWorkspace, resolve_workspace_id
 from launchkit.harness.run import run_request
 from launchkit.harness.spec import SpecError
 from launchkit.harness.trace import Trace
@@ -94,10 +94,24 @@ def _previous_picture(conversation: dict, current) -> dict | None:
     return None
 
 
+def refuse_bad_workspace(body: RunBody, current) -> str | None:
+    """Step 4's check, run before any conversation file is opened, so a bad id never reads or rewrites another brand's history."""
+    try:
+        resolve_workspace_id(Request(workspace_id=body.workspace_id, user_id=body.user_id, session_id="check", text=body.text), current)
+    except UnknownWorkspace as error:
+        return str(error)
+    return None
+
+
 def _worker(body: RunBody, queue: Queue):
     trace = Trace()
     trace.listeners.append(lambda event: queue.put({"type": "trace", "kind": event.kind, "detail": event.detail, "line": trace.lines()[-1]}))
     current = replace(settings, model=body.model) if body.model else settings
+    refusal = refuse_bad_workspace(body, current)
+    if refusal:
+        queue.put({"type": "error", "kind": "UnknownWorkspace", "message": refusal})
+        queue.put(DONE)
+        return
     conversation = _load_conversation(body.workspace_id, body.user_id)
     req = Request(workspace_id=body.workspace_id, user_id=body.user_id, session_id=conversation["session_id"], text=body.text)
     conversation["turns"].append({"role": "user", "text": body.text})

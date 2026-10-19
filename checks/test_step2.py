@@ -38,3 +38,10 @@ def test_copy_never_reaches_the_image_prompt(settings, images, trace, request_fo
     assert trace.tool_calls("generate_image") == []
     assert images.calls == []
     assert any("image_prompt" in e for e in raised.value.errors)
+
+
+def test_a_claim_inside_another_word_is_not_a_claim():
+    """Banned claims match whole words: 'inorganic' does not trip 'organic', and an empty field is not a leak."""
+    spec = PosterSpec(headline="Nothing inorganic here", subheadline="", body="A fine cup.", image_prompt="A cup on a table.", format="poster")
+    assert validate_spec(spec, {"banned_claims": ["organic"]}) == []
+    assert validate_spec(PosterSpec(headline="Organic beans", subheadline="x", body="y", image_prompt="z", format="poster"), {"banned_claims": ["organic"]}) == ["banned claim: organic"]

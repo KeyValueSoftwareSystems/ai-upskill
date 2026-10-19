@@ -26,7 +26,7 @@ uv run launchkit ui         # the harness chat page on http://localhost:8000
 
 Keys go through KeyValue's LiteLLM proxy: `LITELLM_API_KEY` and `LITELLM_BASE_URL`. Everyone runs the real model and real pictures; a picture takes 30 to 60 seconds through the proxy. `LAUNCHKIT_IMAGES=placeholder` draws a stand-in picture when you want speed over pictures.
 
-The opener's own commands still work on this branch: `uv run python -m launchkit.check_setup`, `uv run python -m launchkit.scoreboard --approach graph`, `uv run python -m launchkit.ui` (the opener's page, also port 8000, so run one at a time).
+The opener's code is on this branch too (`approach_llm/`, `approach_graph/`, `launchkit/ui.py`, `launchkit/scoreboard.py`), but its LangGraph parts need the opener branches' dependencies; run them from `session-01-langgraph`.
 
 ## Commands
 

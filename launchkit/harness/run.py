@@ -50,7 +50,7 @@ def run_request(
     images = images if images is not None else make_images(settings)
     result = Result(trace=trace)
 
-    agent = build_copy_agent(ws, ctx, model, settings)
+    agent = build_copy_agent(ws, ctx, model, settings, trace)
     result.context = ctx.report()
     trace.context(result.context)
     session = f"{wid}:{req.user_id}:{req.session_id}"

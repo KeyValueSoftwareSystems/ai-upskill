@@ -74,3 +74,14 @@ def test_an_unchanged_image_prompt_reuses_the_picture(settings, images, trace, r
     assert "reused" in " ".join(trace.lines())
     other = run_request(request_for(), settings=settings, model=good, images=images, trace=Trace(), previous={"image_prompt": "something else", "image": str(kept)})
     assert other.image != kept
+
+
+def test_the_copy_agent_carries_the_leash(settings, trace, good):
+    """The copy agent runs its tools through the same hook as the picture agent, so a retrieval tool added later is traced and capped too."""
+    from launchkit.harness.agent import build_copy_agent
+    from launchkit.harness.context import ContextBuilder
+    from launchkit.harness.workspace import load_workspace
+
+    ws = load_workspace("harbor", settings, trace)
+    agent = build_copy_agent(ws, ContextBuilder(settings.budgets), good, settings, trace)
+    assert agent.tool_hooks
