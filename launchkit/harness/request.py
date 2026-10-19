@@ -19,5 +19,7 @@ class UnknownWorkspace(Exception):
 
 
 def resolve_workspace_id(request: Request, settings) -> str:
-    # TODO step 4: accept only ids that match WORKSPACE_ID and name an existing folder; else raise UnknownWorkspace
-    return request.workspace_id
+    workspace_id = request.workspace_id
+    if not WORKSPACE_ID.fullmatch(workspace_id) or not (settings.workspaces_dir / workspace_id).is_dir():
+        raise UnknownWorkspace(workspace_id)
+    return workspace_id
