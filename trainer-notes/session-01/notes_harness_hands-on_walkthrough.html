@@ -359,13 +359,14 @@ footer{color:var(--muted);font-size:13.5px;border-top:1px solid var(--line);padd
 │   │   ├── agent.py             <i>build_copy_agent · </i><b>build_picture_agent  ← step 3</b>
 │   │   ├── run.py               <i>run_request: the boxes of the flow, in order</i>
 │   │   ├── trace.py             <i>the trace: one plain line per event</i>
-│   │   └── onboard.py           <i>PDF → the workspace files, the Onboard a brand demo</i>
+│   │   ├── onboard.py           <i>PDF → the workspace files, the Onboard a brand demo</i>
+│   │   └── library.py           <i>a brand's files as readable categories, for the page's Brand library</i>
 │   ├── adapters/                <i>the model and image clients behind the proxy</i>
-│   └── web/                     <i>the chat page</i>
+│   └── web/                     <i>the chat page, with the Onboard a brand and Brand library panels</i>
 ├── workspaces/
 │   ├── harbor/   SOUL.md  AGENTS.md  rules.yaml  facts.md  brand-book.md  users.yaml
 │   └── ember/    SOUL.md  AGENTS.md  rules.yaml  facts.md  users.yaml
-├── samples/moss-and-fern-brand-pack.pdf   <i>for the Onboard a brand demo in block 1: a one-page brand pack for Moss and Fern, a brand with no workspace folder yet</i>
+├── samples/                     <i>moss-and-fern-brand-pack.pdf, a one-page pack for a brand with no folder yet (the block 1 demo) · ember-coffee-brand-book.pdf, Ember's 15-page book</i>
 ├── checks/                      <i>test_step0.py … test_step4.py, what <code>launchkit check N</code> runs</i>
 ├── docs/                        <i>setup.md · glossary.md · step-1.md … step-4.md, the prompt cards · context.md</i>
 └── approach_llm/ · approach_graph/ · a few launchkit/*.py   <i>the opener's code, not part of this build</i></div>
@@ -378,7 +379,7 @@ footer{color:var(--muted);font-size:13.5px;border-top:1px solid var(--line);padd
         <li><b>Memory.</b> Every turn is stored per conversation and the last five go back to the model, so "Make the headline shorter" knows which headline.</li>
         <li><b>Poster or reply.</b> The model's form is a <code>Turn</code>: a poster spec for a brief, a plain reply for anything else.</li>
         <li><b>Brand and person.</b> The page's two pickers come from each workspace's <code>users.yaml</code>. Each brand-and-person pair has its own conversation; two people never share history.</li>
-        <li><b>Onboarding.</b> Upload a brand pack PDF; the model fills a profile form and code writes the six workspace files. The marketer owns them after that.</li>
+        <li><b>Onboarding and the brand library.</b> Upload a brand pack PDF; the model fills a profile form and code writes the workspace files. A brand that already has a folder gets its drafts replaced there, with the previous files kept as <code>.bak</code> and its people kept; a pack for another brand is refused. The Brand library panel shows what was extracted, read-only.</li>
       </ul>
     </div>
   </div>
@@ -568,7 +569,7 @@ ctx.set(&quot;rules&quot;, ...). Keep output_schema=Turn.</pre>
         <tr><td class="set">Harbor · Maya</td><td class="type">Poster for the Tidal bottle on a misty lakeshore at dawn. Headline idea: cold for 24 hours.</td><td><div class="exp"><div><b>Trace</b><span>Three <code>file read workspaces/harbor/…</code> lines, then <code>prompt rules: 174 tokens</code>.</span></div><div><b>Page</b><span>A spec in Harbor's calm voice. Context tab: the rules section holds SOUL.md then AGENTS.md.</span></div><div><b>Why</b><span>The three files now reach the model on every request.</span></div></div></td></tr>
         <tr><td class="set">Ember · Jonas</td><td class="type">Poster for our new roast at sunrise.</td><td><div class="exp"><div><b>Trace</b><span><code>workspaces/ember/…</code> files, <code>rules: 143 tokens</code>.</span></div><div><b>Page</b><span>Ember's playful voice, Ember Orange and Roast Brown in the image prompt.</span></div><div><b>Why</b><span>Same code, other files. Nothing about Harbor is hard-coded.</span></div></div></td></tr>
         <tr><td class="set">Harbor · Maya</td><td class="type">add <code>- End the body with the word Tidal.</code> to <code>workspaces/harbor/AGENTS.md</code>, send the request again</td><td><div class="exp"><div><b>Trace</b><span><code>rules: 184 tokens</code> instead of 174.</span></div><div><b>Page</b><span>The body ends with "Tidal".</span></div><div><b>Why</b><span>A file edit changes the next turn, no restart, no deploy. Remove the line after.</span></div></div></td></tr>
-        <tr><td class="set">Onboard a brand</td><td class="type">upload <code>samples/moss-and-fern-brand-pack.pdf</code></td><td><div class="exp"><div><b>Trace</b><span>One page read, one model call, <code>brand 'Moss and Fern' gets the new workspace 'moss-and-fern'</code>, six <code>wrote</code> lines.</span></div><div><b>Page</b><span>Moss and Fern in the Brand list. Press Close to return to the chat.</span></div><div><b>Why</b><span>A new brand is a new folder, drafted from its pack. A second upload is refused: folders are never overwritten. Delete the folder after.</span></div></div></td></tr>
+        <tr><td class="set">Onboard a brand</td><td class="type">Into: <i>New brand</i> · upload <code>samples/moss-and-fern-brand-pack.pdf</code></td><td><div class="exp"><div><b>Trace</b><span>One page read, one model call, <code>brand 'Moss and Fern' gets the new workspace 'moss-and-fern'</code>, six <code>wrote</code> lines.</span></div><div><b>Page</b><span>Set <b>Into</b> to <i>New brand (named from the pack)</i> first. Moss and Fern appears in the Brand list. Press <b>Brand library</b> to see what was extracted as a table: voice, rules, banned words, colours, facts, people, and the uploaded PDF. Press Close to return to the chat.</span></div><div><b>Why</b><span>A new brand is a new folder, drafted from its pack; a pack for a brand that already has a folder lands in that folder, whatever the folder is called. Uploading again replaces the five drafted files, keeps each previous one as <code>.bak</code>, keeps <code>users.yaml</code>, and keeps only the latest PDF. A pack for another brand uploaded into a workspace is refused. Delete the Moss and Fern folder after the demo.</span></div></div></td></tr>
       </tbody>
     </table>
   </div></div>
@@ -724,7 +725,7 @@ tool_hooks=[make_leash(settings.limits, trace)].</pre>
     <span class="stamp">Block 4</span>
     <h2>4 · The request says who you are</h2>
   </div>
-  <div class="row branch"><h3>Branches</h3><div class="body"><div class="branches"><span class="chip"><span class="lbl">Build on</span><code>session-01-harness-step3</code><span class="why">the step 4 slot is a TODO there</span></span><span class="chip"><span class="lbl">Answer</span><code>session-01-harness-step4</code><span class="why">step 4 filled in · the full answer, <code>check all</code> passes 43</span></span></div></div></div>
+  <div class="row branch"><h3>Branches</h3><div class="body"><div class="branches"><span class="chip"><span class="lbl">Build on</span><code>session-01-harness-step3</code><span class="why">the step 4 slot is a TODO there</span></span><span class="chip"><span class="lbl">Answer</span><code>session-01-harness-step4</code><span class="why">step 4 filled in · the full answer, <code>check all</code> passes 51</span></span></div></div></div>
   <div class="row say"><h3>The point</h3><div class="body">
     <p>Who is asking comes from the request, never from the text. The workspace id is a field the sign-in sets; the page's Brand picker stands in for that sign-in. No tool takes a folder name, and the id is checked against an allow-list and an existing folder before any file is opened. So <code>../harbor</code>, or an Ember user asking for Harbor's rules, gets nowhere.</p>
   </div></div>
@@ -747,7 +748,7 @@ Never read the workspace id from request.text.</pre>
 WORKSPACE_ID = re.compile(r&quot;^[a-z0-9-]{1,32}$&quot;)</pre>
   </div></div>
   <div class="row check"><h3>Check</h3><div class="body">
-    <p><code>uv run launchkit check 4</code> · seven PASS lines: a request cannot name another workspace and load its files; an id outside the allow-list is refused and no file is read. Then <code>uv run launchkit check all</code>: 43 passed, the CP1.1 gate.</p>
+    <p><code>uv run launchkit check 4</code> · seven PASS lines: a request cannot name another workspace and load its files; an id outside the allow-list is refused and no file is read. Then <code>uv run launchkit check all</code>: 51 passed, the CP1.1 gate.</p>
   </div></div>
   <div class="row page drive"><h3>Drive it from the page</h3><div class="body">
     <table>
