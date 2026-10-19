@@ -11,6 +11,7 @@
 }
 @media (prefers-color-scheme:dark){:root{--bg:#111619;--surface:#192024;--ink:#e7edf1;--ink-2:#b4c0c9;--muted:#80909c;--line:#2b353c;--accent:#4fb3c0;--accent-soft:#143036;--model:#e0944e;--model-soft:#3a2816;--pass:#6cc08e;--fail:#ef8a8a;--fail-soft:#3c2323;--code:#0d1214}}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;height:100vh;display:flex;flex-direction:column}
 header{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--surface)}
 header h1{font-size:17px;margin:0 14px 0 0;letter-spacing:-.01em}
@@ -18,6 +19,7 @@ header label{font-size:12px;color:var(--muted);display:flex;flex-direction:colum
 select,input,button{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
 button{cursor:pointer;background:var(--accent);color:#fff;border-color:var(--accent)}
 button.quiet{background:transparent;color:var(--ink-2);border-color:var(--line)}
+button:disabled{opacity:.45;cursor:default}
 main{flex:1;display:grid;grid-template-columns:minmax(320px,1fr) minmax(360px,1.2fr);min-height:0}
 .chat{display:flex;flex-direction:column;border-right:1px solid var(--line);min-width:0}
 .messages{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
@@ -54,6 +56,29 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 .files div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
 .files b{display:block;font:12px ui-monospace,Menlo,monospace;color:var(--accent);margin-bottom:4px}
 .files pre{max-height:160px;overflow:auto;font-size:11.5px}
+header button.quiet.on{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.library{border-bottom:1px solid var(--line);background:var(--surface);padding:12px 18px;max-height:62vh;overflow:auto}
+.library .head{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:end;justify-content:space-between;margin-bottom:12px}
+.library h2{font-size:16px;margin:0}
+.library h2 small{font-weight:normal;font-size:12px;color:var(--muted);margin-left:6px}
+.library form{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:end}
+.library form label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+.library .status{font-size:12.5px;color:var(--muted)}
+.library .status.bad{color:var(--fail)}
+.library .status.ok{color:var(--pass)}
+.brand-table{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:0}
+.brand-table th{background:var(--surface);padding:10px 14px}
+.brand-table td{vertical-align:top;padding:12px 14px;background:var(--bg);border-bottom:2px solid var(--surface)}
+.brand-table td.cat{width:220px;font-weight:600;white-space:nowrap}
+.brand-table td.cat span{font-weight:normal;color:var(--muted);margin-left:4px}
+.brand-table ul{margin:0;padding-left:18px}
+.brand-table li{margin:2px 0}
+.brand-table .none{color:var(--muted);font-style:italic}
+.chips{display:flex;flex-wrap:wrap;gap:8px 18px}
+.chip{display:inline-flex;align-items:center;gap:8px}
+.chip i{width:22px;height:22px;border-radius:5px;border:1px solid var(--line);display:inline-block}
+.chip code{font:12px ui-monospace,Menlo,monospace;color:var(--muted)}
+@media (max-width:640px){.brand-table td.cat{width:auto;white-space:normal}}
 @media (max-width:860px){main{grid-template-columns:1fr;grid-template-rows:1fr 1fr}.chat{border-right:none;border-bottom:1px solid var(--line)}}
 </style>
 </head>
@@ -65,15 +90,28 @@ td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
   <label>Conversation <span id="session" style="font:12px ui-monospace,Menlo,monospace;color:var(--ink-2)"></span></label>
   <button class="quiet" id="new">New conversation</button>
   <button class="quiet" id="onboardToggle">Onboard a brand</button>
+  <button class="quiet" id="libraryToggle">Brand library</button>
 </header>
 <section class="onboard" id="onboard" hidden>
   <form id="onboardForm">
+    <label>Into <select id="onboardTarget"></select></label>
     <label>Brand pack (PDF) <input id="onboardPdf" type="file" accept="application/pdf" required></label>
     <button id="onboardRun">Upload and draft the files</button>
     <button type="button" class="quiet" id="onboardClose">Close</button>
-    <span class="hint">A new brand gets a new folder, named after the brand in the pack. The PDF is stored under its assets. The model drafts six files: SOUL.md, AGENTS.md, rules.yaml, facts.md, brand-book.md and users.yaml. You own them after that. The new brand appears in the Brand list; press Close to go back to the chat.</span>
+    <span class="hint">Pick the brand the pack belongs to. Its drafted files (SOUL.md, AGENTS.md, rules.yaml, facts.md, brand-book.md) are replaced and the PDF replaces the older pack under its assets; users.yaml is kept. "New brand" gets a new folder, named after the brand in the pack, with a users.yaml of its own. You own the files after that: edit them in the Brand library. Press Close to go back to the chat.</span>
   </form>
   <div class="files" id="onboardFiles"></div>
+</section>
+<section class="library" id="library" hidden>
+  <div class="head">
+    <h2 id="libraryTitle"></h2>
+    <form id="libraryForm">
+      <label>Brand file (PDF) <input id="libraryPdf" type="file" accept="application/pdf" required></label>
+      <button id="libraryRun">Upload and extract</button>
+      <span class="status" id="libraryStatus"></span>
+    </form>
+  </div>
+  <div id="libraryBody"></div>
 </section>
 <main>
   <section class="chat">
@@ -125,34 +163,82 @@ function loadLogins(select){
     const brands = []; list.forEach(l => { if (!brands.some(b => b.id === l.workspace_id)) brands.push({ id: l.workspace_id, label: l.label.split(" · ")[1] || l.workspace_id }); });
     brands.forEach(b => { const o = document.createElement("option"); o.value = b.id; o.textContent = b.label; sel.appendChild(o); });
     if (current && brands.some(b => b.id === current)) sel.value = current;
-    fillPeople(); return loadConversation();
+    $("onboardTarget").innerHTML = brands.map(b => `<option value="${esc(b.id)}">${esc(b.label)} (${esc(b.id)})</option>`).join("") + '<option value="">New brand (named from the pack)</option>';
+    $("onboardTarget").value = sel.value;
+    fillPeople(); if (!$("library").hidden) loadLibrary(); return loadConversation();
   });
 }
 loadLogins();
-$("brand").onchange = () => { fillPeople(); loadConversation(); };
+$("brand").onchange = () => { fillPeople(); loadConversation(); $("onboardTarget").value = $("brand").value; if (!$("library").hidden) loadLibrary(); };
 $("person").onchange = loadConversation;
 $("new").onclick = async () => { const w = who(); const data = await (await fetch(`/conversations/${w.workspace_id}/${w.user_id}/new`, { method: "POST" })).json(); session = data.session_id; $("session").textContent = session; $("messages").innerHTML = ""; };
-$("onboardToggle").onclick = () => { $("onboard").hidden = !$("onboard").hidden; };
-$("onboardClose").onclick = () => { $("onboard").hidden = true; };
-$("onboardForm").onsubmit = async e => {
-  e.preventDefault();
-  const file = $("onboardPdf").files[0]; if (!file) return;
+function showTop(id){
+  ["onboard", "library"].forEach(x => { const open = x === id && $(x).hidden; $(x).hidden = !open; $(x + "Toggle").classList.toggle("on", open); });
+  if (!$("library").hidden) loadLibrary();
+}
+$("onboardToggle").onclick = () => showTop("onboard");
+$("libraryToggle").onclick = () => showTop("library");
+$("onboardClose").onclick = () => { $("onboard").hidden = true; $("onboardToggle").classList.remove("on"); };
+async function loadLibrary(){
+  const id = $("brand").value; if (!id) return;
+  const r = await fetch(`/library/${encodeURIComponent(id)}`);
+  if (!r.ok) { $("libraryTitle").textContent = id; $("libraryBody").innerHTML = `<p class="empty">No library for ${esc(id)}.</p>`; return; }
+  const lib = await r.json();
+  $("libraryTitle").innerHTML = `${esc(lib.brand)}<small>workspaces/${esc(id)}/</small>`;
+  const list = items => `<ul>${items.map(i => `<li>${esc(i.text)}</li>`).join("")}</ul>`;
+  const chips = items => `<div class="chips">${items.map(i => `<span class="chip"><i style="background:${/^#[0-9a-f]{3,8}$/i.test(i.hex) ? i.hex : "transparent"}"></i>${esc(i.text)} <code>${esc(i.hex)}</code></span>`).join("")}</div>`;
+  const row = (category, count, html) => `<tr><td class="cat">${esc(category)}${count ? `<span>(${count})</span>` : ""}</td><td>${html}</td></tr>`;
+  const rows = lib.details.map(d => row(d.category, d.items.length > 1 ? d.items.length : 0,
+    !d.items.length ? '<span class="none">Not found in the brand file</span>' : d.category === "Colours" ? chips(d.items) : d.items.length === 1 ? esc(d.items[0].text) : list(d.items)));
+  const docs = lib.uploads.length
+    ? `<ul>${lib.uploads.map(u => `<li><a href="/library/${encodeURIComponent(id)}/assets/${encodeURIComponent(u.name)}" target="_blank">${esc(u.name)}</a> · ${Math.max(1, Math.round(u.bytes / 1024))} KB · uploaded ${esc(new Date(u.modified * 1000).toLocaleString())}</li>`).join("")}</ul>`
+    : '<span class="none">No brand file uploaded yet. Upload one above.</span>';
+  $("libraryBody").innerHTML = `<table class="brand-table"><tr><th>Category</th><th>Details</th></tr>${rows.join("")}${row("Documents", 0, docs)}</table>`;
+}
+function uploadPack(file, workspaceId, { button, onOnboarded, onError, onDone = () => {} }){
   const fd = new FormData();
   fd.append("pdf", file);
-  $("trace").innerHTML = ""; $("onboardFiles").innerHTML = ""; $("onboardRun").disabled = true;
-  const { run_id } = await (await fetch("/onboard", { method: "POST", body: fd })).json();
-  const es = new EventSource(`/events/${run_id}`);
-  es.onmessage = m => {
-    const ev = JSON.parse(m.data);
-    if (ev.type === "trace") traceLine(ev);
-    if (ev.type === "onboarded") {
+  fd.append("workspace_id", workspaceId);
+  $("trace").innerHTML = ""; button.disabled = true;
+  return fetch("/onboard", { method: "POST", body: fd }).then(async res => {
+    if (!res.ok) { button.disabled = false; onError(`Not uploaded: ${(await res.json()).detail || res.status}`); return; }
+    const { run_id } = await res.json();
+    const es = new EventSource(`/events/${run_id}`);
+    es.onmessage = m => {
+      const ev = JSON.parse(m.data);
+      if (ev.type === "trace") traceLine(ev);
+      if (ev.type === "onboarded") onOnboarded(ev);
+      if (ev.type === "error") onError(`${ev.kind}: ${ev.message}`);
+    };
+    es.addEventListener("done", () => { es.close(); button.disabled = false; onDone(); });
+    es.onerror = () => { es.close(); button.disabled = false; onDone(); };
+  }).catch(() => { button.disabled = false; onError("Could not reach the server."); onDone(); });
+}
+$("onboardForm").onsubmit = e => {
+  e.preventDefault();
+  const file = $("onboardPdf").files[0]; if (!file) return;
+  $("onboardFiles").innerHTML = "";
+  uploadPack(file, $("onboardTarget").value, {
+    button: $("onboardRun"),
+    onOnboarded: ev => {
       $("onboardFiles").innerHTML = Object.entries(ev.files).map(([name, body]) => `<div><b>workspaces/${esc(ev.workspace_id)}/${esc(name)}</b><pre>${esc(body)}</pre></div>`).join("");
       loadLogins(ev.workspace_id);
-    }
-    if (ev.type === "error") add("error", `<b>${esc(ev.kind)}</b>\n${esc(ev.message)}`);
-  };
-  es.addEventListener("done", () => { es.close(); $("onboardRun").disabled = false; });
-  es.onerror = () => { es.close(); $("onboardRun").disabled = false; };
+    },
+    onError: message => add("error", esc(message)),
+  });
+};
+$("libraryForm").onsubmit = e => {
+  e.preventDefault();
+  const file = $("libraryPdf").files[0]; if (!file) return;
+  const status = $("libraryStatus"), t0 = Date.now();
+  status.className = "status"; status.textContent = "Reading the file and extracting the brand… 0s";
+  const tick = setInterval(() => { status.textContent = `Reading the file and extracting the brand… ${Math.round((Date.now() - t0) / 1000)}s`; }, 1000);
+  uploadPack(file, $("brand").value, {
+    button: $("libraryRun"),
+    onOnboarded: () => { status.className = "status ok"; status.textContent = "Done. The details below come from this file."; $("libraryPdf").value = ""; loadLogins($("brand").value); },
+    onError: message => { status.className = "status bad"; status.textContent = message; },
+    onDone: () => { clearInterval(tick); if (status.className === "status") { status.className = "status bad"; status.textContent = "Lost the connection before the extraction finished."; } },
+  });
 };
 document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
   document.querySelectorAll(".tabs button").forEach(x => x.classList.toggle("on", x === b));
