@@ -67,3 +67,12 @@ def test_next_problem_meaning_ignores_the_owner(settings):
     """The failure step 4 fixes: one shared list, so Ember asking about its next launch gets Harbor's embargoed Tidal launch."""
     result = tool_for("ember", settings)("Write a poster about our next launch.")
     assert any(ref.startswith("harbor/") for ref in refs(result))
+
+
+def test_the_trace_shows_whose_chunks_came_back(settings):
+    """Each returned chunk is traced with its brand, rank and cosine score, so the leak in one shared list is visible."""
+    trace = Trace()
+    make_get_brand_details(load_workspace("ember", settings, Trace()), trace)("Write a poster about our next launch.")
+    lines = [line for line in trace.lines() if line.startswith("chunk")]
+    assert len(lines) == 5 and all("score 0." in line for line in lines)
+    assert any(" harbor/" in line for line in lines)

@@ -56,11 +56,20 @@ uv run launchkit run harbor "How do I clean the lid?" --session rag3
 
 The reply: hand-wash the lid, the body is dishwasher-safe.
 
+Compare the two rankers on the same questions. Each chunk line shows its rank, id and cosine score:
+
+```
+uv run launchkit lookup harbor "Will it spill in my bag?"     # leak-proof is #1; in step 2 nothing matched
+uv run launchkit lookup harbor "Warm on a long shift?"        # "hot for 12 hours" is in the top 5
+```
+
 ## Next problem
 
 ```
 uv run launchkit run ember "Write a poster about our next launch." --user jonas --session rag3
 ```
+
+Show it before the poster: `uv run launchkit lookup ember "Write a poster about our next launch."` returns five chunks, all `harbor/…`.
 
 Every brand's chunks sit in one list, ranked by meaning alone. Harbor's embargoed Tidal launch is the closest thing to "our next launch",
 so Ember's poster says "Flask Trail 750 lands in six weeks". Dropping other brands' chunks afterwards leaves Ember with nothing,

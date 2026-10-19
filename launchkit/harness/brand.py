@@ -15,8 +15,10 @@ def make_get_brand_details(ws: Workspace, trace: Trace):
         index = memory_index(ws.root.parent)
         if index.refresh():
             trace.note(f"get_brand_details embedded {len(index.entries)} chunks into one in-memory list")
-        top = [chunk for _, chunk in index.search(query, TOP_K)]
-        trace.note(f"get_brand_details ranked {len(index.entries)} chunks by meaning, returned {len(top)}")
-        return render_results(query, top)
+        ranked = index.search(query, TOP_K)
+        trace.note(f"get_brand_details ranked {len(index.entries)} chunks by meaning (cosine similarity), returned {len(ranked)}")
+        for rank, (score, chunk) in enumerate(ranked, 1):
+            trace.chunk(rank, chunk.ref, score, chunk.text)
+        return render_results(query, [chunk for _, chunk in ranked])
 
     return get_brand_details

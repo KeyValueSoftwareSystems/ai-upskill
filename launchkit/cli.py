@@ -103,11 +103,11 @@ def cmd_chunks(args):
     table.add_column("tokens", justify="right")
     table.add_column("starts with", no_wrap=True, overflow="ellipsis")
     for n, chunk in enumerate(chunks, 1):
-        table.add_row(str(n), chunk.id, str(approx_tokens(f"{chunk.heading} {chunk.text}")), " ".join(chunk.text.split())[:60])
+        table.add_row(str(n), chunk.ref, str(approx_tokens(f"{chunk.heading} {chunk.text}")), " ".join(chunk.text.split())[:60])
     console.print(table)
     if args.show:
         for chunk in chunks:
-            console.print(f"\n[bold]{chunk.id}[/bold]\n{chunk.text}", highlight=False)
+            console.print(f"\n[bold]{chunk.ref}[/bold]\n{chunk.text}", highlight=False)
     return 0
 
 
