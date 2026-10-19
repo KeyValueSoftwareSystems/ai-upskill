@@ -588,7 +588,7 @@ ctx.set(&quot;rules&quot;, ...). Keep output_schema=Turn.</pre>
     <details class="card" open><summary>Prompt card 2 · for their coding agent</summary>
 <pre>In launchkit/harness/spec.py, implement validate_spec(spec, rules) -&gt; list[str].
 Return one readable error per problem: headline over 6 words, subheadline over 12,
-body over 25, any banned claim from rules[&quot;banned_claims&quot;] appearing in the copy,
+body over 25, any banned claim from rules[&quot;banned_claims&quot;] appearing as a whole word in the copy,
 and the headline or subheadline text appearing inside image_prompt.
 
 In launchkit/harness/run.py, after the copy agent returns a spec: validate it.
@@ -607,16 +607,15 @@ Never start the picture phase with an invalid spec.</pre>
             errors.append(f&quot;{field} has {words} words, limit is {limit}&quot;)
     copy = f&quot;{spec.headline} {spec.subheadline} {spec.body}&quot;.lower()
     for claim in rules.get(&quot;banned_claims&quot;, []):
-        if claim.lower() in copy:
+        if re.search(rf&quot;\b{re.escape(claim.lower())}\b&quot;, copy):
             errors.append(f&quot;banned claim: {claim}&quot;)
     for field in (&quot;headline&quot;, &quot;subheadline&quot;):
-        if getattr(spec, field).lower() in spec.image_prompt.lower():
+        text = getattr(spec, field).lower()
+        if text and text in spec.image_prompt.lower():
             errors.append(f&quot;{field} text leaked into image_prompt&quot;)
     return errors
 
 # launchkit/harness/run.py · after the copy agent returns
-    errors = validate_spec(spec, ws.rules)
-    if errors:
         trace.validation(errors, attempt=1)
         run = agent.run(repair_message(errors), session_id=session, user_id=req.user_id)
         result.runs.append(run)
@@ -628,7 +627,7 @@ Never start the picture phase with an invalid spec.</pre>
             raise SpecError(errors)</pre>
   </div></div>
   <div class="row check"><h3>Check</h3><div class="body">
-    <p><code>uv run launchkit check 2</code> · three PASS lines: the limits and banned claims are caught; a bad form gets one repair, then a typed error; copy never reaches the image prompt.</p>
+    <p><code>uv run launchkit check 2</code> · four PASS lines: the limits and banned claims are caught; a bad form gets one repair, then a typed error; copy never reaches the image prompt.</p>
   </div></div>
   <div class="row page drive"><h3>Drive it from the page</h3><div class="body">
     <table>
@@ -725,7 +724,7 @@ tool_hooks=[make_leash(settings.limits, trace)].</pre>
     <span class="stamp">Block 4</span>
     <h2>4 · The request says who you are</h2>
   </div>
-  <div class="row branch"><h3>Branches</h3><div class="body"><div class="branches"><span class="chip"><span class="lbl">Build on</span><code>session-01-harness-step3</code><span class="why">the step 4 slot is a TODO there</span></span><span class="chip"><span class="lbl">Answer</span><code>session-01-harness-step4</code><span class="why">step 4 filled in · the full answer, <code>check all</code> passes 38</span></span></div></div></div>
+  <div class="row branch"><h3>Branches</h3><div class="body"><div class="branches"><span class="chip"><span class="lbl">Build on</span><code>session-01-harness-step3</code><span class="why">the step 4 slot is a TODO there</span></span><span class="chip"><span class="lbl">Answer</span><code>session-01-harness-step4</code><span class="why">step 4 filled in · the full answer, <code>check all</code> passes 43</span></span></div></div></div>
   <div class="row say"><h3>The point</h3><div class="body">
     <p>Who is asking comes from the request, never from the text. The workspace id is a field the sign-in sets; the page's Brand picker stands in for that sign-in. No tool takes a folder name, and the id is checked against an allow-list and an existing folder before any file is opened. So <code>../harbor</code>, or an Ember user asking for Harbor's rules, gets nowhere.</p>
   </div></div>
@@ -740,7 +739,7 @@ Never read the workspace id from request.text.</pre>
   <div class="row slot"><h3>Answer</h3><div class="body">
 <pre># launchkit/harness/request.py · resolve_workspace_id
     workspace_id = request.workspace_id
-    if not WORKSPACE_ID.match(workspace_id) or not (settings.workspaces_dir / workspace_id).is_dir():
+    if not WORKSPACE_ID.fullmatch(workspace_id) or not (settings.workspaces_dir / workspace_id).is_dir():
         raise UnknownWorkspace(workspace_id)
     return workspace_id
 
@@ -748,7 +747,7 @@ Never read the workspace id from request.text.</pre>
 WORKSPACE_ID = re.compile(r&quot;^[a-z0-9-]{1,32}$&quot;)</pre>
   </div></div>
   <div class="row check"><h3>Check</h3><div class="body">
-    <p><code>uv run launchkit check 4</code> · five PASS lines: a request cannot name another workspace and load its files; an id outside the allow-list is refused and no file is read. Then <code>uv run launchkit check all</code>: 38 passed, the CP1.1 gate.</p>
+    <p><code>uv run launchkit check 4</code> · seven PASS lines: a request cannot name another workspace and load its files; an id outside the allow-list is refused and no file is read. Then <code>uv run launchkit check all</code>: 43 passed, the CP1.1 gate.</p>
   </div></div>
   <div class="row page drive"><h3>Drive it from the page</h3><div class="body">
     <table>
