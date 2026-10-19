@@ -10,11 +10,13 @@ def test_skeleton_returns_a_spec(settings, images, trace, request_for, good):
     assert [e.kind for e in trace.events].count("model") >= 1
 
 
-def test_skeleton_skips_the_picture(settings, images, trace, request_for, good):
-    """Before step 3 the picture phase is skipped and the trace says so."""
+def test_trace_reports_the_picture_phase(settings, images, trace, request_for, good):
+    """The trace always says what happened to the picture: skipped before step 3, saved after."""
     result = run_request(request_for(), settings=settings, model=good, images=images, trace=trace)
-    assert result.image is None
-    assert any(e.kind == "picture" and e.detail.get("status") == "skipped" for e in trace.events)
+    picture = [e for e in trace.events if e.kind == "picture"]
+    assert len(picture) == 1
+    assert picture[0].detail["status"] in ("skipped", "done")
+    assert (result.image is not None) == (picture[0].detail["status"] == "done")
 
 
 def test_second_turn_remembers_the_first(settings, images, trace, request_for, good):
