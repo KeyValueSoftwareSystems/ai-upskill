@@ -99,7 +99,7 @@ header button.quiet.on{color:var(--accent);border-color:var(--accent);background
     <label>Brand pack (PDF) <input id="onboardPdf" type="file" accept="application/pdf" required></label>
     <button id="onboardRun">Upload and draft the files</button>
     <button type="button" class="quiet" id="onboardClose">Close</button>
-    <span class="hint">Pick the brand the pack belongs to. Its drafted files (SOUL.md, AGENTS.md, rules.yaml, facts.md, brand-book.md) are replaced and the PDF replaces the older pack under its assets; users.yaml is kept. "New brand" gets a new folder, named after the brand in the pack, with a users.yaml of its own. You own the files after that: edit them in the Brand library. Press Close to go back to the chat.</span>
+    <span class="hint">New brand makes a folder named from the pack, or lands in the brand's existing folder when the pack names a brand that already has one. Pick a brand to replace its drafts: a pack for another brand is refused. Its drafted files (SOUL.md, AGENTS.md, rules.yaml, facts.md, brand-book.md) are replaced and the PDF replaces the older pack under its assets; users.yaml is kept. "New brand" gets a new folder, named after the brand in the pack, with a users.yaml of its own. You own the files after that: edit them in the Brand library. Press Close to go back to the chat.</span>
   </form>
   <div class="files" id="onboardFiles"></div>
 </section>
@@ -164,13 +164,12 @@ function loadLogins(select){
     const brands = []; list.forEach(l => { if (!brands.some(b => b.id === l.workspace_id)) brands.push({ id: l.workspace_id, label: l.label.split(" · ")[1] || l.workspace_id }); });
     brands.forEach(b => { const o = document.createElement("option"); o.value = b.id; o.textContent = b.label; sel.appendChild(o); });
     if (current && brands.some(b => b.id === current)) sel.value = current;
-    $("onboardTarget").innerHTML = brands.map(b => `<option value="${esc(b.id)}">${esc(b.label)} (${esc(b.id)})</option>`).join("") + '<option value="">New brand (named from the pack)</option>';
-    $("onboardTarget").value = sel.value;
+    $("onboardTarget").innerHTML = '<option value="">New brand (named from the pack)</option>' + brands.map(b => `<option value="${esc(b.id)}">${esc(b.label)} (${esc(b.id)})</option>`).join("");
     fillPeople(); if (!$("library").hidden) loadLibrary(); return loadConversation();
   });
 }
 loadLogins();
-$("brand").onchange = () => { fillPeople(); loadConversation(); $("onboardTarget").value = $("brand").value; if (!$("library").hidden) loadLibrary(); };
+$("brand").onchange = () => { fillPeople(); loadConversation(); if (!$("library").hidden) loadLibrary(); };
 $("person").onchange = loadConversation;
 $("new").onclick = async () => { const w = who(); const data = await (await fetch(`/conversations/${w.workspace_id}/${w.user_id}/new`, { method: "POST" })).json(); session = data.session_id; $("session").textContent = session; $("messages").innerHTML = ""; };
 function showTop(id){
