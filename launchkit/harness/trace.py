@@ -130,5 +130,5 @@ def _result(result) -> str:
 
 
 def _short(value, width: int = 90) -> str:
-    text = str(value)
+    text = " ".join(str(value).split())
     return text if len(text) <= width else text[: width - 1] + "…"

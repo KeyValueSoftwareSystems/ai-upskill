@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from launchkit.adapters.fakes import EchoModel, EndlessModel, GoodModel, MalformedModel
+from launchkit.adapters.fakes import EchoModel, EndlessModel, GoodModel, LookupModel, MalformedModel
 from launchkit.adapters.images import FakeImages
 from launchkit.harness.request import Request
 from launchkit.harness.trace import Trace
@@ -46,6 +46,11 @@ def echo():
 @pytest.fixture
 def good():
     return GoodModel()
+
+
+@pytest.fixture
+def lookup():
+    return LookupModel()
 
 
 @pytest.fixture

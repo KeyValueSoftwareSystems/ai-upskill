@@ -100,9 +100,17 @@ def cmd_explain(args):
     return 0
 
 
+RAG_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_rag*.py"))
+
+
 def cmd_check(args):
     extra = ["onboard", "setup"]
-    names = [f"step{n}" for n in range(5)] + extra if args.step == "all" else [args.step if args.step in extra else f"step{args.step}"]
+    if args.step == "all":
+        names = [f"step{n}" for n in range(5)] + extra
+    elif args.step == "rag":
+        names = RAG_STEPS
+    else:
+        names = [args.step if args.step in extra + RAG_STEPS else f"step{args.step}"]
     targets = [ROOT / "checks" / f"test_{name}.py" for name in names]
     command = [sys.executable, "-m", "pytest", "-q", "--tb=no", "-rN", "-p", "no:cacheprovider", *map(str, targets)]
     proc = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
@@ -149,8 +157,8 @@ def main(argv=None):
     explain.add_argument("--show", action="store_true", help="print the system message as sent")
     explain.set_defaults(func=cmd_explain)
 
-    check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all")
-    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all"])
+    check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all; retrieval: check rag1.. or rag")
+    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag"])
     check.set_defaults(func=cmd_check)
 
     ui = sub.add_parser("ui", help="start the chat page")

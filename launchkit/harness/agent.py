@@ -1,6 +1,7 @@
 from agno.agent import Agent
 from agno.db.sqlite import SqliteDb
 
+from launchkit.harness.brand import make_get_brand_details
 from launchkit.harness.context import ContextBuilder
 from launchkit.harness.limits import make_leash
 from launchkit.harness.spec import PosterSpec, Turn
@@ -12,6 +13,7 @@ SPEC_TASK = """You are talking with a marketer. Decide what kind of turn this is
 If they ask for a poster, or to change, improve or redo any part of a poster from earlier in this conversation (its words, its picture, its sky, its mood): kind is "poster", and the spec is the whole poster with that change made. Never describe what you would change; make the change.
 Fill every field of the spec. Headline up to 6 words, subheadline up to 12, body up to 25. format is portrait or square.
 The image_prompt describes only the picture: subject, setting, light, colours. It contains no words to print.
+Brand and product facts are not in this prompt. Before you state any product fact, call get_brand_details and use only what it returns. Never claim what it does not say.
 Otherwise, for a greeting, a question or small talk: kind is "reply", with a short helpful answer in the brand's voice. No spec."""
 
 PICTURE_TASK = """Make the poster picture. Call generate_image once with the scene description you were given.
@@ -33,6 +35,7 @@ def build_copy_agent(ws: Workspace, ctx: ContextBuilder, model, settings, trace:
         db=session_db(settings),
         add_history_to_context=True,
         num_history_runs=5,
+        tools=[make_get_brand_details(ws, trace)],
         tool_hooks=[make_leash(settings.limits, trace)],
         telemetry=False,
     )

@@ -9,6 +9,7 @@ A marketing assistant built in steps across the session. A marketer asks for a p
 | `session-01-langgraph` | a LangGraph pipeline, `approach_graph/graph.py` |
 | **`session-01-harness`** (you are here) | the agent harness on Agno, built in four steps; the opener's code stays in the repo |
 | `session-01-harness-step1` … `step4` | each step's answer |
+| `session-01-rag-step1` … `step4` | retrieval (CP1.2): one `get_brand_details` tool, rebuilt four times |
 
 Each branch contains the previous branch's solution. Fall behind, check out the next one.
 
@@ -81,3 +82,11 @@ Where retrieval plugs in:
 - `uv run launchkit explain` prints what the model saw on the last run, section by section, with tool results as a row.
 - `workspaces/harbor/brand-book.md` and `facts.md` hold Harbor's text with clear headings; Ember's are in `workspaces/ember/`.
 - `launchkit/harness/request.py`: the workspace id is already resolved from the trusted request. Your tool takes no workspace argument.
+
+## Retrieval (CP1.2), in four steps
+
+One tool, `get_brand_details`, rebuilt each time it fails. Each step has a check and a page in `docs/`.
+
+| Step | Version | Check | Branch with the answer |
+| --- | --- | --- | --- |
+| 1 · A tool to fetch brand details | `get_brand_details()`: the whole brand file | `check rag1` | `session-01-rag-step1` |

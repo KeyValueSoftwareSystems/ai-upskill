@@ -2,7 +2,7 @@ import os
 
 from agno.models.openai import OpenAIChat
 
-from launchkit.adapters.fakes import EchoModel, EndlessModel, GoodModel, MalformedModel, ProfileModel
+from launchkit.adapters.fakes import EchoModel, EndlessModel, GoodModel, LookupModel, MalformedModel, ProfileModel
 from launchkit.harness.trace import Trace
 
 PROVIDER_KEYS = {
@@ -12,7 +12,7 @@ PROVIDER_KEYS = {
     "groq": "GROQ_API_KEY",
 }
 
-FAKES = {"echo": EchoModel, "malformed": MalformedModel, "endless": EndlessModel, "good": GoodModel, "profile": ProfileModel}
+FAKES = {"echo": EchoModel, "malformed": MalformedModel, "endless": EndlessModel, "good": GoodModel, "lookup": LookupModel, "profile": ProfileModel}
 
 
 def proxy() -> tuple[str, str] | None:

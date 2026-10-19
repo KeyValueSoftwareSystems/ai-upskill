@@ -86,7 +86,19 @@ def tool_call_response(name: str, arguments: dict, call_id: str) -> ModelRespons
 
 
 def has_tool_result(messages: list) -> bool:
-    return any(getattr(m, "role", None) == "tool" for m in messages)
+    return any(getattr(m, "role", None) == "tool" and not getattr(m, "from_history", False) for m in messages)
+
+
+def tool_names(tools: list) -> set[str]:
+    return {t["function"]["name"] for t in tools if isinstance(t, dict) and "function" in t}
+
+
+def is_picture_phase(tools: list) -> bool:
+    return "generate_image" in tool_names(tools)
+
+
+def tool_results(messages: list) -> str:
+    return "\n".join(str(m.content or "") for m in messages if getattr(m, "role", None) == "tool" and not getattr(m, "from_history", False))
 
 
 def system_text(messages: list) -> str:
@@ -135,7 +147,7 @@ class GoodModel(FakeModel):
         super().__init__("good")
 
     def answer(self, messages, tools):
-        if tools:
+        if is_picture_phase(tools):
             return picture_phase(messages)
         asked = last_user_text(messages)
         if not wants_a_poster(asked):
@@ -153,7 +165,7 @@ class EchoModel(FakeModel):
         super().__init__("echo")
 
     def answer(self, messages, tools):
-        if tools:
+        if is_picture_phase(tools):
             return picture_phase(messages)
         rules = section(system_text(messages), "# Rules")
         first = next((line.strip() for line in rules.splitlines() if line.strip()), "No rules were given.")
@@ -166,7 +178,7 @@ class MalformedModel(FakeModel):
         super().__init__("malformed")
 
     def answer(self, messages, tools):
-        if tools:
+        if is_picture_phase(tools):
             return picture_phase(messages)
         headline = "Cold for twenty four long hours and then some more"
         spec = {
@@ -185,10 +197,43 @@ class EndlessModel(FakeModel):
         self.asks = 0
 
     def answer(self, messages, tools):
-        if not tools:
+        if not is_picture_phase(tools):
             return text_response(poster_turn(HARBOR_SPEC), messages)
         self.asks += 1
         return tool_call_response("generate_image", {"image_prompt": f"the same lakeshore, better sky, try {self.asks}"}, f"call_{self.asks}")
+
+
+def tool_parameters(tools: list, name: str) -> dict:
+    for t in tools:
+        if isinstance(t, dict) and t.get("function", {}).get("name") == name:
+            return t["function"].get("parameters", {}).get("properties", {})
+    return {}
+
+
+class LookupModel(FakeModel):
+    """Writes copy the way a careful model would: looks the brand up first, then claims only what came back.
+    With nothing found it fills the gap with something plausible, which is the failure the tool fixes."""
+
+    def __init__(self):
+        super().__init__("lookup")
+
+    def answer(self, messages, tools):
+        if is_picture_phase(tools):
+            return picture_phase(messages)
+        asked = last_user_text(messages)
+        if not wants_a_poster(asked):
+            return text_response(reply_turn("Hello. I write posters for this brand. Tell me the concept and I will draft one."), messages)
+        if "get_brand_details" in tool_names(tools) and not has_tool_result(messages):
+            arguments = {"query": asked} if "query" in tool_parameters(tools, "get_brand_details") else {}
+            return tool_call_response("get_brand_details", arguments, "lookup_1")
+        facts = tool_results(messages).lower()
+        spec = dict(HARBOR_SPEC)
+        if "dishwasher" in asked.lower():
+            if "hand-wash only" in facts:
+                spec["body"] = "The body is dishwasher-safe. The lid is hand-wash only, so it stays leak-proof for years."
+            else:
+                spec["body"] = "Fully dishwasher-safe, top to bottom. Built for long days outside."
+        return text_response(poster_turn(spec), messages)
 
 
 class ProfileModel(FakeModel):
