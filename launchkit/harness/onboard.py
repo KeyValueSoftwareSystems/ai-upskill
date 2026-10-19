@@ -102,11 +102,16 @@ def onboard_workspace(pdf_path: Path, *, workspace_id: str | None = None, settin
 
     workspace_id = workspace_id or slug(profile.brand_name)
     root = settings.workspaces_dir / workspace_id
-    if root.exists():
-        raise FileExistsError(f"workspace '{workspace_id}' already exists. Edit its files, or remove the folder to onboard it again.")
-    trace.note(f"brand '{profile.brand_name}' gets the new workspace '{workspace_id}'")
+    if root.is_dir():
+        trace.note(f"brand '{profile.brand_name}' replaces the drafted files of workspace '{workspace_id}'")
+    else:
+        trace.note(f"brand '{profile.brand_name}' gets the new workspace '{workspace_id}'")
     assets = root / "assets"
-    assets.mkdir(parents=True)
+    assets.mkdir(parents=True, exist_ok=True)
+    for old in assets.glob("*.pdf"):
+        if old.name != pdf_path.name:
+            old.unlink()
+            trace.note(f"removed the older pack {old.name}")
     stored = assets / pdf_path.name
     shutil.copyfile(pdf_path, stored)
     trace.file(stored)
@@ -114,6 +119,8 @@ def onboard_workspace(pdf_path: Path, *, workspace_id: str | None = None, settin
     written = []
     for name, body in render_files(profile, text).items():
         path = root / name
+        if name == "users.yaml" and path.exists():
+            continue
         path.write_text(body, encoding="utf-8")
         trace.written(path)
         written.append(path)

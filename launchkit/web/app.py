@@ -10,6 +10,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
+from launchkit.harness.library import asset_path, read_library, workspace_root
 from launchkit.harness.onboard import onboard_workspace
 from launchkit.harness.request import Request, UnknownWorkspace, resolve_workspace_id
 from launchkit.harness.run import run_request
@@ -138,7 +139,13 @@ def _worker(body: RunBody, queue: Queue):
 
 
 @app.post("/onboard")
-async def start_onboard(model: str = Form(""), pdf: UploadFile = File(...)):
+async def start_onboard(model: str = Form(""), workspace_id: str = Form(""), pdf: UploadFile = File(...)):
+    workspace_id = workspace_id.strip() or None
+    if workspace_id is not None:
+        try:
+            workspace_root(workspace_id, settings)
+        except UnknownWorkspace as error:
+            raise HTTPException(404, str(error))
     run_id = uuid.uuid4().hex[:8]
     queue: Queue = Queue()
     RUNS[run_id] = queue
@@ -146,24 +153,40 @@ async def start_onboard(model: str = Form(""), pdf: UploadFile = File(...)):
     uploads.mkdir(parents=True, exist_ok=True)
     path = uploads / Path(pdf.filename or "brand-pack.pdf").name
     path.write_bytes(await pdf.read())
-    threading.Thread(target=_onboard_worker, args=(path, model.strip() or None, queue), daemon=True).start()
+    threading.Thread(target=_onboard_worker, args=(path, workspace_id, model.strip() or None, queue), daemon=True).start()
     return {"run_id": run_id}
 
 
-def _onboard_worker(path: Path, model: str | None, queue: Queue):
+def _onboard_worker(path: Path, workspace_id: str | None, model: str | None, queue: Queue):
     trace = Trace()
     trace.listeners.append(lambda event: queue.put({"type": "trace", "kind": event.kind, "detail": event.detail, "line": trace.lines()[-1]}))
     current = replace(settings, model=model) if model else settings
     try:
-        written = onboard_workspace(path, settings=current, trace=trace)
+        written = onboard_workspace(path, workspace_id=workspace_id, settings=current, trace=trace)
         files = {p.name: p.read_text(encoding="utf-8") for p in written if p.name != "brand-book.md"}
         queue.put({"type": "onboarded", "workspace_id": written[0].parent.name, "files": files})
-    except (UnknownWorkspace, ValueError, FileExistsError) as error:
+    except (UnknownWorkspace, ValueError) as error:
         queue.put({"type": "error", "kind": type(error).__name__, "message": str(error)})
     except Exception as error:
         queue.put({"type": "error", "kind": type(error).__name__, "message": str(error)})
     finally:
         queue.put(DONE)
+
+
+@app.get("/library/{workspace_id}")
+def library(workspace_id: str):
+    try:
+        return read_library(workspace_id, settings)
+    except UnknownWorkspace as error:
+        raise HTTPException(404, str(error))
+
+
+@app.get("/library/{workspace_id}/assets/{name}")
+def library_asset(workspace_id: str, name: str):
+    try:
+        return FileResponse(asset_path(workspace_id, name, settings))
+    except (UnknownWorkspace, FileNotFoundError):
+        raise HTTPException(404)
 
 
 @app.get("/events/{run_id}")
