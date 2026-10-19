@@ -42,6 +42,10 @@ class Trace:
     def tool(self, name: str, arguments: dict, result):
         self.add("tool", name=name, arguments=arguments, result=result, result_tokens=round(len(str(result)) / 4))
 
+    def chunk(self, rank: int, ref: str, score: float | None, text: str):
+        """One chunk a search returned, so the trace shows what the model is about to read and why it ranked."""
+        self.add("chunk", rank=rank, ref=ref, score=score, text=text)
+
     def refused(self, name: str, reason: str):
         self.add("refused", name=name, reason=reason)
 
@@ -89,6 +93,9 @@ class Trace:
                     out.append(f"model     {d['phase']} phase · {d['model']} · sent {d['input_tokens']} tokens{cached}, got back {d['output_tokens']}")
                 case "tool":
                     out.append(f"tool      {d['name']}({_short(_args(d['arguments']), 60)}) → {_short(_result(d['result']), 60)} · {d.get('result_tokens', 0)} tokens back")
+                case "chunk":
+                    score = f" · score {d['score']:.3f}" if d.get("score") is not None else ""
+                    out.append(f"chunk     #{d['rank']} {d['ref']}{score} · {_short(d['text'], 70)}")
                 case "refused":
                     out.append(f"refused   {d['name']}: {d['reason']}")
                 case "validation":

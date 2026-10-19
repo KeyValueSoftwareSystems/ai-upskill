@@ -54,6 +54,37 @@ def print_trace(trace: Trace):
         console.print("  " + line, highlight=False)
 
 
+def cmd_lookup(args):
+    """Call get_brand_details the way the agent would, and print exactly what the model gets back."""
+    import inspect
+
+    from launchkit.harness.brand import make_get_brand_details
+    from launchkit.harness.context import approx_tokens
+    from launchkit.harness.request import resolve_workspace_id
+    from launchkit.harness.workspace import load_workspace
+
+    trace = Trace()
+    try:
+        wid = resolve_workspace_id(Request(workspace_id=args.workspace, text=args.query or "lookup"), settings)
+    except UnknownWorkspace as error:
+        console.print(f"[red]UnknownWorkspace[/red]  {error}")
+        return 1
+    ws = load_workspace(wid, settings, Trace())
+    extra = {"settings": settings} if "settings" in inspect.signature(make_get_brand_details).parameters else {}
+    tool = make_get_brand_details(ws, trace, **extra)
+    takes_query = bool(inspect.signature(tool).parameters)
+    call = f'get_brand_details("{args.query}")' if takes_query else "get_brand_details()"
+    result = tool(args.query) if takes_query else tool()
+    print_trace(trace)
+    lines = result.splitlines()
+    console.print(f"\n[bold]{call} returns {approx_tokens(result)} tokens, {len(lines)} lines. This is what the model reads:[/bold]\n")
+    shown = lines if args.full or len(lines) <= 60 else lines[:40]
+    console.print("\n".join(shown), highlight=False, markup=False)
+    if len(shown) < len(lines):
+        console.print(f"\n[dim]… {len(lines) - len(shown)} more lines. --full prints them all.[/dim]")
+    return 0
+
+
 def cmd_onboard(args):
     from launchkit.harness.onboard import onboard_workspace
 
@@ -146,6 +177,12 @@ def main(argv=None):
     run.add_argument("--model", help="override LAUNCHKIT_MODEL, e.g. fake:echo")
     run.add_argument("--facts", help="a text file to load into the facts section")
     run.set_defaults(func=cmd_run)
+
+    lookup = sub.add_parser("lookup", help="call get_brand_details as the agent would and print what the model gets back")
+    lookup.add_argument("workspace")
+    lookup.add_argument("query", nargs="?", default="", help="the question the agent would ask (from RAG step 2 on)")
+    lookup.add_argument("--full", action="store_true", help="print the whole result, however long")
+    lookup.set_defaults(func=cmd_lookup)
 
     onboard = sub.add_parser("onboard", help="draft a workspace's files from a brand pack PDF")
     onboard.add_argument("pdf")

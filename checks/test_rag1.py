@@ -53,6 +53,16 @@ def test_without_the_tool_the_copy_is_plausible_not_true(settings, images, trace
         run_request(request_for(text=DISHWASHER), settings=settings, model=lookup, images=images, trace=trace)
 
 
+def test_lookup_prints_what_the_model_gets_back(settings, monkeypatch, capsys):
+    """`launchkit lookup harbor` calls the tool the way the agent would and prints exactly what comes back."""
+    import launchkit.cli as cli
+
+    monkeypatch.setattr(cli, "settings", settings)
+    assert cli.main(["lookup", "harbor", "Is the lid dishwasher-safe?", "--full"]) == 0
+    out = capsys.readouterr().out
+    assert "This is what the model reads" in out and "hand-wash only" in out
+
+
 def test_the_trace_shows_the_tool_output_in_tokens(settings, images, trace, request_for, lookup):
     """The trace has the tool call with its result size in tokens, and explain counts it as a row."""
     import json

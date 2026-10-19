@@ -47,6 +47,12 @@ uv run launchkit explain
 
 The trace has `tool get_brand_details() → … · 1970 tokens back`. That is the whole guide, on every call. Step 2 starts there.
 
+To show the class exactly what the model reads, call the tool yourself, the way the agent does:
+
+```
+uv run launchkit lookup harbor          # the first 40 lines; --full prints all 135
+```
+
 ## Stuck?
 
 The answer is on the branch `session-01-rag-step1`.
