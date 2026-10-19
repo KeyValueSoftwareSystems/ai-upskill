@@ -73,3 +73,18 @@ def test_the_trace_shows_the_tool_output_in_tokens(settings, images, trace, requ
     assert any(line.startswith("tool      get_brand_details") and "tokens back" in line for line in trace.lines())
     explain = json.loads((settings.data_dir / "last_run.json").read_text())
     assert explain["tool_results"] >= 1 and explain["tool_tokens"] > 0
+
+
+def test_the_page_shows_the_tool_results_and_the_terminal_prints_the_trace(settings, monkeypatch, capsys):
+    """The Context tab has a tool results row, and `launchkit ui` prints each run's trace in its terminal, tool call and size included."""
+    from queue import Queue
+
+    from launchkit.settings import ROOT
+    import launchkit.web.app as web
+
+    page = (ROOT / "launchkit" / "web" / "index.html").read_text(encoding="utf-8")
+    assert "<td>tool results</td>" in page and "x.tool_tokens" in page
+    monkeypatch.setattr(web, "settings", settings)
+    web._worker(web.RunBody(workspace_id="harbor", user_id="maya", text=DISHWASHER, model="fake:lookup"), Queue())
+    out = capsys.readouterr().out
+    assert 'run · harbor · maya · "' in out and "tool      get_brand_details" in out and "tokens back" in out
