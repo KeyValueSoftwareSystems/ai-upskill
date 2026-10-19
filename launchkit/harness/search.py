@@ -1,9 +1,12 @@
 import math
+import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from functools import lru_cache
 from pathlib import Path
 
 TOP_K = 5
+EMBED_MODEL = os.environ.get("LAUNCHKIT_EMBED_MODEL", "BAAI/bge-small-en-v1.5")
 SOURCES = ("brand-book.md", "facts.md")
 STOPWORDS = set(
     "a an and are as at be by can do does for from has have how i if in is it its me my of on or our so that the "
@@ -16,9 +19,14 @@ class Chunk:
     id: str
     heading: str
     text: str
+    workspace: str = ""
+
+    @property
+    def ref(self) -> str:
+        return f"{self.workspace}/{self.id}" if self.workspace else self.id
 
     def render(self) -> str:
-        return f"[{self.id}] {self.heading}\n{self.text}"
+        return f"[{self.ref}] {self.heading}\n{self.text}"
 
 
 def slug(text: str) -> str:
@@ -52,7 +60,7 @@ def load_chunks(root: Path) -> list[Chunk]:
     for name in SOURCES:
         path = root / name
         if path.is_file():
-            chunks += split_by_heading(path.read_text(encoding="utf-8"), name)
+            chunks += [replace(c, workspace=root.name) for c in split_by_heading(path.read_text(encoding="utf-8"), name)]
     return chunks
 
 
@@ -86,3 +94,60 @@ def render_results(query: str, chunks: list[Chunk]) -> str:
     if not chunks:
         return f'Nothing in the brand guide matches "{query}". Do not claim anything about it.'
     return f"{len(chunks)} sections of the brand guide that match, best first:\n\n" + "\n\n".join(c.render() for c in chunks)
+
+
+@lru_cache(maxsize=1)
+def embedder():
+    """A small local embedding model: runs on the CPU, needs no key, and gives the same numbers on every run.
+    The first call downloads it (about 130 MB) into the Hugging Face cache."""
+    from sentence_transformers import SentenceTransformer
+
+    return SentenceTransformer(EMBED_MODEL, device="cpu")
+
+
+def embed(texts: list[str]) -> list[list[float]]:
+    """Text in, a list of 384 numbers per text out. Normalised, so the dot product is the cosine similarity."""
+    return embedder().encode(list(texts), normalize_embeddings=True).tolist()
+
+
+def chunk_text(chunk: Chunk) -> str:
+    return f"{chunk.heading}\n{chunk.text}"
+
+
+def cosine(a: list[float], b: list[float]) -> float:
+    return sum(x * y for x, y in zip(a, b))
+
+
+class MemoryIndex:
+    """Every brand's chunks with their vectors, in one plain list in memory. Embedded once; embedded again
+    only when a brand file changes. Lost on restart."""
+
+    def __init__(self, workspaces_dir: Path):
+        self.workspaces_dir = workspaces_dir
+        self.signature = None
+        self.entries: list[tuple[Chunk, list[float]]] = []
+
+    def files(self) -> list[Path]:
+        return sorted(p for p in self.workspaces_dir.glob("*/*") if p.name in SOURCES)
+
+    def refresh(self) -> bool:
+        signature = tuple((str(p), p.stat().st_mtime_ns) for p in self.files())
+        if signature == self.signature:
+            return False
+        chunks = [c for folder in sorted({p.parent for p in self.files()}) for c in load_chunks(folder)]
+        self.entries = list(zip(chunks, embed([chunk_text(c) for c in chunks])))
+        self.signature = signature
+        return True
+
+    def search(self, query: str, k: int = TOP_K) -> list[tuple[float, Chunk]]:
+        self.refresh()
+        vector = embed([query])[0]
+        ranked = sorted(((cosine(vector, v), c) for c, v in self.entries), key=lambda pair: pair[0], reverse=True)
+        return ranked[:k]
+
+
+_INDEXES: dict[Path, MemoryIndex] = {}
+
+
+def memory_index(workspaces_dir: Path) -> MemoryIndex:
+    return _INDEXES.setdefault(workspaces_dir, MemoryIndex(workspaces_dir))

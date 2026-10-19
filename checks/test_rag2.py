@@ -58,13 +58,6 @@ def test_the_prompt_is_smaller_than_in_step_one(settings, images, trace, request
     assert returned < whole_guide / 3, f"{returned} tokens back, the whole guide is {whole_guide}"
 
 
-def test_next_problem_keywords_miss_meaning(settings):
-    """The failure step 3 fixes: a paraphrase shares no words with the chunk that answers it."""
-    tool = harbor_tool(settings)
-    assert "leak-proof" not in tool("Will it spill in my bag?").lower()
-    assert "hot for 12 hours" not in tool("Warm on a long shift?").lower()
-
-
 def test_the_trace_shows_each_chunk_and_its_score(settings, images, trace, request_for, lookup):
     """The trace lists every chunk the tool returned, best first, with its BM25 score, so you can see what the model reads."""
     run_request(request_for(text=DISHWASHER), settings=settings, model=lookup, images=images, trace=trace)

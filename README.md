@@ -91,3 +91,4 @@ One tool, `get_brand_details`, rebuilt each time it fails. Each step has a check
 | --- | --- | --- | --- |
 | 1 · A tool to fetch brand details | `get_brand_details()`: the whole brand file | `check rag1` | `session-01-rag-step1` |
 | 2 · Return only what matches | `get_brand_details(query)`: top 5 chunks by keywords (BM25) | `check rag2` | `session-01-rag-step2` |
+| 3 · Match what the words mean | `get_brand_details(query)`: top 5 by meaning, local `bge-small-en-v1.5`, in-memory list | `check rag3` | `session-01-rag-step3` |
