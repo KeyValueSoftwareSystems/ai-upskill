@@ -69,8 +69,15 @@ def run_request(
     spec = turn.spec
     errors = validate_spec(spec, ws.rules)
     if errors:
-        # TODO step 2: trace.validation(errors, 1); one repair run with repair_message(errors); validate again; raise SpecError if errors remain
-        pass
+        trace.validation(errors, attempt=1)
+        run = agent.run(repair_message(errors), session_id=session, user_id=req.user_id)
+        result.runs.append(run)
+        trace.model("repair", model_name(model), run.metrics)
+        spec = as_turn(run.content).spec or spec
+        errors = validate_spec(spec, ws.rules)
+        trace.validation(errors, attempt=2)
+        if errors:
+            raise SpecError(errors)
     result.spec = spec
     write_explain(settings, result, wid, model_name(model))
 
