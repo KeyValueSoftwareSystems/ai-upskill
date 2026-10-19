@@ -4,6 +4,7 @@ from agno.db.sqlite import SqliteDb
 from launchkit.harness.context import ContextBuilder
 from launchkit.harness.limits import make_leash
 from launchkit.harness.spec import PosterSpec, Turn
+from launchkit.harness.tools import make_generate_image
 from launchkit.harness.trace import Trace
 from launchkit.harness.workspace import Workspace
 
@@ -38,5 +39,10 @@ def build_copy_agent(ws: Workspace, ctx: ContextBuilder, model, settings, trace:
 
 
 def build_picture_agent(spec: PosterSpec, model, images, colours: dict, trace: Trace, settings) -> Agent | None:
-    # TODO step 3: an Agent with tools=[make_generate_image(images, colours, trace)] and tool_hooks=[make_leash(settings.limits, trace)]
-    return None
+    return Agent(
+        model=model,
+        system_message=PICTURE_TASK,
+        tools=[make_generate_image(images, colours, trace)],
+        tool_hooks=[make_leash(settings.limits, trace)],
+        telemetry=False,
+    )
