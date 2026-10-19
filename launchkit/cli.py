@@ -111,6 +111,22 @@ def cmd_chunks(args):
     return 0
 
 
+def cmd_index(args):
+    """Document processing for brands whose files were written by hand: chunk, embed and store them once."""
+    from launchkit.harness.store import index_brand
+
+    names = args.workspaces or sorted(p.name for p in settings.workspaces_dir.iterdir() if p.is_dir())
+    trace = Trace()
+    for name in names:
+        try:
+            index_brand(name, settings, trace)
+        except UnknownWorkspace as error:
+            console.print(f"[red]UnknownWorkspace[/red]  {error}")
+            return 1
+    print_trace(trace)
+    return 0
+
+
 def cmd_onboard(args):
     from launchkit.harness.onboard import onboard_workspace
 
@@ -214,6 +230,10 @@ def main(argv=None):
     chunks.add_argument("workspace")
     chunks.add_argument("--show", action="store_true", help="print every chunk in full after the table")
     chunks.set_defaults(func=cmd_chunks)
+
+    index = sub.add_parser("index", help="chunk, embed and store brand documents in the vector database (once per change)")
+    index.add_argument("workspaces", nargs="*", help="brands to index; all of them when none is given")
+    index.set_defaults(func=cmd_index)
 
     onboard = sub.add_parser("onboard", help="draft a workspace's files from a brand pack PDF")
     onboard.add_argument("pdf")

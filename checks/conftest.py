@@ -13,10 +13,23 @@ from launchkit.settings import ROOT, settings as base_settings
 BRIEF = "Poster for the Tidal bottle on a misty lakeshore at dawn. Headline idea: cold for 24 hours."
 
 
+@pytest.fixture(scope="session")
+def indexed_store(tmp_path_factory):
+    """The brands' documents processed once per test session: chunked, embedded and stored, as `launchkit index` does."""
+    from launchkit.harness.store import BrandStore
+
+    path = tmp_path_factory.mktemp("index") / "brand-store"
+    store = BrandStore(path)
+    for folder in sorted(p for p in (ROOT / "workspaces").iterdir() if p.is_dir()):
+        store.index(folder.name, folder)
+    return path
+
+
 @pytest.fixture
-def settings(tmp_path):
+def settings(tmp_path, indexed_store):
     workspaces = tmp_path / "workspaces"
     shutil.copytree(ROOT / "workspaces", workspaces)
+    shutil.copytree(indexed_store, tmp_path / "data" / "brand-store")
     return replace(base_settings, workspaces_dir=workspaces, data_dir=tmp_path / "data", image_mode="fake")
 
 

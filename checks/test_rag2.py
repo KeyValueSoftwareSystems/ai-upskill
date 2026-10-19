@@ -16,7 +16,7 @@ def chunk_ids(result: str) -> list[str]:
 
 
 def harbor_tool(settings):
-    return make_get_brand_details(load_workspace("harbor", settings, Trace()), Trace())
+    return make_get_brand_details(load_workspace("harbor", settings, Trace()), Trace(), settings)
 
 
 def test_the_guide_is_split_by_heading():

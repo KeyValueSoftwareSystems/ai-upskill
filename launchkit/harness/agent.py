@@ -35,7 +35,7 @@ def build_copy_agent(ws: Workspace, ctx: ContextBuilder, model, settings, trace:
         db=session_db(settings),
         add_history_to_context=True,
         num_history_runs=5,
-        tools=[make_get_brand_details(ws, trace)],
+        tools=[make_get_brand_details(ws, trace, settings)],
         tool_hooks=[make_leash(settings.limits, trace)],
         telemetry=False,
     )

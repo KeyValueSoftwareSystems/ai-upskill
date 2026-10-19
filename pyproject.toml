@@ -16,6 +16,7 @@ dependencies = [
     "python-multipart>=0.0.32",
     "sentence-transformers>=3.0",
     "torch>=2.4",
+    "lancedb>=0.25",
 ]
 
 [project.scripts]

@@ -117,37 +117,3 @@ def chunk_text(chunk: Chunk) -> str:
 def cosine(a: list[float], b: list[float]) -> float:
     return sum(x * y for x, y in zip(a, b))
 
-
-class MemoryIndex:
-    """Every brand's chunks with their vectors, in one plain list in memory. Embedded once; embedded again
-    only when a brand file changes. Lost on restart."""
-
-    def __init__(self, workspaces_dir: Path):
-        self.workspaces_dir = workspaces_dir
-        self.signature = None
-        self.entries: list[tuple[Chunk, list[float]]] = []
-
-    def files(self) -> list[Path]:
-        return sorted(p for p in self.workspaces_dir.glob("*/*") if p.name in SOURCES)
-
-    def refresh(self) -> bool:
-        signature = tuple((str(p), p.stat().st_mtime_ns) for p in self.files())
-        if signature == self.signature:
-            return False
-        chunks = [c for folder in sorted({p.parent for p in self.files()}) for c in load_chunks(folder)]
-        self.entries = list(zip(chunks, embed([chunk_text(c) for c in chunks])))
-        self.signature = signature
-        return True
-
-    def search(self, query: str, k: int = TOP_K) -> list[tuple[float, Chunk]]:
-        self.refresh()
-        vector = embed([query])[0]
-        ranked = sorted(((cosine(vector, v), c) for c, v in self.entries), key=lambda pair: pair[0], reverse=True)
-        return ranked[:k]
-
-
-_INDEXES: dict[Path, MemoryIndex] = {}
-
-
-def memory_index(workspaces_dir: Path) -> MemoryIndex:
-    return _INDEXES.setdefault(workspaces_dir, MemoryIndex(workspaces_dir))

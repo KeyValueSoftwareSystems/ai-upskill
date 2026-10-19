@@ -10,6 +10,7 @@ from pypdf import PdfReader
 from launchkit.adapters.models import model_name, resolve_model
 from launchkit.harness.context import approx_tokens
 from launchkit.harness.request import WORKSPACE_ID, UnknownWorkspace
+from launchkit.harness.store import index_brand
 from launchkit.harness.trace import Trace
 from launchkit.settings import settings as default_settings
 
@@ -124,4 +125,5 @@ def onboard_workspace(pdf_path: Path, *, workspace_id: str | None = None, settin
         path.write_text(body, encoding="utf-8")
         trace.written(path)
         written.append(path)
+    index_brand(workspace_id, settings, trace)
     return written

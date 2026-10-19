@@ -20,7 +20,7 @@ def test_the_tool_is_registered_on_the_copy_agent(settings, good):
 
 def test_the_tool_takes_no_workspace_argument(settings):
     """The model never names the workspace: the harness binds it from the trusted request."""
-    tool = make_get_brand_details(load_workspace("harbor", settings, Trace()), Trace())
+    tool = make_get_brand_details(load_workspace("harbor", settings, Trace()), Trace(), settings)
     assert "workspace" not in str(inspect.signature(tool))
 
 
@@ -48,7 +48,7 @@ def test_without_the_tool_the_copy_is_plausible_not_true(settings, images, trace
     from launchkit.harness.spec import SpecError
     import pytest
 
-    monkeypatch.setattr(agent, "make_get_brand_details", lambda ws, trace: (lambda query="": "Nothing in the brand guide matches."))
+    monkeypatch.setattr(agent, "make_get_brand_details", lambda ws, trace, settings: (lambda query="": "Nothing in the brand guide matches."))
     with pytest.raises(SpecError, match="fully dishwasher-safe"):
         run_request(request_for(text=DISHWASHER), settings=settings, model=lookup, images=images, trace=trace)
 
