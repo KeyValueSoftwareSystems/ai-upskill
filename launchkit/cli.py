@@ -85,6 +85,32 @@ def cmd_lookup(args):
     return 0
 
 
+def cmd_chunks(args):
+    """How a brand's guide is split before anything is searched: one row per chunk."""
+    from launchkit.harness.context import approx_tokens
+    from launchkit.harness.request import resolve_workspace_id
+    from launchkit.harness.search import load_chunks
+
+    try:
+        wid = resolve_workspace_id(Request(workspace_id=args.workspace, text="chunks"), settings)
+    except UnknownWorkspace as error:
+        console.print(f"[red]UnknownWorkspace[/red]  {error}")
+        return 1
+    chunks = load_chunks(settings.workspaces_dir / wid)
+    table = Table(title=f"{wid}: {len(chunks)} chunks, one per ## section of brand-book.md and one per line of facts.md")
+    table.add_column("#", justify="right")
+    table.add_column("chunk id", no_wrap=True)
+    table.add_column("tokens", justify="right")
+    table.add_column("starts with", no_wrap=True, overflow="ellipsis")
+    for n, chunk in enumerate(chunks, 1):
+        table.add_row(str(n), chunk.id, str(approx_tokens(f"{chunk.heading} {chunk.text}")), " ".join(chunk.text.split())[:60])
+    console.print(table)
+    if args.show:
+        for chunk in chunks:
+            console.print(f"\n[bold]{chunk.id}[/bold]\n{chunk.text}", highlight=False)
+    return 0
+
+
 def cmd_onboard(args):
     from launchkit.harness.onboard import onboard_workspace
 
@@ -183,6 +209,11 @@ def main(argv=None):
     lookup.add_argument("query", nargs="?", default="", help="the question the agent would ask (from RAG step 2 on)")
     lookup.add_argument("--full", action="store_true", help="print the whole result, however long")
     lookup.set_defaults(func=cmd_lookup)
+
+    chunks = sub.add_parser("chunks", help="show how a brand's guide is split into chunks")
+    chunks.add_argument("workspace")
+    chunks.add_argument("--show", action="store_true", help="print every chunk in full after the table")
+    chunks.set_defaults(func=cmd_chunks)
 
     onboard = sub.add_parser("onboard", help="draft a workspace's files from a brand pack PDF")
     onboard.add_argument("pdf")

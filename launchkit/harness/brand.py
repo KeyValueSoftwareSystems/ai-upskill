@@ -13,8 +13,10 @@ def make_get_brand_details(ws: Workspace, trace: Trace):
         best first. Call it before you state any product fact. Use only what it returns; if it
         does not say something, do not claim it. Ask again with other words for another fact."""
         chunks = load_chunks(ws.root)
-        top = [chunk for _, chunk in bm25(query, chunks)[:TOP_K]]
-        trace.note(f"get_brand_details scored {len(chunks)} chunks by shared words, returned {len(top)}")
-        return render_results(query, top)
+        ranked = bm25(query, chunks)[:TOP_K]
+        trace.note(f"get_brand_details scored {len(chunks)} chunks by shared words (BM25), returned {len(ranked)}")
+        for rank, (score, chunk) in enumerate(ranked, 1):
+            trace.chunk(rank, chunk.id, score, chunk.text)
+        return render_results(query, [chunk for _, chunk in ranked])
 
     return get_brand_details

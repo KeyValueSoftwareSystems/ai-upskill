@@ -45,6 +45,17 @@ uv run launchkit run harbor "Poster for the Tidal bottle. Mention it's dishwashe
 
 `tool get_brand_details("is the Tidal bottle dishwasher-safe") → … · 294 tokens back`, down from about 1,970.
 
+Show the class the two halves of it:
+
+```
+uv run launchkit chunks harbor                              # how the guide is split: 41 chunks, id and size each
+uv run launchkit lookup harbor "How do I clean the lid?"    # the chunks that come back, their BM25 scores, and the exact text
+```
+
+The trace (terminal and the page's Trace tab) lists every returned chunk with its rank and score:
+`chunk #1 brand-book.md#product-facts-harbor-mug · score 3.531 · Harbor Mug is 350 ml with a sliding lid…`.
+Keywords put the mug first because it says "lid" and "dishwasher-safe"; the hand-wash fact is second.
+
 ## Next problem
 
 Ask the tool "Will it spill in my bag?". The answer is "leak-proof lid", but the two share no words, so BM25 finds nothing.

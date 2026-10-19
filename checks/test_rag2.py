@@ -63,3 +63,23 @@ def test_next_problem_keywords_miss_meaning(settings):
     tool = harbor_tool(settings)
     assert "leak-proof" not in tool("Will it spill in my bag?").lower()
     assert "hot for 12 hours" not in tool("Warm on a long shift?").lower()
+
+
+def test_the_trace_shows_each_chunk_and_its_score(settings, images, trace, request_for, lookup):
+    """The trace lists every chunk the tool returned, best first, with its BM25 score, so you can see what the model reads."""
+    run_request(request_for(text=DISHWASHER), settings=settings, model=lookup, images=images, trace=trace)
+    lines = [line for line in trace.lines() if line.startswith("chunk")]
+    assert 0 < len(lines) <= 5 and lines[0].startswith("chunk     #1 ") and "score" in lines[0]
+
+
+def test_chunks_shows_how_the_guide_is_split(settings, monkeypatch, capsys):
+    """`launchkit chunks harbor` lists every chunk with its id and size, before anything is searched."""
+    import launchkit.cli as cli
+
+    from rich.console import Console
+
+    monkeypatch.setattr(cli, "settings", settings)
+    monkeypatch.setattr(cli, "console", Console(width=200))
+    assert cli.main(["chunks", "harbor"]) == 0
+    out = capsys.readouterr().out
+    assert "brand-book.md#product-facts-flask-trail-750" in out and "facts.md#4" in out
