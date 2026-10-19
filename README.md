@@ -92,5 +92,6 @@ One tool, `get_brand_details`, rebuilt each time it fails. Each step has a check
 | 1 · A tool to fetch brand details | `get_brand_details()`: the whole brand file | `check rag1` | `session-01-rag-step1` |
 | 2 · Return only what matches | `get_brand_details(query)`: top 5 chunks by keywords (BM25) | `check rag2` | `session-01-rag-step2` |
 | 3 · Match what the words mean | `get_brand_details(query)`: top 5 by meaning, local `bge-small-en-v1.5`, LanceDB vector database | `check rag3` | `session-01-rag-step3` |
+| 4 · Keep each brand to its own chunks | `get_brand_details(query)`: the same search, filtered to the request's workspace inside the query | `check rag4` | `session-01-rag-step4` |
 
 From step 3 on, brand documents live in a vector database under `data/brand-store/`. Uploading a brand file indexes it; for the brands in this repo run `uv run launchkit index` once. `uv run launchkit check rag` runs every retrieval check on the branch.

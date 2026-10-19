@@ -28,7 +28,8 @@ def text_hash(text: str) -> str:
 
 
 def scope(workspace_id: str) -> str:
-    """A filter on the workspace column. The id is checked against the allow-list because it is written into the query."""
+    """The metadata filter that keeps a search inside one workspace. The id comes from the trusted request and is
+    checked against the allow-list again here, because it is written into the query."""
     if not WORKSPACE_ID.match(workspace_id):
         raise UnknownWorkspace(workspace_id)
     return f"workspace = '{workspace_id}'"
@@ -74,10 +75,17 @@ class BrandStore:
                 )
             return len(missing)
 
-    def search(self, query: str, k: int = TOP_K) -> list[tuple[float, Chunk]]:
-        """Semantic search: embed the question, rank every row by cosine similarity to it, keep the top k.
-        Every row in the table takes part, whichever brand it belongs to."""
-        rows = self.table.search(embed([query])[0]).metric("cosine").limit(k).to_list()
+    def search(self, workspace_id: str, query: str, k: int = TOP_K) -> list[tuple[float, Chunk]]:
+        """Semantic search inside one workspace: embed the question, rank by cosine similarity, keep the top k.
+        The workspace filter is part of the query (prefilter), so only that brand's rows are ranked at all
+        and the top k are always its own best k, never what is left after other brands' rows are dropped."""
+        rows = (
+            self.table.search(embed([query])[0])
+            .metric("cosine")
+            .where(scope(workspace_id), prefilter=True)
+            .limit(k)
+            .to_list()
+        )
         return [
             (1 - r["_distance"], Chunk(id=r["ref"].split("/", 1)[1], heading=r["heading"], text=r["text"], workspace=r["workspace"]))
             for r in rows

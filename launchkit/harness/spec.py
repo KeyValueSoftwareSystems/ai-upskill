@@ -10,6 +10,7 @@ class PosterSpec(BaseModel):
     body: str = Field(description="One short paragraph. Up to 25 words.")
     image_prompt: str = Field(description="What the picture shows: subject, setting, light, colours. No words to print.")
     format: str = Field(default="A3 portrait", description="Poster format, for example A3 portrait.")
+    sources: list[str] = Field(default_factory=list, description="The id in brackets of every get_brand_details section a fact in the copy came from, for example harbor/brand-book.md#product-facts-flask-trail-750-tidal-colourway.")
 
 
 class Turn(BaseModel):
@@ -27,7 +28,8 @@ class SpecError(Exception):
 WORD_LIMITS = {"headline": 6, "subheadline": 12, "body": 25}
 
 
-def validate_spec(spec: PosterSpec, rules: dict) -> list[str]:
+def validate_spec(spec: PosterSpec, rules: dict, looked_up: set[str] | None = None) -> list[str]:
+    """looked_up: the chunk ids get_brand_details returned in this run. A source the tool never returned is invented."""
     errors = []
     for field, limit in WORD_LIMITS.items():
         words = len(getattr(spec, field).split())
@@ -41,6 +43,10 @@ def validate_spec(spec: PosterSpec, rules: dict) -> list[str]:
         text = getattr(spec, field).lower()
         if text and text in spec.image_prompt.lower():
             errors.append(f"{field} text leaked into image_prompt")
+    if looked_up is not None:
+        for source in spec.sources:
+            if source not in looked_up:
+                errors.append(f"source {source} was not returned by get_brand_details")
     return errors
 
 

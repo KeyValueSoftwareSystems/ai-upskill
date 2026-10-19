@@ -139,7 +139,7 @@ let LOGINS = [], session = "";
 const who = () => ({ workspace_id: $("brand").value, user_id: $("person").value });
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 function add(cls, html){ const d = document.createElement("div"); d.className = "msg " + cls; d.innerHTML = html; $("messages").appendChild(d); $("messages").scrollTop = 1e9; return d; }
-function specHtml(s){ return `<span class="k">headline</span>${esc(s.headline)}\n<span class="k">subheadline</span>${esc(s.subheadline)}\n<span class="k">body</span>${esc(s.body)}\n<span class="k">image prompt</span>${esc(s.image_prompt)}\n<span class="k">format</span>${esc(s.format)}`; }
+function specHtml(s){ return `<span class="k">headline</span>${esc(s.headline)}\n<span class="k">subheadline</span>${esc(s.subheadline)}\n<span class="k">body</span>${esc(s.body)}\n<span class="k">image prompt</span>${esc(s.image_prompt)}\n<span class="k">format</span>${esc(s.format)}${s.sources && s.sources.length ? `\n<span class="k">sources</span>${esc(s.sources.join(", "))}` : ""}`; }
 function renderTurn(t){
   if (t.role === "user") add("user", esc(t.text));
   else if (t.role === "error") add("error", `<b>${esc(t.kind)}</b>\n${esc(t.message)}`);

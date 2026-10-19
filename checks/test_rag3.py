@@ -54,21 +54,6 @@ def test_still_at_most_five_chunks(settings):
     assert 0 < len(refs(tool_for("harbor", settings)("poster placement logo headline print file"))) <= TOP_K == 5
 
 
-def test_next_problem_meaning_ignores_the_owner(settings):
-    """The failure step 4 fixes: one shared list, so Ember asking about its next launch gets Harbor's embargoed Tidal launch."""
-    result = tool_for("ember", settings)("Write a poster about our next launch.")
-    assert any(ref.startswith("harbor/") for ref in refs(result))
-
-
-def test_the_trace_shows_whose_chunks_came_back(settings):
-    """Each returned chunk is traced with its brand, rank and cosine score, so the leak in one shared list is visible."""
-    trace = Trace()
-    tool_for("ember", settings, trace)("Write a poster about our next launch.")
-    lines = [line for line in trace.lines() if line.startswith("chunk")]
-    assert len(lines) == 5 and all("score 0." in line for line in lines)
-    assert any(" harbor/" in line for line in lines)
-
-
 def test_the_tool_only_searches(settings, monkeypatch):
     """A lookup embeds the question and nothing else: no brand file is read or embedded during a turn."""
     calls = []
@@ -91,7 +76,7 @@ def test_the_vectors_survive_a_restart(settings, monkeypatch):
     calls.clear()
     restarted = BrandStore(settings.data_dir / "fresh")
     assert restarted.index("harbor", root) == 0
-    restarted.search("How do I clean the lid?")
+    restarted.search("harbor", "How do I clean the lid?")
     assert calls == [1], "only the question is embedded after a restart"
 
 
@@ -103,7 +88,7 @@ def test_an_edited_file_embeds_only_what_changed(settings):
     facts = root / "facts.md"
     facts.write_text(facts.read_text() + "Ships in a recycled cardboard tube.\n")
     assert store.index("harbor", root) == 1
-    assert "cardboard tube" in "".join(c.text for _, c in store.search("what does it ship in"))
+    assert "cardboard tube" in "".join(c.text for _, c in store.search("harbor", "what does it ship in"))
 
 
 def test_onboarding_indexes_the_brand(settings, trace, brand_pdf):

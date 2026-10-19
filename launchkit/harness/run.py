@@ -1,4 +1,5 @@
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -67,14 +68,14 @@ def run_request(
         write_explain(settings, result, wid, model_name(model))
         return result
     spec = turn.spec
-    errors = validate_spec(spec, ws.rules)
+    errors = validate_spec(spec, ws.rules, looked_up(trace))
     if errors:
         trace.validation(errors, attempt=1)
         run = agent.run(repair_message(errors), session_id=session, user_id=req.user_id)
         result.runs.append(run)
         trace.model("repair", model_name(model), run.metrics)
         spec = as_turn(run.content).spec or spec
-        errors = validate_spec(spec, ws.rules)
+        errors = validate_spec(spec, ws.rules, looked_up(trace))
         trace.validation(errors, attempt=2)
         if errors:
             raise SpecError(errors)
@@ -100,6 +101,11 @@ def run_request(
     result.image = Path(files[-1]) if files else None
     trace.picture("done" if result.image else "none", file=str(result.image) if result.image else None)
     return result
+
+
+def looked_up(trace: Trace) -> set[str]:
+    """Every chunk id get_brand_details returned so far in this request."""
+    return {ref for e in trace.tool_calls("get_brand_details") if e.kind == "tool" for ref in re.findall(r"^\[([^\]]+)\]", str(e.detail["result"]), flags=re.M)}
 
 
 def raise_if_failed(run) -> None:

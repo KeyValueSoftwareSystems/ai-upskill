@@ -1,4 +1,5 @@
 import json
+import re
 from typing import Any, AsyncIterator, Iterator
 
 from agno.models.base import Model
@@ -210,6 +211,11 @@ def tool_parameters(tools: list, name: str) -> dict:
     return {}
 
 
+def chunks_in(result: str) -> list[tuple[str, str]]:
+    """The (id, text) of every chunk in a get_brand_details result."""
+    return [(m.group(1), m.group(2)) for m in re.finditer(r"^\[([^\]]+)\][^\n]*\n(.*?)(?=\n\n\[|\Z)", result, flags=re.M | re.S)]
+
+
 class LookupModel(FakeModel):
     """Writes copy the way a careful model would: looks the brand up first, then claims only what came back.
     With nothing found it fills the gap with something plausible, which is the failure the tool fixes."""
@@ -226,11 +232,13 @@ class LookupModel(FakeModel):
         if "get_brand_details" in tool_names(tools) and not has_tool_result(messages):
             arguments = {"query": asked} if "query" in tool_parameters(tools, "get_brand_details") else {}
             return tool_call_response("get_brand_details", arguments, "lookup_1")
-        facts = tool_results(messages).lower()
+        found = tool_results(messages)
+        facts = found.lower()
         spec = dict(HARBOR_SPEC)
         if "dishwasher" in asked.lower():
             if "hand-wash only" in facts:
                 spec["body"] = "The body is dishwasher-safe. The lid is hand-wash only, so it stays leak-proof for years."
+                spec["sources"] = [ref for ref, text in chunks_in(found) if "hand-wash only" in text.lower()][:1]
             else:
                 spec["body"] = "Fully dishwasher-safe, top to bottom. Built for long days outside."
         return text_response(poster_turn(spec), messages)
