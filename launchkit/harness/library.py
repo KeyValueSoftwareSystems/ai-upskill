@@ -10,7 +10,7 @@ BOILERPLATE = re.compile(r"^You are .+'s poster copywriter\.$")
 
 def workspace_root(workspace_id: str, settings) -> Path:
     root = settings.workspaces_dir / workspace_id
-    if not WORKSPACE_ID.match(workspace_id) or not root.is_dir():
+    if not WORKSPACE_ID.fullmatch(workspace_id) or not root.is_dir():
         raise UnknownWorkspace(workspace_id)
     return root
 

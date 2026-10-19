@@ -37,47 +37,72 @@ def test_bad_workspace_id_is_refused_before_anything_is_written(settings, trace,
     assert not (settings.workspaces_dir / ".." / "moss").exists()
 
 
-def test_a_pack_uploaded_into_a_brand_replaces_its_drafted_files(settings, trace, brand_pdf):
-    """A pack uploaded into an existing brand goes into that brand's folder, whatever name the pack gives: no second folder."""
-    users_before = (settings.workspaces_dir / "ember" / "users.yaml").read_text()
-    folders_before = sorted(p.name for p in settings.workspaces_dir.iterdir())
-    onboard_workspace(brand_pdf, workspace_id="ember", settings=settings, model=ProfileModel(), trace=trace)
+def ember_pdf(tmp_path, version="v1"):
+    path = tmp_path / f"ember-{version}.pdf"
+    path.write_bytes(minimal_pdf(["Ember Coffee Co. brand pack", "Warm, playful.", f"Pack {version}."]))
+    return path
+
+
+def test_a_pack_uploaded_into_its_brand_replaces_the_drafted_files_and_keeps_a_backup(settings, trace, tmp_path):
+    """A pack uploaded into its own brand goes into that folder: the five drafted files are replaced, each previous one kept as .bak, and users.yaml is kept."""
     root = settings.workspaces_dir / "ember"
+    soul_before = (root / "SOUL.md").read_text()
+    users_before = (root / "users.yaml").read_text()
+    folders_before = sorted(p.name for p in settings.workspaces_dir.iterdir())
+    onboard_workspace(ember_pdf(tmp_path), workspace_id="ember", settings=settings, model=ProfileModel(), trace=trace)
     assert sorted(p.name for p in settings.workspaces_dir.iterdir()) == folders_before
-    assert "Moss and Fern" in (root / "SOUL.md").read_text()
+    assert "Ember Coffee Co." in (root / "SOUL.md").read_text()
+    assert (root / "SOUL.md.bak").read_text() == soul_before, "the previous draft is kept"
     assert (root / "users.yaml").read_text() == users_before, "the brand's people are kept"
-    assert (root / "assets" / "moss-brand-pack.pdf").exists()
+    assert (root / "assets" / "ember-v1.pdf").exists()
 
 
-def test_only_the_latest_pack_is_kept(settings, trace, brand_pdf, tmp_path):
+def test_a_pack_for_another_brand_is_refused(settings, trace, brand_pdf):
+    """A pack whose brand is not the target brand is refused before anything is written, with a message naming both."""
+    root = settings.workspaces_dir / "ember"
+    before = {p.name: p.read_bytes() for p in root.iterdir() if p.is_file()}
+    with pytest.raises(ValueError, match="Moss and Fern.*ember.*Ember Coffee Co"):
+        onboard_workspace(brand_pdf, workspace_id="ember", settings=settings, model=ProfileModel(), trace=trace)
+    assert {p.name: p.read_bytes() for p in root.iterdir() if p.is_file()} == before
+    assert not (root / "assets").exists() or not any((root / "assets").iterdir())
+
+
+def test_a_new_brand_that_already_has_a_folder_lands_in_it(settings, trace, tmp_path):
+    """Uploading 'Ember Coffee Co.' as a new brand finds the existing 'ember' folder by its brand line and drafts into it; no 'ember-coffee-co' twin."""
+    onboard_workspace(ember_pdf(tmp_path), settings=settings, model=ProfileModel(), trace=trace)
+    assert not (settings.workspaces_dir / "ember-coffee-co").exists()
+    assert "Ember Coffee Co." in (settings.workspaces_dir / "ember" / "SOUL.md").read_text()
+    assert any("already has workspace 'ember'" in e.detail.get("text", "") for e in trace.events if e.kind == "note")
+
+
+def test_only_the_latest_pack_is_kept(settings, trace, tmp_path):
     """Uploading a second pack into a brand processes the new one and replaces the older PDF under assets."""
-    onboard_workspace(brand_pdf, workspace_id="ember", settings=settings, model=ProfileModel(), trace=trace)
-    newer = tmp_path / "ember-v2.pdf"
-    newer.write_bytes(minimal_pdf(["Ember Coffee Co. brand pack", "Warm, playful."]))
-    onboard_workspace(newer, workspace_id="ember", settings=settings, model=ProfileModel(), trace=trace)
+    onboard_workspace(ember_pdf(tmp_path, "v1"), workspace_id="ember", settings=settings, model=ProfileModel(), trace=trace)
+    onboard_workspace(ember_pdf(tmp_path, "v2"), workspace_id="ember", settings=settings, model=ProfileModel(), trace=trace)
     root = settings.workspaces_dir / "ember"
     assert sorted(p.name for p in (root / "assets").iterdir()) == ["ember-v2.pdf"]
     assert "Ember Coffee Co." in (root / "SOUL.md").read_text()
 
 
 def test_a_new_brand_named_like_an_existing_one_reuses_its_folder(settings, trace, brand_pdf):
-    """Onboarding as a new brand twice does not fail the second time: the same folder gets the newer drafts."""
+    """Onboarding as a new brand twice does not fail the second time: the same folder gets the newer drafts and keeps the older ones as .bak."""
     onboard_workspace(brand_pdf, settings=settings, model=ProfileModel(), trace=trace)
     onboard_workspace(brand_pdf, settings=settings, model=ProfileModel(), trace=trace)
     assert (settings.workspaces_dir / "moss-and-fern" / "SOUL.md").exists()
+    assert (settings.workspaces_dir / "moss-and-fern" / "SOUL.md.bak").exists()
 
 
 def test_the_library_shows_the_brand_as_categories(settings, trace, brand_pdf):
     """The brand library shows what was extracted as readable categories, not raw files: voice, rules, banned words, colours, facts, people."""
-    onboard_workspace(brand_pdf, workspace_id="ember", settings=settings, model=ProfileModel(), trace=trace)
-    lib = read_library("ember", settings)
+    onboard_workspace(brand_pdf, settings=settings, model=ProfileModel(), trace=trace)
+    lib = read_library("moss-and-fern", settings)
     details = {d["category"]: [i["text"] for i in d["items"]] for d in lib["details"]}
-    assert details["Brand"] == ["Ember Coffee Co."]
+    assert details["Brand"] == ["Moss and Fern"]
     assert details["Voice and tone"] == ["Warm, green, patient.", "Short lines. Talk to one person."], "the template's opening line is not a brand detail"
     assert "Mention the plant's name once." in details["Copy rules"]
     assert details["Words and claims to avoid"] == ["cheap", "guaranteed"]
     assert details["Product and company facts"] == ["Pots ship in 3 days."]
-    assert details["People"] == ["Jonas (marketer)"]
+    assert details["People"] == ["Owner (owner)"]
     colours = next(d for d in lib["details"] if d["category"] == "Colours")["items"]
     assert {"text": "Fern", "hex": "#2f6b4f"} in colours
     assert [u["name"] for u in lib["uploads"]] == ["moss-brand-pack.pdf"]
@@ -99,6 +124,8 @@ def test_the_library_refuses_an_unknown_brand(settings):
         read_library("../ember", settings)
     with pytest.raises(UnknownWorkspace):
         read_library("nobody", settings)
+    with pytest.raises(UnknownWorkspace):
+        read_library("ember\n", settings)
 
 
 def test_the_chat_page_wires_the_upload_form():
@@ -112,6 +139,8 @@ def test_the_chat_page_wires_the_upload_form():
     assert "onboardFiles" in page
     assert 'id="onboardClose"' in page and '$("onboardClose").onclick' in page, "the panel needs a Close control"
     assert 'id="onboardTarget"' in page and 'fd.append("workspace_id"' in page, "the upload says which brand it is for"
+    assert "New brand (named from the pack)</option>' + brands.map" in page, "Into offers New brand first"
+    assert '$("onboardTarget").value = sel.value' not in page and '$("onboardTarget").value = $("brand").value' not in page, "Into defaults to New brand, never to the brand on screen"
 
 
 def test_the_chat_page_has_a_brand_library():
