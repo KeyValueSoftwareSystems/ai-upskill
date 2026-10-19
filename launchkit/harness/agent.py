@@ -23,7 +23,7 @@ def session_db(settings) -> SqliteDb:
 
 
 def build_copy_agent(ws: Workspace, ctx: ContextBuilder, model, settings, trace: Trace) -> Agent:
-    # TODO step 1: ctx.set("rules", ws.soul followed by ws.agents)
+    ctx.set("rules", f"{ws.soul}\n\n{ws.agents}")
     ctx.set("task", SPEC_TASK)
     return Agent(
         model=model,
