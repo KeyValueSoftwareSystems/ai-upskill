@@ -43,28 +43,23 @@ def ember_pdf(tmp_path, version="v1"):
     return path
 
 
-def test_a_pack_uploaded_into_its_brand_replaces_the_drafted_files_and_keeps_a_backup(settings, trace, tmp_path):
-    """A pack uploaded into its own brand goes into that folder: the five drafted files are replaced, each previous one kept as .bak, and users.yaml is kept."""
+def test_a_pack_uploaded_into_its_brand_replaces_the_drafted_files(settings, trace, tmp_path):
+    """A pack uploaded into its own brand goes into that folder: the five drafted files are overwritten, no backups, and users.yaml is kept."""
     root = settings.workspaces_dir / "ember"
-    soul_before = (root / "SOUL.md").read_text()
     users_before = (root / "users.yaml").read_text()
     folders_before = sorted(p.name for p in settings.workspaces_dir.iterdir())
     onboard_workspace(ember_pdf(tmp_path), workspace_id="ember", settings=settings, model=ProfileModel(), trace=trace)
     assert sorted(p.name for p in settings.workspaces_dir.iterdir()) == folders_before
     assert "Ember Coffee Co." in (root / "SOUL.md").read_text()
-    assert (root / "SOUL.md.bak").read_text() == soul_before, "the previous draft is kept"
+    assert not list(root.glob("*.bak")), "drafts are overwritten, not backed up"
     assert (root / "users.yaml").read_text() == users_before, "the brand's people are kept"
     assert (root / "assets" / "ember-v1.pdf").exists()
 
 
-def test_a_pack_for_another_brand_is_refused(settings, trace, brand_pdf):
-    """A pack whose brand is not the target brand is refused before anything is written, with a message naming both."""
-    root = settings.workspaces_dir / "ember"
-    before = {p.name: p.read_bytes() for p in root.iterdir() if p.is_file()}
-    with pytest.raises(ValueError, match="Moss and Fern.*ember.*Ember Coffee Co"):
-        onboard_workspace(brand_pdf, workspace_id="ember", settings=settings, model=ProfileModel(), trace=trace)
-    assert {p.name: p.read_bytes() for p in root.iterdir() if p.is_file()} == before
-    assert not (root / "assets").exists() or not any((root / "assets").iterdir())
+def test_a_pack_uploaded_into_a_brand_overwrites_it_whatever_brand_it_names(settings, trace, brand_pdf):
+    """The picked brand is trusted: a Moss and Fern pack uploaded into ember overwrites ember's drafts."""
+    onboard_workspace(brand_pdf, workspace_id="ember", settings=settings, model=ProfileModel(), trace=trace)
+    assert "Moss and Fern" in (settings.workspaces_dir / "ember" / "SOUL.md").read_text()
 
 
 def test_a_new_brand_that_already_has_a_folder_lands_in_it(settings, trace, tmp_path):
@@ -85,11 +80,10 @@ def test_only_the_latest_pack_is_kept(settings, trace, tmp_path):
 
 
 def test_a_new_brand_named_like_an_existing_one_reuses_its_folder(settings, trace, brand_pdf):
-    """Onboarding as a new brand twice does not fail the second time: the same folder gets the newer drafts and keeps the older ones as .bak."""
+    """Onboarding as a new brand twice does not fail the second time: the same folder gets the newer drafts."""
     onboard_workspace(brand_pdf, settings=settings, model=ProfileModel(), trace=trace)
     onboard_workspace(brand_pdf, settings=settings, model=ProfileModel(), trace=trace)
     assert (settings.workspaces_dir / "moss-and-fern" / "SOUL.md").exists()
-    assert (settings.workspaces_dir / "moss-and-fern" / "SOUL.md.bak").exists()
 
 
 def test_the_library_shows_the_brand_as_categories(settings, trace, brand_pdf):
