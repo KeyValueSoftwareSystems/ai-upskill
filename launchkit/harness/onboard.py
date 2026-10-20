@@ -84,9 +84,6 @@ def slug(name: str) -> str:
     return cleaned[:32].strip("-") or "brand"
 
 
-DRAFTED = ("SOUL.md", "AGENTS.md", "rules.yaml", "facts.md", "brand-book.md")
-
-
 def brand_of(root: Path) -> str | None:
     users = root / "users.yaml"
     if not users.is_file():
@@ -132,12 +129,6 @@ def onboard_workspace(pdf_path: Path, *, workspace_id: str | None = None, settin
         workspace_id = found or slug(profile.brand_name)
     root = settings.workspaces_dir / workspace_id
     if root.is_dir():
-        current = brand_of(root)
-        if current and slug(current) != slug(profile.brand_name):
-            raise ValueError(
-                f"this pack is for '{profile.brand_name}', but workspace '{workspace_id}' is '{current}'. "
-                f"Upload it as a new brand, or into its own workspace."
-            )
         trace.note(f"brand '{profile.brand_name}' replaces the drafted files of workspace '{workspace_id}'")
     else:
         trace.note(f"brand '{profile.brand_name}' gets the new workspace '{workspace_id}'")
@@ -156,10 +147,6 @@ def onboard_workspace(pdf_path: Path, *, workspace_id: str | None = None, settin
         path = root / name
         if name == "users.yaml" and path.exists():
             continue
-        if name in DRAFTED and path.exists():
-            backup = path.with_name(path.name + ".bak")
-            shutil.copyfile(path, backup)
-            trace.note(f"kept the previous {name} as {backup.name}")
         path.write_text(body, encoding="utf-8")
         trace.written(path)
         written.append(path)
