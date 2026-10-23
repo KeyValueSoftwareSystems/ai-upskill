@@ -107,3 +107,9 @@ def brand_pdf(tmp_path):
     path = tmp_path / "moss-brand-pack.pdf"
     path.write_bytes(minimal_pdf(["Moss and Fern brand pack", "Voice: warm, green, patient.", "Never say cheap or guaranteed.", "Colour: Fern 2f6b4f. Pots ship in 3 days."]))
     return path
+
+
+@pytest.fixture(autouse=True)
+def no_gpu_pictures(monkeypatch):
+    """Checks never call the GPU picture service, even when a trainee's .env points at it."""
+    monkeypatch.delenv("IMAGESVC_URL", raising=False)
