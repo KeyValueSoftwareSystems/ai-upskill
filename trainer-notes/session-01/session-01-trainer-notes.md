@@ -283,6 +283,55 @@ Poster for the Tidal bottle on a misty lakeshore at dawn. Headline idea: cold fo
 
 All commands below start with `uv run launchkit` and run from the repo root.
 
+### How one request flows
+
+Top to bottom, one request. Each line says which step fills it, or that it ships ready.
+
+| # | Box | Filled by | What happens |
+| --- | --- | --- | --- |
+| 1 | Request | ships ready | Workspace id (which customer), user id (who is typing), conversation id, text. The system sets the first three; the person types only the text. |
+| 2 | Resolve the workspace id | step 4 | The id comes from the request, never from the text. An id that is not on the allow-list or has no folder is refused before any file is opened. |
+| 3 | Load the workspace files | step 1 | `SOUL.md`, `AGENTS.md` and `rules.yaml` from that folder, each recorded on the trace. |
+| 4 | Build the context | ships ready | Rules, then task, then facts, then history, each with a size budget. |
+| 5 | Phase A: the model writes the copy | step 1 | An Agno agent returns a form: a poster spec (headline, subheadline, body, image prompt, format) or a plain reply. |
+| 6 | Validate the spec | step 2 | Word limits, banned claims, no copy inside the image prompt. Errors the first time go back to Phase A once; errors the second time end in `SpecError`, no poster, and Phase B never starts. |
+| 7 | Phase B: the model makes the picture | step 3 | An Agno agent with one tool, `generate_image`, under a leash: at most 3 pictures per request and 6 tool calls per run. It sees only the image prompt. The same image prompt as the previous turn keeps the previous picture. |
+| 8 | Result | ships ready | The spec, the poster, the trace and the metrics. |
+
+### What ships before step 1
+
+`session-01-harness` runs on day one with simple defaults in the four slots, and everything it does shows on the trace. The rest is ready and explained in class, not built.
+
+```
+ai-upskill/
+├── .env.example            LiteLLM key and URL, the chat model, the image model, the GPU address and key
+├── launchkit/
+│   ├── cli.py              run · ui · explain · check · onboard
+│   ├── settings.py         the section budgets, the model and image settings
+│   ├── gpu_images.py       pictures from our GPU first, gpt-image-1 when it can't be reached
+│   ├── harness/
+│   │   ├── request.py      Request · resolve_workspace_id        <- step 4
+│   │   ├── workspace.py    Workspace · load_workspace            <- step 1
+│   │   ├── context.py      ContextBuilder: rules, task, facts, history, a budget each
+│   │   ├── spec.py         PosterSpec · validate_spec            <- step 2 · SpecError
+│   │   ├── tools.py        generate_image                        <- step 3
+│   │   ├── limits.py       the leash: 3 pictures, 6 tool calls   <- step 3
+│   │   ├── agent.py        build_copy_agent · build_picture_agent <- step 3
+│   │   ├── run.py          run_request: the boxes above, in order <- step 2 (repair)
+│   │   ├── trace.py        the trace: one plain line per event
+│   │   ├── users.py        the logins, from each brand's users.yaml
+│   │   ├── onboard.py      PDF to workspace files (the Onboard a brand demo)
+│   │   └── library.py      a brand's files for the page's Brand library
+│   ├── adapters/           the model and picture clients
+│   └── web/                the chat page
+├── workspaces/
+│   ├── harbor/             SOUL.md  AGENTS.md  rules.yaml  facts.md  brand-book.md  users.yaml
+│   └── ember/              SOUL.md  AGENTS.md  rules.yaml  facts.md  users.yaml
+├── samples/                moss-and-fern-brand-pack.pdf · ember-coffee-brand-book.pdf
+├── checks/                 test_step0.py to test_step4.py: what `launchkit check N` runs
+└── docs/                   setup, glossary, context, onboarding, and step-1.md to step-4.md (the prompt cards)
+```
+
 ### Step 0 · The starting point
 
 Branch `session-01-harness`. The skeleton runs end to end before anyone builds: a request goes in, a generic spec comes out, no brand file is read, no picture is made. The trainer runs it once; participants repeat it.
