@@ -14,6 +14,22 @@ The list in `rules.yaml` is for the code: a guarantee.
 - `launchkit/harness/spec.py` · `validate_spec`. Today it returns no errors.
 - `launchkit/harness/run.py` · after the copy agent returns. Today errors are ignored.
 
+## Break it first
+
+Before you paste the card, run this and keep the output:
+
+```
+uv run launchkit run harbor "Poster for the Tidal bottle" --model fake:malformed
+```
+
+```
+  headline      Cold for twenty four long hours and then some more
+  subheadline   Tidal, the eco-friendly bottle for every shore
+  image_prompt  A bottle on a lakeshore with the words 'Cold for twenty four long hours and then some more' printed across the sky
+```
+
+Ten words against a limit of six, a banned claim, and the headline inside the picture prompt. All three ship. `AGENTS.md` asked the model; nothing checked.
+
 ## Prompt card, for your coding agent
 
 ```
@@ -38,6 +54,23 @@ uv run launchkit check 2
 - The spec validates: headline up to 6 words, subheadline up to 12, body up to 25, no banned claims.
 - A malformed spec gets one repair, then a typed error.
 - The copy never reaches the image prompt: no image call, and the leaked headline is caught.
+
+## Run it again
+
+The same command after the build:
+
+```
+  check     attempt 1: headline has 10 words, limit is 6; banned claim: eco-friendly; headline text leaked into image_prompt
+  model     repair phase · fake:malformed
+  check     attempt 2: headline has 10 words, limit is 6; ...
+SpecError  headline has 10 words, limit is 6; banned claim: eco-friendly; headline text leaked into image_prompt
+```
+
+One repair, then a clear stop. No poster ships.
+
+## Why it matters
+
+A rule in the prompt is a request; a rule in code is a guarantee. And no paid picture is ever made from bad copy.
 
 ## See it
 
