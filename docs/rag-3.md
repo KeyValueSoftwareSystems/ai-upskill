@@ -1,7 +1,7 @@
 # RAG step 3 · Match what the words mean (CP1.2c)
 
 Step 2 matches words. "Will it spill in my bag?" shares no words with "leak-proof lid", so it finds nothing.
-"How long does my coffee stay warm?" matches "warm" and "long" in a tone rule, not "hot for 12 hours". A synonym list fixes one question and misses the next.
+"Warm on a long shift?" only matches "long days outside", not "hot for 12 hours". A synonym list fixes one question and misses the next.
 
 **Semantic search** matches what the words mean:
 
