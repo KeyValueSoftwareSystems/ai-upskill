@@ -15,6 +15,20 @@ The picture phase only gets the image prompt. The headline never reaches the ima
 - `launchkit/harness/limits.py` · `make_leash`. Today the hook just passes the call through.
 - `launchkit/harness/agent.py` · `build_picture_agent`. Today it returns None, so the picture phase is skipped.
 
+## Break it first
+
+Before you paste the card, run this and keep the output:
+
+```
+LAUNCHKIT_IMAGES=placeholder uv run launchkit run harbor "Poster for the Tidal bottle on a misty lakeshore at dawn." --model fake:endless
+```
+
+```
+  picture   skipped, the image tool is step 3
+```
+
+No picture at all yet. The leash only matters once there is a tool to call, so this step breaks it after the build (below).
+
 ## Prompt card, for your coding agent
 
 ```
@@ -44,6 +58,26 @@ uv run launchkit check 3
 - The endless fake stops at the step cap.
 - A 4th image call against a budget of 3 is refused.
 - The image prompt sent to the adapter never contains the headline.
+
+## Run it again
+
+The same command after the build:
+
+```
+  tool      generate_image("the same lakeshore, better sky, try 1") → file data/outputs/poster-…-1.png
+  tool      generate_image("the same lakeshore, better sky, try 2") → file data/outputs/poster-…-2.png
+  tool      generate_image("the same lakeshore, better sky, try 3") → file data/outputs/poster-…-3.png
+  refused   generate_image: image budget of 3 spent
+  refused   generate_image: image budget of 3 spent
+  refused   generate_image: image budget of 3 spent
+  stop      step cap of 6 tool calls reached, run ended
+```
+
+Now take the leash off. In `agent.py`, comment out the `tool_hooks=[make_leash(...)]` line in `build_picture_agent` and run the same command. It never stops: hundreds of placeholder pictures in seconds, until Ctrl-C. With a real image model, each one is paid. Put the line back and delete `data/outputs`.
+
+## Why it matters
+
+Spend has a ceiling the model cannot talk its way past. The harness owns the stop, because Agno's `tool_call_limit` does not end the loop.
 
 ## See it
 
