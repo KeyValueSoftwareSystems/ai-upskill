@@ -1,31 +1,28 @@
-"""Harbor's four requests, and a scoreboard that runs them through an approach.
+"""Maya's four requests, and a scoreboard that runs them through an approach.
 
     uv run python -m launchkit.scoreboard --approach llm
     uv run python -m launchkit.scoreboard --approach graph
 
-Each request comes straight from the problem statement. Order matters: R2 follows R1 in
-conversation A, and R4 follows R3 in conversation B.
+Maya is Harbor's marketer. Her requests come one after another in one conversation, so order
+matters: R2 to R4 all build on the poster she approved in R1.
 """
 import argparse
 import importlib
+import re
 import uuid
-from difflib import SequenceMatcher
 
-from .poster import OUT, load_brand, validate_spec, word_count
+from .poster import OUT, load_brand, validate_spec
 
+STORY = (1080, 1920)
 REQUESTS = [
-    {"id": "R1", "conversation": "A", "needs": "a concept becomes an on-brand poster",
-     "text": "Poster for the Tidal bottle on a misty lakeshore at dawn. Headline idea: cold for 24 hours.",
-     "attachments": []},
-    {"id": "R2", "conversation": "A", "needs": "follow-up edits",
-     "text": "Make the headline shorter.",
-     "attachments": []},
-    {"id": "R3", "conversation": "B", "needs": "a concept given as a photo",
-     "text": "Use this photo of the bottle. Make the bottle bigger and the lake moodier.",
-     "attachments": ["assets/tidal_photo.png"]},
-    {"id": "R4", "conversation": "B", "needs": "resizing the poster we just made",
-     "text": "Now give me the story size (1080x1920) of that poster.",
-     "attachments": []},
+    {"id": "R1", "needs": "a full poster from one idea",
+     "text": "Tidal launch, a misty lakeshore at dawn. Can I get a concept, a storyboard, the words and a poster?"},
+    {"id": "R2", "needs": "keep my picture: the story size of the approved poster",
+     "text": "Love it. Just the story size now, please."},
+    {"id": "R3", "needs": "an answer, not a new poster",
+     "text": "What does your brand book say about washing the lid?"},
+    {"id": "R4", "needs": "three asks in one message",
+     "text": "Is the lid dishwasher-safe? If not, fix the copy, then give me the story size."},
 ]
 APPROACHES = {"llm": "approach_llm.app", "graph": "approach_graph.graph"}
 
@@ -39,7 +36,7 @@ def load_handle(name: str):
         raise SystemExit(f"Can't load '{module}' ({e}). Did you check out branch {branch}?")
 
 
-# ---- checks: each returns (passed, reason). `prev` is the earlier results in the same conversation.
+# ---- checks: each returns (passed, reason). `prev` is the earlier results in the conversation.
 
 
 def _valid(res, brand):
@@ -50,59 +47,80 @@ def _valid(res, brand):
     problems = validate_spec(res.spec, brand)
     if problems:
         return False, "breaks Harbor's rules: " + "; ".join(problems)
-    if not res.images:
-        return False, "no image generated"
     return True, ""
+
+
+def _new_pictures(res):
+    """Pictures the image model made for this request (each one paid for), as opposed to resized by code."""
+    return [p for p in res.images if not p.resized_from] if res else []
+
+
+def _approved(prev):
+    """The paths of the pictures Maya has already seen in this conversation."""
+    return [p.path for r in prev if r for p in r.images]
+
+
+def _story_of_approved(res, prev):
+    approved = _approved(prev)
+    return any(tuple(p.size) == STORY and p.resized_from in approved for p in (res.images if res else []))
+
+
+def _answers_the_lid(res):
+    return bool(res and res.answer and re.search(r"hand[- ]?wash", res.answer, re.I))
 
 
 def check_r1(res, prev, brand):
     ok, why = _valid(res, brand)
     if not ok:
         return ok, why
-    prompt = res.images[0].prompt or ""
+    if not _new_pictures(res):
+        return False, "no picture was made"
+    prompt = _new_pictures(res)[0].prompt or ""
     if res.spec.headline.lower() in prompt.replace(res.spec.visual_concept, "").lower():
         return False, "the headline was sent to the image model"
-    return True, "valid copy, picture with no words"
+    return True, f'concept, {len(res.spec.storyboard)} frames, words that follow the rules, a picture with no words'
 
 
 def check_r2(res, prev, brand):
-    before = next((p for p in reversed(prev) if p and p.spec), None)
-    if before is None:
-        return False, "R1 produced no poster to edit"
-    ok, why = _valid(res, brand)
-    if not ok:
-        return ok, why
-    rest = lambda spec: f"{spec.subheadline} {spec.body} {spec.visual_concept}".lower()
-    if SequenceMatcher(None, rest(before.spec), rest(res.spec)).ratio() < 0.7:  # an edit keeps the rest
-        return False, (f'a different poster came back ("{before.spec.headline}" became "{res.spec.headline}", '
-                       "and everything else changed too): the model never saw the first poster")
-    if word_count(res.spec.headline) >= word_count(before.spec.headline):
-        return False, f'headline not shorter ("{res.spec.headline}" vs "{before.spec.headline}")'
-    return True, f'"{before.spec.headline}" became "{res.spec.headline}"'
+    if not _approved(prev):
+        return False, "R1 made no poster, so there is nothing to resize"
+    if res is None or res.error:
+        return False, f"nothing came back: {res.error if res else 'nothing returned'}"
+    if _new_pictures(res):
+        return False, ("it drew a new one: every step ran again, so a new picture came back (and was paid for) "
+                       "instead of the one she approved")
+    if not _story_of_approved(res, prev):
+        return False, f"no {STORY[0]}x{STORY[1]} version of the approved picture"
+    return True, "the approved picture, resized by code to the story size; no new picture"
 
 
-def check_r3(res, prev, brand, photo="assets/tidal_photo.png"):
-    ok, why = _valid(res, brand)
-    if not ok:
-        return ok, why
-    if not (res.images[0].reference or "").endswith(photo):
-        return False, "the uploaded photo was ignored: a text-only call never sees it"
-    return True, "poster built from the uploaded photo"
+def check_r3(res, prev, brand):
+    if res is None or res.error:
+        return False, f"nothing came back: {res.error if res else 'nothing returned'}"
+    if not res.answer:
+        made = "a new poster and a new picture" if _new_pictures(res) else "a poster"
+        return False, f"she asked a question and got {made} instead of an answer"
+    if _new_pictures(res):
+        return False, "answered, but also drew a new picture nobody asked for"
+    if not _answers_the_lid(res):
+        return False, f'the answer misses the fact: the lid is hand-wash only ("{res.answer[:80]}")'
+    return True, "answered from Harbor's facts: the lid is hand-wash only"
 
 
 def check_r4(res, prev, brand):
-    before = next((p for p in reversed(prev) if p and p.images), None)
-    if before is None:
-        return False, "no earlier poster to resize"
-    if res is None or res.error or not res.images:
-        return False, f"no image: {res.error if res else 'nothing returned'}"
-    story = [p for p in res.images if tuple(p.size) == (1080, 1920)]
-    if not story:
-        w, h = res.images[0].size
-        return False, f"asked for 1080x1920, got a new {w}x{h} picture"
-    if not any(p.resized_from in [b.path for b in before.images] for p in story):
-        return False, "a brand-new picture was made: the call doesn't know which poster 'that poster' is"
-    return True, "resized the existing poster to 1080x1920"
+    if res is None or res.error:
+        return False, f"nothing came back: {res.error if res else 'nothing returned'}"
+    asks = {
+        "answer the lid question": _answers_the_lid(res),
+        "fix the copy": _valid(res, brand)[0],
+        "the story size of the approved picture": _story_of_approved(res, prev) and not _new_pictures(res),
+    }
+    dropped = [ask for ask, done in asks.items() if not done]
+    if dropped:
+        done = [ask for ask, ok in asks.items() if ok]
+        return False, (f"{len(dropped)} of her 3 asks vanished, and nobody told her: " + "; ".join(dropped)
+                       + (f" (done: {'; '.join(done)})" if done else ""))
+    return True, "all three asks done: the answer, the copy and the story size"
 
 
 CHECKS = {"R1": check_r1, "R2": check_r2, "R3": check_r3, "R4": check_r4}
@@ -112,15 +130,13 @@ def run(approach: str, workspace: str = "harbor") -> list[dict]:
     handle = load_handle(approach)
     brand = load_brand(workspace)
     run_id = uuid.uuid4().hex[:6]
-    history: dict[str, list] = {}
-    rows = []
+    conv = f"{approach}-{run_id}"  # one conversation: Maya's requests follow each other
+    prev, rows = [], []
     for req in REQUESTS:
-        conv = f"{approach}-{run_id}-{req['conversation']}"
-        prev = history.setdefault(conv, [])
         print(f"{req['id']}: {req['text']}", flush=True)
         res = None
         try:
-            res = handle(req["text"], workspace=workspace, conversation_id=conv, attachments=list(req["attachments"]))
+            res = handle(req["text"], workspace=workspace, conversation_id=conv)
             ok, why = CHECKS[req["id"]](res, prev, brand)
             status = "PASS" if ok else "FAIL"
         except NotImplementedError as e:
