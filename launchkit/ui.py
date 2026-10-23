@@ -1,4 +1,4 @@
-"""A small web page for trying requests: paste a request, see the model calls, the poster and the images.
+"""A small web page for trying requests: paste a request, see the model calls, the poster, any answer and the images.
 
     uv run python -m launchkit.ui                  # opens http://localhost:8000
     uv run python -m launchkit.ui --port 8001 --no-open
@@ -18,7 +18,6 @@ from .ask import run
 from .poster import ROOT
 from .scoreboard import APPROACHES, REQUESTS, load_handle
 
-PHOTO = "assets/tidal_photo.png"
 _loaded: dict[str, tuple[float | None, object]] = {}  # approach -> (file's mtime, handle)
 
 
@@ -45,9 +44,8 @@ def handle_run(body: dict) -> dict:
                          "Check the code you just pasted (indentation, whole function replaced)."}
     except (Exception, SystemExit) as e:
         return {"error": f"{APPROACHES[approach]} doesn't load: {e}"}
-    attachments = [PHOTO] if body.get("attach_photo") else []
     return run(body.get("text", ""), handle=handle, conversation_id=body.get("conversation", "ui"),
-               attachments=attachments, no_image=bool(body.get("no_image")))
+               no_image=bool(body.get("no_image")))
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -60,11 +58,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path in ("/", "/index.html"):
-            page = PAGE.replace("__REQUESTS__", json.dumps(REQUESTS)).replace("__PHOTO__", PHOTO)
+            page = PAGE.replace("__REQUESTS__", json.dumps(REQUESTS))
             return self._send(200, "text/html; charset=utf-8", page.encode())
-        # Images: only PNGs inside out/ or assets/.
+        # Images: only PNGs inside out/.
         path = (ROOT / self.path.lstrip("/").split("?")[0]).resolve()
-        allowed = any(path.is_relative_to(ROOT / d) for d in ("out", "assets"))
+        allowed = path.is_relative_to(ROOT / "out")
         if allowed and path.suffix == ".png" and path.is_file():
             return self._send(200, "image/png", path.read_bytes())
         self._send(404, "text/plain", b"not found")
@@ -141,7 +139,6 @@ PAGE = r"""<!doctype html>
   .hint { color: var(--muted); font-size: 13px; }
   .opts { display: grid; gap: 8px; margin: 14px 0; }
   .opts label { display: flex; gap: 8px; align-items: center; }
-  .opts img { width: 28px; height: 28px; border-radius: 4px; object-fit: cover; }
   select { font: inherit; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--line);
            background: var(--bg); color: var(--ink); }
   .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -188,28 +185,29 @@ PAGE = r"""<!doctype html>
   pre { margin: 0; white-space: pre-wrap; word-break: break-word; background: var(--code); padding: 8px 10px;
         border-radius: 6px; font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; }
   .note { font-size: 13px; color: var(--muted); font-style: italic; }
+  .answer { background: var(--soft); border-radius: 8px; padding: 10px 12px; white-space: pre-wrap; }
+  .caption.bad { color: var(--bad); font-weight: 600; }
 </style>
 </head>
 <body>
 <header>
   <h1>LaunchKit Playground</h1>
-  <p>Paste a campaign request for Harbor. You'll see the model call, the poster and the images your <code>app.py</code> makes.</p>
+  <p>Send Maya's requests for Harbor. You'll see the model calls, the poster, any answer and the images your code makes.</p>
 </header>
 <main>
   <form class="panel" id="form">
     <label class="title" for="text">Request</label>
-    <textarea id="text" placeholder="Poster for the Tidal bottle on a misty lakeshore at dawn. Headline idea: cold for 24 hours."></textarea>
+    <textarea id="text" placeholder="Tidal launch, a misty lakeshore at dawn. Can I get a concept, a storyboard, the words and a poster?"></textarea>
     <div class="chips" id="chips"></div>
-    <div class="hint">Harbor's four requests. Run R1 then R2 (or R3 then R4) in the same conversation.</div>
+    <div class="hint">Maya's four requests. Send R1 to R4 in order, in the same conversation.</div>
     <div class="opts">
       <label><input type="checkbox" id="noimage"> Skip the paid image call (draw a placeholder)</label>
-      <label><input type="checkbox" id="photo"> Attach Harbor's photo <img src="/__PHOTO__" alt=""></label>
       <label>Approach
         <select id="approach"><option value="llm">one LLM call (approach_llm)</option>
         <option value="graph">LangGraph (approach_graph)</option></select></label>
     </div>
     <div class="row">
-      <button class="primary" id="go" type="submit">Make poster</button>
+      <button class="primary" id="go" type="submit">Send</button>
       <span class="hint">or Ctrl+Enter</span>
     </div>
     <div class="conv">Conversation <b id="conv"></b> · <button class="link" type="button" id="newconv">start a new one</button></div>
@@ -221,6 +219,7 @@ const REQUESTS = __REQUESTS__;
 const $ = id => document.getElementById(id);
 const newConv = () => "ui-" + Math.random().toString(36).slice(2, 7);
 let conversation = newConv();
+const shown = {};  // conversation -> true once Maya has seen a picture in it
 $("conv").textContent = conversation;
 
 // Build DOM with textContent only: model output is never treated as HTML.
@@ -235,7 +234,7 @@ function h(tag, attrs = {}, ...kids) {
 
 for (const r of REQUESTS) {
   const chip = h("button", {type: "button", class: "chip", title: r.text}, `${r.id} · ${r.needs}`);
-  chip.onclick = () => { $("text").value = r.text; $("photo").checked = r.attachments.length > 0; $("text").focus(); };
+  chip.onclick = () => { $("text").value = r.text; $("text").focus(); };
   $("chips").append(chip);
 }
 $("newconv").onclick = () => { conversation = newConv(); $("conv").textContent = conversation; };
@@ -246,16 +245,15 @@ $("form").onsubmit = async e => {
   const text = $("text").value.trim();
   if (!text) return $("text").focus();
   $("go").disabled = true;
-  $("go").textContent = $("noimage").checked ? "Calling the model…" : "Making the poster… (a real picture takes about a minute)";
+  $("go").textContent = $("noimage").checked ? "Calling the model…" : "Working… (a real picture takes about a minute)";
   try {
     const res = await fetch("/run", {method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({text, conversation, approach: $("approach").value,
-                            no_image: $("noimage").checked, attach_photo: $("photo").checked})});
+      body: JSON.stringify({text, conversation, approach: $("approach").value, no_image: $("noimage").checked})});
     render(await res.json(), text);
   } catch (err) {
     render({request: text, error: "Couldn't reach the UI server. Is `uv run python -m launchkit.ui` still running?"}, text);
   } finally {
-    $("go").disabled = false; $("go").textContent = "Make poster";
+    $("go").disabled = false; $("go").textContent = "Send";
   }
 };
 
@@ -263,8 +261,10 @@ function render(r, typed) {
   const card = h("div", {class: "panel card"});
   card.append(h("h2", {text: `Request · conversation ${conversation}`}),
               h("div", {class: "request", text: r.request || typed}));
-  for (const a of r.attachments || []) card.append(h("div", {class: "hint", text: `attached: ${a}`}));
   if (r.error) card.append(h("h2", {text: "No poster"}), h("div", {class: "error", text: r.error}));
+  if (r.answer) card.append(h("h2", {text: "Answer"}), h("div", {class: "answer", text: r.answer}));
+  const seenBefore = shown[conversation];
+  if (r.images && r.images.length) shown[conversation] = true;
 
   if (r.spec) {
     const field = name => r.spec.find(s => s.field === name).value;
@@ -299,8 +299,9 @@ function render(r, typed) {
       grid.append(h("a", {href: "/" + img.path, target: "_blank"},
         h("img", {src: "/" + img.path, alt: img.path, loading: "lazy"}),
         h("div", {class: "size", text: `${img.size[0]}×${img.size[1]}`}),
-        h("div", {class: "caption", text: img.resized_from ? "resized by code"
-                                         : img.placeholder ? "placeholder (no image model call)" : "made by the image model"})));
+        img.resized_from ? h("div", {class: "caption", text: "resized by code"})
+          : seenBefore ? h("div", {class: "caption bad", text: "new picture: the one she already saw was not reused"})
+          : h("div", {class: "caption", text: img.placeholder ? "placeholder (no image model call)" : "made by the image model"})));
     }
     card.append(h("h2", {text: `Images (${r.images.length})`}), grid);
     const made = r.images.find(i => i.prompt);

@@ -9,7 +9,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]  # the repo folder
 OUT = ROOT / "out"                          # everything we make goes here
-FIELDS = ("headline", "subheadline", "body", "visual_concept")
+FIELDS = ("concept", "storyboard", "headline", "subheadline", "body", "visual_concept")
+FRAMES = 3  # storyboard frames
 
 
 # ---- the brand
@@ -41,20 +42,26 @@ class SpecError(ValueError):
 
 @dataclass
 class PosterSpec:
-    """The words on the poster, and a description of its picture."""
+    """The whole form: the idea, its storyboard, the words on the poster, and a description of its picture."""
+    concept: str          # the idea, in one sentence
+    storyboard: list[str]  # the story in frames, first to last
     headline: str
     subheadline: str
     body: str
-    visual_concept: str  # describes the picture only; never words to draw
+    visual_concept: str   # describes the picture only; never words to draw
 
     @classmethod
     def from_dict(cls, data: dict) -> "PosterSpec":
         if not isinstance(data, dict):
             raise SpecError("expected a JSON object")
-        missing = [f for f in FIELDS if not isinstance(data.get(f), str) or not data.get(f).strip()]
+        text = [f for f in FIELDS if f != "storyboard"]
+        missing = [f for f in text if not isinstance(data.get(f), str) or not data.get(f).strip()]
+        frames = data.get("storyboard")
+        if not isinstance(frames, list) or not frames or not all(isinstance(x, str) and x.strip() for x in frames):
+            missing.append("storyboard")
         if missing:
             raise SpecError("missing or empty fields: " + ", ".join(missing))
-        return cls(**{f: data[f].strip() for f in FIELDS})
+        return cls(storyboard=[x.strip() for x in frames], **{f: data[f].strip() for f in text})
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -76,18 +83,27 @@ class Result:
     """What an approach returns for one request."""
     spec: PosterSpec | None = None
     images: list[Picture] = field(default_factory=list)
+    answer: str | None = None  # a reply in words, when the request was a question
     error: str | None = None
 
 
-def parse_spec(raw: str) -> PosterSpec:
+def parse_json(raw: str) -> dict:
     """The model replies with text. Find the JSON object in it (even inside prose or ```json fences)."""
     start, end = raw.find("{"), raw.rfind("}")
     if start == -1 or end <= start:
         raise SpecError("no JSON object in the model's reply")
     try:
-        return PosterSpec.from_dict(json.loads(raw[start:end + 1]))
+        data = json.loads(raw[start:end + 1])
     except json.JSONDecodeError as e:
         raise SpecError(f"invalid JSON: {e}") from e
+    if not isinstance(data, dict):
+        raise SpecError("expected a JSON object")
+    return data
+
+
+def parse_spec(raw: str) -> PosterSpec:
+    """A whole poster spec from one reply."""
+    return PosterSpec.from_dict(parse_json(raw))
 
 
 # ---- the checks
@@ -99,6 +115,8 @@ def word_count(text: str) -> int:
 def validate_spec(spec: PosterSpec, brand: dict) -> list[str]:
     """Check a spec against the brand's written rules. An empty list means it follows them all."""
     problems = []
+    if len(spec.storyboard) != FRAMES:
+        problems.append(f"storyboard has {len(spec.storyboard)} frames; it needs {FRAMES}")
     for name, limit in brand["copy_limits"].items():
         n = word_count(getattr(spec, name))
         if n > limit:

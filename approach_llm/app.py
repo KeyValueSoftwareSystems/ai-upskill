@@ -1,41 +1,52 @@
-"""One LLM call: turn a campaign concept into a Harbor poster.
+"""Give it a shape: Maya's brief, split into four calls with Harbor's rules and a fixed answer shape.
 
-    concept --> build_prompt --> model --> parse_spec --> image model --> every placement size
+    brief --> concept --> storyboard --> words --> poster --> image model
+              (each call sees the earlier ones, so the picture and the words carry on together)
 
-Solved: this is where the LLM-call session ends. The LangGraph pipeline in
-approach_graph/graph.py starts from it.
-    uv run python -m launchkit.ask --approach llm R1
+Solved: both TODOs from the one-AI-call hands-on are filled in. Score it:
+    uv run python -m launchkit.scoreboard --approach llm
 """
-from launchkit.images import generate_image, resize_image
+from launchkit.images import generate_image
 from launchkit.llm import complete
-from launchkit.poster import Result, SpecError, brand_rules_text, load_brand, parse_spec
+from launchkit.poster import PosterSpec, Result, SpecError, brand_rules_text, load_brand, parse_json
+
+# The job in four steps, and the fixed shape of each step's answer: key -> what goes in it.
+STAGES = {
+    "concept": {"concept": "the idea of the poster, in one sentence"},
+    "storyboard": {"storyboard": "a list of exactly 3 short frames that tell the poster's story, first to last"},
+    "words": {"headline": "the headline", "subheadline": "the subheadline", "body": "the body copy"},
+    "poster": {"visual_concept": "the picture only, for the image model; never words to draw"},
+}
 
 
-def build_prompt(text: str, brand: dict) -> list[dict]:
-    """Solved TODO 1: tell the model Harbor's rules and the shape of answer we need."""
-    system = (
-        "You write poster ads.\n"
-        f"{brand_rules_text(brand)}\n"
-        "Reply with ONLY a JSON object with the keys headline, subheadline, body and visual_concept. "
-        "visual_concept describes the picture only and never contains words to draw."
-    )
-    return [{"role": "system", "content": system}, {"role": "user", "content": text}]
+def build_prompt(keys: dict, brand: dict) -> str:
+    """Solved TODO 1: the system message: Harbor's rules, and the shape of answer we need."""
+    shape = "\n".join(f"- {key}: {what}" for key, what in keys.items())
+    return (f"You write poster ads.\n{brand_rules_text(brand)}\n"
+            f"Reply with ONLY a JSON object with these keys, and nothing else:\n{shape}")
 
 
-def handle(text: str, *, workspace: str, conversation_id: str, attachments: list[str]) -> Result:
-    """Make one poster from one request. Used by `ask` and the scoreboard."""
+def write(text: str, brand: dict) -> PosterSpec:
+    """The model's part: Maya's brief in, the filled-in form out."""
+    # Solved TODO 2: one call per stage, each with its own shape. Earlier messages go with each call.
+    messages, form = [{"role": "user", "content": text}], {}
+    for stage, keys in STAGES.items():
+        messages.append({"role": "user", "content": f"Now the {stage}."})
+        reply = complete([{"role": "system", "content": build_prompt(keys, brand)}] + messages)
+        form.update(parse_json(reply))
+        messages.append({"role": "assistant", "content": reply})
+    return PosterSpec.from_dict(form)
+
+
+def handle(text: str, *, workspace: str, conversation_id: str) -> Result:
+    """Make a poster from one request. Used by `ask`, the UI and the scoreboard."""
     brand = load_brand(workspace)
-    reply = complete(build_prompt(text, brand))  # the one LLM call
     try:
-        spec = parse_spec(reply)
+        spec = write(text, brand)
     except SpecError as e:
-        return Result(error=str(e))
+        return Result(error=f"not a form: {e}")
 
-    # The image model only gets the picture, never the copy. Words drawn into pixels can't be
+    # The image model only gets the picture, never the words. Words drawn into pixels can't be
     # edited, set in Harbor's font or cropped to other sizes; the copy is laid over the picture later.
     picture = generate_image(spec.visual_concept, brand, conversation_id=conversation_id)
-
-    # Solved TODO 2: the picture in every placement size, by plain code.
-    sizes = [resize_image(picture, tuple(size), conversation_id=conversation_id)
-             for size in brand["placements"].values()]
-    return Result(spec=spec, images=[picture] + sizes)
+    return Result(spec=spec, images=[picture])
