@@ -145,9 +145,6 @@ PAGE = r"""<!doctype html>
   button.primary { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px;
                    padding: 9px 18px; font: inherit; font-weight: 600; cursor: pointer; }
   button.primary:disabled { opacity: .6; cursor: progress; }
-  button.link { background: none; border: 0; color: var(--accent); font: inherit; cursor: pointer; padding: 0;
-                text-decoration: underline; }
-  .conv { margin-top: 12px; font-size: 13px; color: var(--muted); }
   #results { display: grid; gap: 16px; min-width: 0; }
   .empty { color: var(--muted); text-align: center; padding: 48px 16px; }
   .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
@@ -199,7 +196,7 @@ PAGE = r"""<!doctype html>
     <label class="title" for="text">Request</label>
     <textarea id="text" placeholder="Tidal launch, a misty lakeshore at dawn. Can I get a concept, a storyboard, the words and a poster?"></textarea>
     <div class="chips" id="chips"></div>
-    <div class="hint">Maya's four requests. Send R1 to R4 in order, in the same conversation.</div>
+    <div class="hint">Maya's four requests. Send R1 to R4 in order; reload the page to start over.</div>
     <div class="opts">
       <label><input type="checkbox" id="noimage"> Skip the paid image call (draw a placeholder)</label>
       <label>Approach
@@ -210,17 +207,15 @@ PAGE = r"""<!doctype html>
       <button class="primary" id="go" type="submit">Send</button>
       <span class="hint">or Ctrl+Enter</span>
     </div>
-    <div class="conv">Conversation <b id="conv"></b> · <button class="link" type="button" id="newconv">start a new one</button></div>
   </form>
   <section id="results"><div class="panel empty">Your results appear here.</div></section>
 </main>
 <script>
 const REQUESTS = __REQUESTS__;
 const $ = id => document.getElementById(id);
-const newConv = () => "ui-" + Math.random().toString(36).slice(2, 7);
-let conversation = newConv();
-const shown = {};  // conversation -> true once Maya has seen a picture in it
-$("conv").textContent = conversation;
+// One conversation per page load: the graph remembers Maya's poster by this id. Reload to start over.
+const conversation = "ui-" + Math.random().toString(36).slice(2, 7);
+let shown = false;  // true once Maya has seen a picture
 
 // Build DOM with textContent only: model output is never treated as HTML.
 function h(tag, attrs = {}, ...kids) {
@@ -237,7 +232,6 @@ for (const r of REQUESTS) {
   chip.onclick = () => { $("text").value = r.text; $("text").focus(); };
   $("chips").append(chip);
 }
-$("newconv").onclick = () => { conversation = newConv(); $("conv").textContent = conversation; };
 $("text").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("form").requestSubmit(); });
 
 $("form").onsubmit = async e => {
@@ -259,12 +253,12 @@ $("form").onsubmit = async e => {
 
 function render(r, typed) {
   const card = h("div", {class: "panel card"});
-  card.append(h("h2", {text: `Request · conversation ${conversation}`}),
+  card.append(h("h2", {text: "Request"}),
               h("div", {class: "request", text: r.request || typed}));
   if (r.error) card.append(h("h2", {text: "No poster"}), h("div", {class: "error", text: r.error}));
   if (r.answer) card.append(h("h2", {text: "Answer"}), h("div", {class: "answer", text: r.answer}));
-  const seenBefore = shown[conversation];
-  if (r.images && r.images.length) shown[conversation] = true;
+  const seenBefore = shown;
+  if (r.images && r.images.length) shown = true;
 
   if (r.spec) {
     const field = name => r.spec.find(s => s.field === name).value;
