@@ -4,16 +4,16 @@ Branches `session-01-llm-call` → `session-01-langgraph` (both solved: `session
 
 **This is a trainer demo.** The trainer runs it live and the room watches the scoreboard move. Use the hands-on only if the room needs it and there is time: trainees paste the same snippets on the same branches. To demo without pasting, run everything from `session-01-llm-langgraph-solution`.
 
-Before the session, add `LAUNCHKIT_IMAGES=placeholder` to `.env`. A real image takes about a minute; show real ones from a run done earlier.
-
 Maya, Harbor's marketer, asked: *why don't we just use ChatGPT?* So we start where ChatGPT starts: one call to a model. Every step is scored on Maya's four requests, sent in order in one conversation:
 
-| | Maya says | Needs |
-| --- | --- | --- |
-| R1 | Tidal launch, a misty lakeshore at dawn. Can I get a concept, a storyboard, the words and a poster? | a full poster from one idea |
-| R2 | Love it. Just the story size now, please. | keep my picture |
-| R3 | What does your brand book say about washing the lid? | an answer, not a new poster |
-| R4 | Is the lid dishwasher-safe? If not, fix the copy, then give me the story size. | three asks in one message |
+
+|     | Maya says                                                                                           | Needs                       |
+| --- | --------------------------------------------------------------------------------------------------- | --------------------------- |
+| R1  | Tidal launch, a misty lakeshore at dawn. Can I get a concept, a storyboard, the words and a poster? | a full poster from one idea |
+| R2  | Love it. Just the story size now, please.                                                           | keep my picture             |
+| R3  | What does your brand book say about washing the lid?                                                | an answer, not a new poster |
+| R4  | Is the lid dishwasher-safe? If not, fix the copy, then give me the story size.                      | three asks in one message   |
+
 
 Score each step with:
 
@@ -21,6 +21,8 @@ Score each step with:
 uv run python -m launchkit.scoreboard --approach llm      # part 1
 uv run python -m launchkit.scoreboard --approach graph    # part 2
 ```
+
+
 
 ## Part 1 · One AI call (`session-01-llm-call`, `approach_llm/app.py`)
 
@@ -56,7 +58,7 @@ Scoreboard: **still 1/4**, but `ask R1` now shows four short calls. Maya gets fo
 
 **Read the reasons under R2 to R4.** R2: **it drew a new one.** The code runs every step every time, so a new bottle on new rocks comes back; she loses the poster she approved and pays for a picture she never asked for. R3: she asked a question and got a new poster. R4: three asks, and the code knows one way to answer.
 
-**Ask the room: one `if` per request?** "Just the story size" → resize only; "make the headline shorter" → words only; "use our own photo" → skip the picture; "show me three options" → three pictures; "go back to the first one" → reload the old poster. And "story size, and a shorter headline"? No rule at all. Why not draw every path ahead of time?
+**Ask the room: one** `if` **per request?** "Just the story size" → resize only; "make the headline shorter" → words only; "use our own photo" → skip the picture; "show me three options" → three pictures; "go back to the first one" → reload the old poster. And "story size, and a shorter headline"? No rule at all. Why not draw every path ahead of time?
 
 ## Part 2 · LangGraph (`session-01-langgraph`, `approach_graph/graph.py`)
 
@@ -116,7 +118,7 @@ Scoreboard: **3/4.** R3 gets an answer from Harbor's facts: the lid is hand-wash
 
 ## Showing it in the browser
 
-`uv run python -m launchkit.ui` opens http://localhost:8000. Pick the approach under *Approach* (*LangGraph* for part 2), then send R1 to R4 in order. Memory lives inside one running program, so separate `ask` commands don't remember each other, and restarting the UI, saving `graph.py` or reloading the page starts over from R1.
+`uv run python -m launchkit.ui` opens [http://localhost:8000](http://localhost:8000). Pick the approach under *Approach* (*LangGraph* for part 2), then send R1 to R4 in order. Memory lives inside one running program, so separate `ask` commands don't remember each other, and restarting the UI, saving `graph.py` or reloading the page starts over from R1.
 
 ## After the session
 
@@ -129,15 +131,18 @@ Scoreboard: **3/4.** R3 gets an answer from Harbor's facts: the lid is hand-wash
 **Why did Pencil never use LangGraph?** Every path is mapped in advance. Pencil's users' work can't be written down as a fixed map.
 
 **Stretch.**
+
 - *"Show me three options."* Add a path that draws three pictures. Count what it took: a node, an edge, a router question, and a decision rule that must not break the others.
 - *Memory that survives a restart.* `MemorySaver` forgets when the program stops; LangGraph has database-backed checkpointers (such as `SqliteSaver` in `langgraph-checkpoint-sqlite`).
 - *Make R4 pass.* Add a path for "answer, then fix the copy, then resize". Now try "story size, and a shorter headline".
 
-| Maya needs | One AI call | LangGraph |
-| --- | --- | --- |
-| a full poster from one idea (R1) | yes, once the answer has a shape | the same four calls |
-| keep my picture (R2) | ran every step, so a new picture | a saved state and a router; the resize path has no model at all |
-| an answer, not a new poster (R3) | made a poster | one more path: a node, an edge and a router question |
-| three asks in one message (R4) | one way to answer | the router picks one path; two asks vanish |
+
+| Maya needs                       | One AI call                      | LangGraph                                                       |
+| -------------------------------- | -------------------------------- | --------------------------------------------------------------- |
+| a full poster from one idea (R1) | yes, once the answer has a shape | the same four calls                                             |
+| keep my picture (R2)             | ran every step, so a new picture | a saved state and a router; the resize path has no model at all |
+| an answer, not a new poster (R3) | made a poster                    | one more path: a node, an edge and a router question            |
+| three asks in one message (R4)   | one way to answer                | the router picks one path; two asks vanish                      |
+
 
 Next: `git checkout session-01-harness`
