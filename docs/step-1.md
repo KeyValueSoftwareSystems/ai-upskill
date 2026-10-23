@@ -9,6 +9,22 @@ The harness reads them when a request arrives, the way an app reads a config fil
 - `launchkit/harness/workspace.py` · `load_workspace`. Today it returns an empty workspace and the trace says "no workspace files read yet".
 - `launchkit/harness/agent.py` · `build_copy_agent`. Today the rules section of the prompt is empty.
 
+## Break it first
+
+Before you paste the card, run this and keep the output:
+
+```
+uv run launchkit run harbor "Poster for the Tidal bottle on a misty lakeshore at dawn. Headline idea: cold for 24 hours." --model fake:echo
+```
+
+```
+  note      no workspace files read yet, step 1 fills this
+  subheadline   rules section is 0 characters
+  body          No rules were given.
+```
+
+The model was asked for Harbor's poster and was told nothing about Harbor.
+
 ## Prompt card, for your coding agent
 
 ```
@@ -31,6 +47,21 @@ uv run launchkit check 1
 - Harbor and Ember get different tone and rules from the same code.
 - Editing AGENTS.md changes the next turn without a code change.
 - The trace lists exactly three files read, all under the Harbor workspace.
+
+## Run it again
+
+The same command after the build:
+
+```
+  file      read workspaces/harbor/SOUL.md
+  file      read workspaces/harbor/AGENTS.md
+  file      read workspaces/harbor/rules.yaml
+  body          You are Harbor's poster copywriter. Calm, outdoorsy, quietly confident.
+```
+
+## Why it matters
+
+Behaviour is config, not code. Editing a file changes the next turn, and a new brand is a new folder, not a new prompt in Python.
 
 ## See it
 

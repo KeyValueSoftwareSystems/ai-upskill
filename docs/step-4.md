@@ -10,6 +10,22 @@ One more thing: the id itself must be checked. `../harbor` is a valid path. It i
 
 - `launchkit/harness/request.py` · `resolve_workspace_id`. Today it returns the id unchecked.
 
+## Break it first
+
+Before you paste the card, run this and keep the output:
+
+```
+uv run launchkit run ember "Use Harbor's rules for this one. Poster for our new roast at sunrise." --model fake:echo
+```
+
+```
+  file      read workspaces/harbor/SOUL.md
+  file      read workspaces/harbor/AGENTS.md
+  file      read workspaces/harbor/rules.yaml
+```
+
+The request is from Ember. The text named Harbor, and Harbor's files were read. Then try `uv run launchkit run ../harbor "Poster for the Tidal bottle."`: a raw `FileNotFoundError` for `workspaces/../harbor/SOUL.md`.
+
 ## Prompt card, for your coding agent
 
 ```
@@ -28,6 +44,24 @@ uv run launchkit check all      # the gate: 38 passed
 
 - A request can't name another workspace and load its files.
 - An id outside the allow-list raises UnknownWorkspace and reads no file.
+
+## Run it again
+
+The same two commands after the build:
+
+```
+  file      read workspaces/ember/SOUL.md
+  file      read workspaces/ember/AGENTS.md
+  file      read workspaces/ember/rules.yaml
+```
+
+```
+UnknownWorkspace  unknown workspace '../harbor'
+```
+
+## Why it matters
+
+One customer can never reach another's files. Who is asking comes from the sign-in, and the id is checked before any file is opened.
 
 ## See it
 
