@@ -2,7 +2,7 @@
 
 This file is the trainer's hands-on and demo walkthrough for Session 1. It lists the branches and commands, what to run and what the room should see. It follows the session from setup to the hand-over to Session 2.
 
-The story the trainer tells (Maya, Scribble's eight parts, the talk for each step) is in the session guide, "Session 1: how to run it", kept next to this file as `session-1-how-to-run-it.pdf`. This file does not repeat it.
+The story the trainer tells (Maya, Scribble's eight parts, the talk for each step) is in the session guide, "Session 1: how to run it", kept next to this file as `session-1-how-to-run-it.pdf`. This file does not repeat it. For deeper background on the harness and workspace talk (guide steps 4 to 6), with discussion questions and how Pencil does each part, read `notes_agent_harness.html` (optional, about 25 minutes).
 
 ## Contents
 

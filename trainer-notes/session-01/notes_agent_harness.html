@@ -199,13 +199,13 @@ html { scroll-behavior: smooth; }
 <p class="sub">LaunchKit, Harbor and Ember Coffee Co. are fictional.</p>
 <p>We're building <strong>LaunchKit</strong>, a marketing assistant. Its first job: turn one campaign concept into on-brand poster ads. The first customer is <strong>Harbor</strong>, launching an insulated bottle called <strong>Tidal</strong>. A second customer, <strong>Ember Coffee Co.</strong>, arrives later and needs a different voice and different rules.</p>
 <p>A poster has a short headline, a subheadline, body copy and a picture. Harbor's rules include word limits (headline up to 6 words, subheadline up to 12, body up to 25) and a list of claims the copy must never make, such as "eco-friendly".</p>
-<p>The opening demo of this session sent four requests to a plain model call, then to a fixed LangGraph pipeline:</p>
+<p>The opening demo of this session sent Maya's four requests, in order, in one conversation, first to one AI call and then to a LangGraph pipeline:</p>
 <div class="tbl"><table>
-  <tr><th style="width:42%">Request</th><th>What went wrong</th></tr>
-  <tr><td>"The Tidal bottle on a misty lakeshore, headline: Cold for 24 hours"</td><td>Plain call: the headline came back misspelled inside the picture, the copy added "eco-friendly", and the format changed on every run</td></tr>
-  <tr><td>"Make the bottle bigger" (a follow-up)</td><td>Started again from scratch: nothing remembered the poster</td></tr>
-  <tr><td>"Give me three variants"</td><td>The pipeline had no step for it</td></tr>
-  <tr><td>"Just resize this one for an Instagram story"</td><td>The pipeline ran every step anyway</td></tr>
+  <tr><th style="width:42%">Maya says</th><th>What happened</th></tr>
+  <tr><td>R1 · "Tidal launch, a misty lakeshore at dawn. Can I get a concept, a storyboard, the words and a poster?"</td><td>One AI call: a chat reply, not a form. It made up a tagline and ended with a question. With a fixed answer shape and four calls (concept, storyboard, words, poster), it passes.</td></tr>
+  <tr><td>R2 · "Love it. Just the story size now, please."</td><td>One AI call: the code ran every step again and drew a new picture. LangGraph: a saved state and a router send it to a resize path, so the approved picture stays.</td></tr>
+  <tr><td>R3 · "What does your brand book say about washing the lid?"</td><td>One AI call: a new poster instead of an answer. LangGraph: forced onto the nearest path, until someone draws one more path for questions.</td></tr>
+  <tr><td>R4 · "Is the lid dishwasher-safe? If not, fix the copy, then give me the story size."</td><td>Both: the code can take only one path. Two of the three asks vanish, and nobody tells her.</td></tr>
 </table></div>
 <p>These notes pick up from there.</p>
 
@@ -221,10 +221,10 @@ html { scroll-behavior: smooth; }
 <h4>How it breaks</h4>
 <div class="tbl"><table>
   <tr><th>What we saw</th><th>What was missing</th></tr>
-  <tr><td>"eco-friendly" in the copy</td><td>Rules checked by code, not hoped for in a prompt</td></tr>
-  <tr><td>A different format on every run</td><td>A typed output that's validated</td></tr>
-  <tr><td>The headline misspelled inside the image</td><td>A rule that the image model draws the picture only, never the words</td></tr>
-  <tr><td>"Make the bottle bigger" restarted</td><td>State that survives to the next message</td></tr>
+  <tr><td>A chat reply, not a form (R1)</td><td>A typed output that's validated</td></tr>
+  <tr><td>"Just the story size" drew a new picture (R2)</td><td>State that survives to the next message</td></tr>
+  <tr><td>A question got a new poster (R3)</td><td>A way to choose the next step from what was asked</td></tr>
+  <tr><td>Three asks in one message, two lost (R4)</td><td>A loop that can take more than one step, and limits around it</td></tr>
 </table></div>
 <div class="pencil">
   <h4>How Pencil does it</h4>
@@ -303,7 +303,7 @@ html { scroll-behavior: smooth; }
   <tr><th style="width:26%">Job</th><th>What it does</th><th>LaunchKit example</th></tr>
   <tr><td><strong>Tool dispatch</strong></td><td>Looks up the tool, checks the arguments against its schema, runs it, returns the result</td><td><code>render_image</code> gets a valid prompt and size</td></tr>
   <tr><td><strong>Context assembly</strong></td><td>Decides what the model sees each turn, in what order</td><td>Harbor's rules, then the request, then recent history</td></tr>
-  <tr><td><strong>State</strong></td><td>Keeps the conversation so the next message has it</td><td>"Make the bottle bigger" knows which poster</td></tr>
+  <tr><td><strong>State</strong></td><td>Keeps the conversation so the next message has it</td><td>"Just the story size" knows which poster</td></tr>
   <tr><td><strong>Limits</strong></td><td>Steps, time, money, repeated failures</td><td>At most 3 image generations per turn</td></tr>
   <tr><td><strong>Output contract</strong></td><td>A typed result or a typed error, never "anything"</td><td>A valid poster spec, or a clear error</td></tr>
   <tr><td><strong>Identity and permissions</strong></td><td>Who is asking, and what they may touch, from the system and never from the prompt</td><td>An Ember user can't load Harbor's rules</td></tr>
@@ -392,7 +392,7 @@ agent = Agent(..., tool_hooks=[image_budget], tool_call_limit=6)</code></pre>
 <h3 id="a8"><span class="id">A8</span>State</h3>
 <p class="plain">State is what lets the next message build on the last one. Three things are easy to confuse: the <strong>transcript</strong> (everything said, stored), the <strong>session</strong> (one conversation's identity and data) and the <strong>context window</strong> (what the model actually sees on this turn).</p>
 <h4>Why it matters</h4>
-<p>"Make the bottle bigger" only works if the harness loads the earlier turns about that poster. But you can't send the whole transcript forever: it gets slow and expensive, and important instructions get buried.</p>
+<p>"Just the story size" only works if the harness loads the earlier turns about that poster. But you can't send the whole transcript forever: it gets slow and expensive, and important instructions get buried.</p>
 <h4>Example</h4>
 <pre><code>agent = Agent(
     db=sessions_db,                 <span class="c"># where transcripts are stored</span>
@@ -635,7 +635,7 @@ prompt = BRAND_PROMPTS[request[<span class="k">"brand"</span>]]   <span class="c
 <p><strong>The obvious fix:</strong> paste Harbor's product fact sheets and its 40-page brand guide into <code>AGENTS.md</code>, so the agent always has them.</p>
 <ul>
   <li>With a size cap (OpenClaw's default is 20,000 characters per file), the file is cut off. The lid line is past the cut. Still "fully dishwasher-safe".</li>
-  <li>Raise the cap, and it may pass. But now every turn carries every fact for every product, even "make the bottle bigger". Slower, more expensive, and the one line that matters is buried among thousands.</li>
+  <li>Raise the cap, and it may pass. But now every turn carries every fact for every product, even "just the story size". Slower, more expensive, and the one line that matters is buried among thousands.</li>
 </ul>
 <div class="bridge">
   <p class="eyebrow">Carried into context engineering, 1:00</p>
