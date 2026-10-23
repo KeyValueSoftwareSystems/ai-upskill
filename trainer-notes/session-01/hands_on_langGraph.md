@@ -1,16 +1,15 @@
-# Hands-on: what LangGraph adds around the LLM call
+# Hands-on: why not draw every path ahead of time?
 
 Branch `session-01-langgraph` · you edit one file, `approach_graph/graph.py` · **7 minutes in the session**; the rest is for afterwards
 
-Keep `LAUNCHKIT_IMAGES=placeholder` in `.env`, as for the LLM call.
+Keep `LAUNCHKIT_IMAGES=placeholder` in `.env`, as for the one AI call.
 
-One LLM call got R1 right and nothing else. This branch starts from that solved call (`write` reuses its prompt) and puts a graph around it. Each TODO closes one gap:
+One `if` per request doesn't scale by hand. LangGraph draws the map ahead of time: a router picks a path, and a saved state keeps what Maya approved. This branch starts from the solved four-step `write` and puts a graph around it:
 
 ```
-START -> route --"write"--> write -> check --"ok"-----> picture -> END
-           |                  ^        |
-           |                  +-retry--+--"fail"--> give_up -> END
-           +--"resize"--> resize -> END
+START -> route --"poster"--> write -> picture -> END    (the four shaped calls, then the image model)
+           |----"resize"--> resize -> END             (no model: the saved picture, resized by code)
+           +----"answer"--> answer -> END             (TODO 3)
 ```
 
 ## In the session (7 minutes)
@@ -21,103 +20,71 @@ Paste each snippet, then run the scoreboard:
 uv run python -m launchkit.scoreboard --approach graph
 ```
 
-It starts at **1/4**, the same as last session, and goes up by one with each of TODOs 1 to 3.
+It starts at **1/4**, the same as the one AI call.
 
-**TODO 1: remember the last poster (R2, follow-up edits).** A checkpointer saves the state after every request, per conversation. Replace the `GRAPH = build_graph()` line with:
+**TODO 1: a saved state.** A checkpointer saves the state after every request, per conversation, so the next request can see the picture and words Maya approved. Replace the `GRAPH = build_graph()` line with:
 
 ```python
 GRAPH = build_graph(checkpointer=MemorySaver())
 ```
 
-Remembering isn't enough: the model has to see the poster too. In `write`, under `# TODO 1 (part b)`, add:
+Still 1/4: the graph remembers the picture, but the router sends every message to `write`.
 
-```python
-    if state.get("last_spec"):
-        messages[0]["content"] += ("\n\nThe poster so far. Change only what the request asks for and keep "
-                                   "everything else word for word:\n" + json.dumps(state["last_spec"].to_dict()))
-```
-
-Scoreboard: **2/4.**
-
-**TODO 2: use the photo (R3).** The photo has been in the state all along; the image step just never used it. In `picture`, replace `photo = None` with:
-
-```python
-    photo = state["attachments"][0] if state["attachments"] else None
-```
-
-Scoreboard: **3/4.**
-
-**TODO 3: route resize-only requests (R4).** "Story size of that poster" needs the poster we have, resized, with no new image. The `resize` node and its edge exist, but `route` always says `"write"`. Paste over `route`:
+**TODO 2: the router.** "Just the story size" needs the picture we have, resized, with no new picture. The `resize` node and its edge exist, but `route` always says `"poster"`. Paste over `route`:
 
 ```python
 def route(state: State) -> dict:
-    """TODO 3: decide what this request needs: a new or edited poster ("write"), or only new sizes ("resize")."""
+    """Decide which path this request takes: a new or edited poster, or only new sizes of the saved picture."""
     if not state.get("last_picture"):
-        return {"route": "write"}  # nothing to resize yet
-    answer = complete([
-        {"role": "system", "content": "The user already has a poster. Answer two questions about their request, "
-                                      "each with yes or no, as: changes=<yes|no> sizes=<yes|no>\n"
-                                      "changes: does it ask to change anything about the poster: words, picture, "
-                                      "colours, mood, layout?\n"
-                                      "sizes: does it ask for the poster in other sizes or placements "
-                                      "(story, banner, square, every size, any dimensions)?"},
-        {"role": "user", "content": state["request"]},
-    ], temperature=0).lower().replace(" ", "")
-    only_sizes = "sizes=yes" in answer and "changes=no" in answer
-    return {"route": "resize" if only_sizes else "write"}
+        return {"route": "poster"}  # nothing saved yet, so nothing to resize
+    said = yes_no(state["request"], ["changes", "sizes"])
+    return {"route": "resize" if said["sizes"] and not said["changes"] else "poster"}
 ```
 
-Scoreboard: **4/4.** R4 makes one small model call (the router) and no image call; its five images say *resized by code*.
+Scoreboard: **2/4.** R2 makes one small model call (the router) and no image call; its picture says *resized by code*.
 
-**TODO 4: check the claims, loop until they're right ("reliably").** Last session's festival brief got ✓ from the rules check yet claimed "Ready for any drop". Give `check` a reviewer, a second model call that checks each claim against Harbor's facts. Paste over `review_claims`:
+**Ask the room: R3 fails.** "What does your brand book say about washing the lid?" goes to `write`: she gets a new poster with a new picture. How do we fix it?
+
+**TODO 3: one more path.** A new kind of request needs a node, an edge and a router question. In `build_graph`, uncomment the three lines under `# TODO 3 (part a)`. Then paste over `route`:
 
 ```python
-def review_claims(spec: PosterSpec, brand: dict) -> list[str]:
-    """TODO 4: a second model call checks every claim in the copy against the brand's facts."""
-    reply = complete([
-        {"role": "system", "content": f"You check ad copy for {brand['name']}'s {brand['product']} against its "
-                                      "approved facts. For each sentence or phrase of the copy, write one line: "
-                                      "<phrase> => OK or UNSUPPORTED. UNSUPPORTED means it says or hints that the "
-                                      "product does, survives or is made of something no fact states. A fact in other "
-                                      "words is OK (\"cold all day\" is backed by \"cold for 24 hours\"); the "
-                                      "product's name, mood, setting and look are OK.\nFacts:\n- "
-                                      + "\n- ".join(brand["facts"])},
-        {"role": "user", "content": f"{spec.headline}\n{spec.subheadline}\n{spec.body}"},
-    ], temperature=0)
-    return [f"not in {brand['name']}'s facts: {line.split('=>')[0].strip(' -*')}"
-            for line in reply.splitlines() if "UNSUPPORTED" in line.upper()]
+def route(state: State) -> dict:
+    """Decide which path this request takes: a new or edited poster, only new sizes, or an answer in words."""
+    if not state.get("last_picture"):
+        return {"route": "poster"}  # nothing saved yet, so make the poster first
+    said = yes_no(state["request"], ["changes", "sizes", "question"])
+    if said["question"] and not said["changes"] and not said["sizes"]:
+        return {"route": "answer"}
+    if said["sizes"] and not said["changes"] and not said["question"]:
+        return {"route": "resize"}
+    return {"route": "poster"}  # a new poster, an edit, or a mix of asks: one path only
 ```
 
-Run the festival brief once:
+Scoreboard: **3/4.** R3 gets an answer from Harbor's facts: the lid is hand-wash only.
 
-```bash
-uv run python -m launchkit.ask --approach graph "Summer festival poster: the Tidal bottle survives being dropped on concrete and keeps water ice cold all day."
-```
+**R4 still fails, by design.** "Is the lid dishwasher-safe? If not, fix the copy, then give me the story size." The router can pick only one path. Two of Maya's asks vanish, and nobody tells her. **Ask the room: how many paths for 10 kinds of request, and every mix of them?** Then: can't the AI pick the steps itself? That's where step 3 starts.
 
-**Look for:** a reviewer reply with `=> UNSUPPORTED`, then another `write` call carrying "Fix these problems", then a clean poster. The loop was in the graph from the start; it just had nothing to catch. (It doesn't trigger on every run.)
-
-**The graph doesn't make the model smarter. It decides what runs, remembers what happened and loops until a check passes.**
+**The graph doesn't make the model smarter. It decides what runs and remembers what happened, but only along the paths someone drew.**
 
 ## After the session
 
-**The four ideas.** *State*: one dict every node reads and adds to (`State` in `graph.py`). *Node*: a plain Python function that returns the fields it changes. *Edge*: what runs next; a conditional edge picks from the state, like `check` → `picture` or back to `write`. *Checkpointer*: saves the state per conversation (`thread_id` in `handle`). The model never decides what runs next; the graph does.
+**The four ideas.** *State*: one dict every node reads and adds to (`State` in `graph.py`). *Node*: a plain Python function that returns the fields it changes. *Edge*: what runs next; a conditional edge picks from the state, like `route` → `resize`. *Checkpointer*: saves the state per conversation (`thread_id` in `handle`). LangGraph also gives a save point after each step, a pause for Maya's approval, and a trace for each step. The model never decides what runs next; the graph does.
 
-**Try a conversation in the browser.** Memory lives inside one running program, so separate `ask` commands don't remember each other. Run `uv run python -m launchkit.ui` (http://localhost:8000), pick *LangGraph* under *Approach*, then click R1, *Make poster*, R2, *Make poster*: R2's system message ends with the first poster. Saving `graph.py` reloads it and resets that memory, so run R1 again after an edit.
+**Try a conversation in the browser.** Memory lives inside one running program, so separate `ask` commands don't remember each other. Run `uv run python -m launchkit.ui` (http://localhost:8000), pick *LangGraph* under *Approach*, then send R1 to R4 in order. Saving `graph.py` reloads it and resets that memory, so start again from R1 after an edit.
 
-**Why does the router ask two questions?** Asked one question ("is this only a resize?"), the model kept getting some requests wrong: missing "Can I get this as a web banner too?", or sending "Story size, and make the lake moodier" to `resize`. With two yes/no questions and code combining the answers, it got all 9 test requests right, 4 times each. Let the model answer small questions; let code make the decision.
+**Why does the router ask small yes/no questions?** Asked one question ("which path?"), a model is easy to tip over: "Can I get this as a web banner too?" or "Story size, and make the lake moodier". Small yes/no questions, with code combining the answers, are steadier. Let the model answer small questions; let code make the decision.
 
-**What checks the checker?** In our dry run the festival brief made a drop claim in 4 of 5 posters before TODO 4 and 0 of 8 after; half of them needed the loop. But the reviewer is an LLM too: on a test set it never flagged good copy, yet let 3 of 12 bad claims through, mostly hinted ones. A person still signs off on what ships.
+**Why did Pencil never use LangGraph?** Every path is mapped in advance. Pencil's users' work can't be written down as a fixed map.
 
 **Stretch.**
-- *Edits keep the picture.* R2 only changed the headline, yet `picture` made a new image. Add a route for copy-only edits that reuses `last_picture`.
+- *"Show me three options."* Add a path that draws three pictures. Count what it took: a node, an edge, a router question, and a decision rule that must not break the others.
 - *Memory that survives a restart.* `MemorySaver` forgets when the program stops; LangGraph has database-backed checkpointers (such as `SqliteSaver` in `langgraph-checkpoint-sqlite`).
-- *Count the cost of one new kind of request.* R4 needed a node, an edge and a router prompt. Now imagine every kind of request Harbor will send. That's where the next session starts.
+- *Make R4 pass.* Add a path for "answer, then fix the copy, then resize". Now try "story size, and a shorter headline".
 
-| Problem | One LLM call | LangGraph |
+| Maya needs | One AI call | LangGraph |
 | --- | --- | --- |
-| follow-up edits (R2) | starts from nothing every time | a checkpointer keeps the state per conversation |
-| a photo (R3) | had no step to hand it on | the state carries it to the node that needs it |
-| resize "that poster" (R4) | made a new poster | a router node; the resize path has no model at all |
-| "reliably" | nothing noticed bad claims | a review node and a loop back to `write` |
+| keep my picture (R2) | ran every step, so a new picture | a saved state and a router; the resize path has no model at all |
+| an answer, not a new poster (R3) | made a poster | one more path: a node, an edge and a router question |
+| three asks in one message (R4) | one way to answer | the router picks one path; two asks vanish |
 
 Next: `git checkout session-01-harness`
