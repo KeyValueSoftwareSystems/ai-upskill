@@ -8,7 +8,7 @@ One more thing: the id itself must be checked. `../harbor` is a valid path. It i
 
 ## The slot
 
-- `launchkit/harness/request.py` · `resolve_workspace_id`. Today it returns the id unchecked.
+- `launchkit/harness/request.py` · `resolve_workspace_id`. Today a brand named in the text wins over the request, and the id is not checked.
 
 ## Prompt card, for your coding agent
 
