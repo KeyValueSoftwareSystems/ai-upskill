@@ -37,7 +37,7 @@ The story the trainer tells (Maya, Scribble's eight parts, the talk for each ste
 - [uv](https://docs.astral.sh/uv/), the Python package runner.
 - git, and access to the repo.
 - A coding agent they already use (Cursor, Claude Code or another). Each harness step gives a short prompt to hand to it.
-- The VPN on. The LiteLLM proxy and our GPU are both reached over it.
+- The VPN on, for the whole session. The LiteLLM proxy (every text call) and our GPU (pictures) are both reached only over it. Without the VPN nothing works, and the picture fallback below can't help.
 
 ### Setup steps
 
@@ -54,8 +54,15 @@ Fill in `.env`:
 | Variable | What it is |
 | --- | --- |
 | `LITELLM_API_KEY` | The key for the LiteLLM proxy. Ask the trainer. `LITELLM_BASE_URL` is already set. |
-| `IMAGESVC_URL`, `IMAGESVC_KEY` | Our own GPU for pictures, reached over the VPN. The URL is already set; ask the trainer for the key. If the GPU can't be reached, pictures fall back to `gpt-image-1` through the proxy automatically. |
+| `IMAGESVC_URL`, `IMAGESVC_KEY` | KeyValue's GPU for pictures (FLUX.2 klein, 2 to 4 seconds each, no per-picture cost), reached over the VPN. The URL is already set in `.env.example`; ask the trainer for the key. Anyone with an older `.env` adds both lines by hand. |
+| Picture fallback | If the GPU is down or the key is wrong, pictures switch to `gpt-image-1` through the LiteLLM proxy by themselves: 30 to 60 seconds each, and paid. This needs the VPN on and `LITELLM_API_KEY` set, the same as every text call. |
 | `LAUNCHKIT_IMAGES=placeholder` | Optional. Skips real pictures and draws a labelled stand-in picture instead. |
+
+Test the GPU once, from the repo folder (`check_setup` doesn't test it):
+
+```bash
+uv run python -c "from dotenv import load_dotenv; load_dotenv(); from launchkit.gpu_images import gpu_image; print('GPU ok' if gpu_image('a bottle on a lake') else 'GPU not reached')"
+```
 
 `check_setup` checks Python, dependencies, `.env`, the key and URL, the chat model, the image model and the `out/` folder. Under anything marked FAIL it prints a fix. It must end with **Setup complete**. The image check makes one small paid call through the proxy; add `--no-image` to skip it.
 
@@ -695,7 +702,7 @@ Guide step 8. With DNA, Checks and Brand built by the room, all eight parts are 
 | A call hangs, then retries | The VPN tunnel restarts now and then. On the harness branches, calls give up after `LAUNCHKIT_TIMEOUT` (120 seconds) and retry on a fresh line. |
 | `AuthenticationError` with `Incorrect API key provided: sk-svcac…` (a 401 from the proxy) | The proxy's own upstream key failed, not the participant's. On the opener branches, run it again; on the harness branches the model call is retried automatically. Tell the proxy admin if it repeats. |
 | Any other `AuthenticationError`, or "The LiteLLM proxy rejected the key" | Check `LITELLM_API_KEY` in `.env` (no quotes or spaces), then run `check_setup` again. |
-| `GPU image service failed (…); using gpt-image-1` | The GPU can't be reached (VPN off, or `IMAGESVC_KEY` wrong). Pictures fall back to `gpt-image-1` on their own. |
+| `GPU image service failed (…); using gpt-image-1` | The GPU didn't answer: `IMAGESVC_KEY` wrong (`AuthenticationError`, at once) or the GPU down (`APITimeoutError`, after about 10 seconds). Pictures fall back to `gpt-image-1` through LiteLLM. If the VPN is off, LiteLLM fails too: turn the VPN on. |
 | Pictures are slow | Through the proxy a picture takes 30 to 60 seconds; from our GPU, a few seconds. To skip real pictures, set `LAUNCHKIT_IMAGES=placeholder` in `.env`, pass `--no-image` to `ask`, or tick *Skip the paid image call* in the opener UI. |
 | The picture is a gradient labelled `PLACEHOLDER` | Placeholder mode is on: `LAUNCHKIT_IMAGES=placeholder` in `.env`, or the opener UI box is ticked. |
 | `Can't load 'approach_llm'` or `'approach_graph'` | Wrong branch: check out `session-01-llm-call` or `session-01-langgraph`. |
