@@ -3,7 +3,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from launchkit.adapters.images import make_images
+from launchkit.adapters.images import FromPicture, make_images
 from launchkit.adapters.models import model_name, resolve_model
 from launchkit.adapters.pricing import cost_usd
 from agno.exceptions import ModelProviderError
@@ -89,10 +89,14 @@ def run_request(
         trace.picture("reused", file=str(kept), reason="the image prompt did not change")
         return result
 
+    if kept and kept.exists():
+        images = FromPicture(images, kept)
     picture_agent = build_picture_agent(spec, model, images, ws.colours, trace, settings)
     if picture_agent is None:
         trace.picture("skipped", reason="the image tool is step 3")
         return result
+    if isinstance(images, FromPicture):
+        trace.picture("rework", file=str(kept), reason="the image prompt changed, so the new picture starts from this one")
     picture_run = picture_agent.run(spec.image_prompt, session_id=f"{session}:picture", user_id=req.user_id)
     result.runs.append(picture_run)
     raise_if_failed(picture_run)
