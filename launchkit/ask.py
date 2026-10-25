@@ -60,7 +60,7 @@ def run(text: str, *, handle, workspace: str = "harbor", conversation_id: str = 
     for p in images:
         out["images"].append({"path": os.path.relpath(p.path, ROOT), "size": list(p.size), "prompt": p.prompt,
                               "resized_from": p.resized_from and os.path.basename(p.resized_from),
-                              "placeholder": p.placeholder})
+                              "placeholder": p.placeholder, "source": p.source})
     return out
 
 
