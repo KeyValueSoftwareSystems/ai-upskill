@@ -45,6 +45,10 @@ class Trace:
     def refused(self, name: str, reason: str):
         self.add("refused", name=name, reason=reason)
 
+    def draft(self, spec):
+        """The copy as the model first wrote it, before any check, so a repair shows what it changed."""
+        self.add("draft", headline=spec.headline, subheadline=spec.subheadline, body=spec.body)
+
     def validation(self, errors: list[str], attempt: int):
         self.add("validation", errors=errors, attempt=attempt)
 
@@ -66,47 +70,49 @@ class Trace:
         ]
 
     def lines(self) -> list[str]:
-        out = []
-        for e in self.events:
-            d = e.detail
-            match e.kind:
-                case "file":
-                    out.append(f"file      read {_relative(d['path'])}")
-                case "note":
-                    out.append(f"note      {d['text']}")
-                case "written":
-                    out.append(f"wrote     {_relative(d['path'])}")
-                case "reply":
-                    out.append(f"reply     {_short(d['text'], 80)}  (no poster this turn)")
-                case "context":
-                    parts = " · ".join(
-                        f"{s['section']}: {s['tokens']} tokens" + (" (cut to fit)" if s['trimmed'] else "")
-                        for s in d["sections"] if s['tokens']
-                    )
-                    out.append(f"prompt    {parts}")
-                case "model":
-                    cached = f", {d['cached_tokens']} of them from cache" if d["cached_tokens"] else ""
-                    out.append(f"model     {d['phase']} phase · {d['model']} · sent {d['input_tokens']} tokens{cached}, got back {d['output_tokens']}")
-                case "tool":
-                    out.append(f"tool      {d['name']}({_short(_args(d['arguments']), 60)}) → {_short(_result(d['result']), 60)} · {d.get('result_tokens', 0)} tokens back")
-                case "refused":
-                    out.append(f"refused   {d['name']}: {d['reason']}")
-                case "validation":
-                    out.append(f"check     attempt {d['attempt']}: " + ("; ".join(d["errors"]) if d["errors"] else "spec is clean"))
-                case "stop":
-                    out.append(f"stop      {d['reason']}")
-                case "picture":
-                    if d["status"] == "skipped":
-                        out.append(f"picture   skipped, {d.get('reason', '')}")
-                    elif d["status"] == "done":
-                        out.append(f"picture   saved {_relative(d['file'])}")
-                    elif d["status"] == "reused":
-                        out.append(f"picture   reused {_relative(d['file'])}, {d.get('reason', '')}")
-                    else:
-                        out.append("picture   none, the tool returned no file")
-                case _:
-                    out.append(f"{e.kind:<9} {_short(d)}")
-        return out
+        return [self.line(e) for e in self.events]
+
+    def line(self, e: Event) -> str:
+        d = e.detail
+        match e.kind:
+            case "file":
+                return f"file      read {_relative(d['path'])}"
+            case "note":
+                return f"note      {d['text']}"
+            case "written":
+                return f"wrote     {_relative(d['path'])}"
+            case "reply":
+                return f"reply     {_short(d['text'], 80)}  (no poster this turn)"
+            case "context":
+                parts = " · ".join(
+                    f"{s['section']}: {s['tokens']} tokens" + (" (cut to fit)" if s['trimmed'] else "")
+                    for s in d["sections"] if s['tokens']
+                )
+                return f"prompt    {parts}"
+            case "model":
+                cached = f", {d['cached_tokens']} of them from cache" if d["cached_tokens"] else ""
+                return f"model     {d['phase']} phase · {d['model']} · sent {d['input_tokens']} tokens{cached}, got back {d['output_tokens']}"
+            case "tool":
+                return f"tool      {d['name']}({_short(_args(d['arguments']), 60)}) → {_short(_result(d['result']), 60)} · {d.get('result_tokens', 0)} tokens back"
+            case "refused":
+                return f"refused   {d['name']}: {d['reason']}"
+            case "draft":
+                return f'draft     headline "{d["headline"]}" ({_words(d["headline"])} words) · subheadline {_words(d["subheadline"])} words · body {_words(d["body"])} words'
+            case "validation":
+                return f"check     attempt {d['attempt']}: " + ("; ".join(d["errors"]) if d["errors"] else "spec is clean")
+            case "stop":
+                return f"stop      {d['reason']}"
+            case "picture":
+                if d["status"] == "skipped":
+                    return f"picture   skipped, {d.get('reason', '')}"
+                elif d["status"] == "done":
+                    return f"picture   saved {_relative(d['file'])}"
+                elif d["status"] == "reused":
+                    return f"picture   reused {_relative(d['file'])}, {d.get('reason', '')}"
+                else:
+                    return "picture   none, the tool returned no file"
+            case _:
+                return f"{e.kind:<9} {_short(d)}"
 
 
 def _relative(path) -> str:
@@ -127,6 +133,10 @@ def _result(result) -> str:
     if isinstance(result, dict) and result.get("status"):
         return f"{result['status']}: {result.get('reason', '')}"
     return str(result)
+
+
+def _words(text: str) -> int:
+    return len(str(text).split())
 
 
 def _short(value, width: int = 90) -> str:
