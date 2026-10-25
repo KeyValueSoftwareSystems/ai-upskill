@@ -54,6 +54,15 @@ def _scrub(text: str) -> str:
     return " ".join(text.split())[:160]
 
 
+def _said(err: Exception) -> str:
+    """The provider's own words: the message inside the error body when there is one."""
+    body = getattr(err, "body", None)
+    if isinstance(body, dict) and isinstance(body.get("error"), dict):
+        body = body["error"]
+    text = body.get("message") if isinstance(body, dict) and body.get("message") else getattr(err, "message", err)
+    return _scrub(str(text))
+
+
 def _api_fix(err: Exception, model: str, env_var: str) -> str:
     """Turn an API error into one line telling the trainee what to do."""
     import openai
@@ -70,10 +79,12 @@ def _api_fix(err: Exception, model: str, env_var: str) -> str:
         return "The LiteLLM proxy did not answer in time. Check your network (VPN, proxy, wifi) and run this again"
     if isinstance(err, openai.APIConnectionError):
         return "Could not reach the LiteLLM proxy. Check LITELLM_BASE_URL in .env and your network (VPN, wifi)"
+    if isinstance(err, openai.APIStatusError) and "budget" in _said(err).lower():
+        return f"The key's budget is spent (the proxy says: {_said(err)}). Ask the trainer to raise it or for another key"
     if isinstance(err, openai.BadRequestError):
         return f"The LiteLLM proxy refused the request for '{model}': {_scrub(str(getattr(err, 'message', err)))}. Check {env_var} in .env"
     if isinstance(err, openai.APIStatusError):
-        return f"The LiteLLM proxy returned an error (HTTP {err.status_code}). Run this again; if it repeats, show the trainer"
+        return f"The LiteLLM proxy returned an error (HTTP {err.status_code}: {_said(err)}). Run this again; if it repeats, show the trainer"
     return f"Unexpected error ({type(err).__name__}): {_scrub(str(err))}"
 
 
