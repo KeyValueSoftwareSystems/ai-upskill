@@ -167,7 +167,7 @@ function loadLogins(select){
     fillPeople(); if (!$("library").hidden) loadLibrary(); return loadConversation();
   });
 }
-loadLogins();
+loadLogins("harbor");
 $("brand").onchange = () => { fillPeople(); loadConversation(); if (!$("library").hidden) loadLibrary(); };
 $("person").onchange = loadConversation;
 $("new").onclick = async () => { const w = who(); const data = await (await fetch(`/conversations/${w.workspace_id}/${w.user_id}/new`, { method: "POST" })).json(); session = data.session_id; $("session").textContent = session; $("messages").innerHTML = ""; };
