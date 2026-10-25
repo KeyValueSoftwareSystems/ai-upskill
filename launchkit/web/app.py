@@ -1,5 +1,6 @@
 import asyncio
 import json
+import re
 import threading
 import uuid
 from dataclasses import replace
@@ -30,6 +31,7 @@ class RunBody(BaseModel):
     user_id: str
     text: str
     model: str | None = None
+    session_id: str | None = None
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -47,36 +49,59 @@ def logins():
     return list_logins(settings)
 
 
-def _conversation_file(workspace_id: str, user_id: str) -> Path:
+def _conversation_dir(workspace_id: str, user_id: str) -> Path:
     safe = Path(workspace_id).name, Path(user_id).name
-    return settings.data_dir / "conversations" / safe[0] / f"{safe[1]}.json"
+    folder = settings.data_dir / "conversations" / safe[0] / safe[1]
+    older = folder.with_suffix(".json")
+    if older.is_file():
+        data = json.loads(older.read_text(encoding="utf-8"))
+        folder.mkdir(parents=True, exist_ok=True)
+        older.rename(folder / f"{data['session_id']}.json")
+    return folder
 
 
-def _load_conversation(workspace_id: str, user_id: str) -> dict:
-    path = _conversation_file(workspace_id, user_id)
-    if path.exists():
-        return json.loads(path.read_text(encoding="utf-8"))
+def _conversations(workspace_id: str, user_id: str) -> list[Path]:
+    folder = _conversation_dir(workspace_id, user_id)
+    return sorted(folder.glob("*.json"), key=lambda path: path.stat().st_mtime, reverse=True) if folder.is_dir() else []
+
+
+def _load_conversation(workspace_id: str, user_id: str, session_id: str | None = None) -> dict:
+    saved = _conversations(workspace_id, user_id)
+    if session_id and re.fullmatch(r"[0-9a-f]{6}", session_id):
+        saved = [path for path in saved if path.stem == session_id]
+    if saved:
+        return json.loads(saved[0].read_text(encoding="utf-8"))
     return {"session_id": uuid.uuid4().hex[:6], "turns": []}
 
 
 def _save_conversation(workspace_id: str, user_id: str, data: dict):
-    path = _conversation_file(workspace_id, user_id)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    folder = _conversation_dir(workspace_id, user_id)
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / f"{data['session_id']}.json").write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def _with_list(workspace_id: str, user_id: str, data: dict) -> dict:
+    """The conversation plus every saved one for this person at this brand, newest first, for the picker."""
+    listed = []
+    for path in _conversations(workspace_id, user_id):
+        turns = json.loads(path.read_text(encoding="utf-8"))["turns"]
+        first = next((t["text"] for t in turns if t.get("role") == "user"), "")
+        listed.append({"session_id": path.stem, "first": first[:60], "updated": path.stat().st_mtime})
+    return {**data, "conversations": listed}
 
 
 @app.get("/conversations/{workspace_id}/{user_id}")
-def conversation(workspace_id: str, user_id: str):
-    data = _load_conversation(workspace_id, user_id)
+def conversation(workspace_id: str, user_id: str, session_id: str | None = None):
+    data = _load_conversation(workspace_id, user_id, session_id)
     _save_conversation(workspace_id, user_id, data)
-    return data
+    return _with_list(workspace_id, user_id, data)
 
 
 @app.post("/conversations/{workspace_id}/{user_id}/new")
 def new_conversation(workspace_id: str, user_id: str):
     data = {"session_id": uuid.uuid4().hex[:6], "turns": []}
     _save_conversation(workspace_id, user_id, data)
-    return data
+    return _with_list(workspace_id, user_id, data)
 
 
 @app.post("/run")
@@ -113,7 +138,7 @@ def _worker(body: RunBody, queue: Queue):
         queue.put({"type": "error", "kind": "UnknownWorkspace", "message": refusal})
         queue.put(DONE)
         return
-    conversation = _load_conversation(body.workspace_id, body.user_id)
+    conversation = _load_conversation(body.workspace_id, body.user_id, body.session_id)
     req = Request(workspace_id=body.workspace_id, user_id=body.user_id, session_id=conversation["session_id"], text=body.text)
     conversation["turns"].append({"role": "user", "text": body.text})
     try:
