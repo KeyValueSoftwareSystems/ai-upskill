@@ -67,6 +67,7 @@ def run_request(
         write_explain(settings, result, wid, model_name(model))
         return result
     spec = turn.spec
+    trace.draft(spec)
     errors = validate_spec(spec, ws.rules)
     if errors:
         # TODO step 2: trace.validation(errors, 1); one repair run with repair_message(errors); validate again; raise SpecError if errors remain
