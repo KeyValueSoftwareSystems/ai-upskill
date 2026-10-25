@@ -24,7 +24,15 @@ class ProxyChat(OpenAIChat):
     """Through the proxy a 401 is usually its upstream key having a bad moment, not ours, so it is worth another try."""
 
     def _is_retryable_error(self, error) -> bool:
-        return error.status_code == 401 or super()._is_retryable_error(error)
+        retry = error.status_code == 401 or super()._is_retryable_error(error)
+        self.last_error = " ".join(str(error.message).split())[:80]
+        return retry
+
+    def _get_retry_delay(self, attempt: int) -> float:
+        """Agno asks for the delay only when it is about to try again, so this is where the trace hears of a retry."""
+        if getattr(self, "on_retry", None):
+            self.on_retry(f"model call failed ({getattr(self, 'last_error', 'no answer')}), trying again: {attempt + 2} of {self.retries + 1}")
+        return super()._get_retry_delay(attempt)
 
 
 def resolve_model(settings, trace: Trace):
@@ -37,10 +45,12 @@ def resolve_model(settings, trace: Trace):
         return FAKES[model_id]()
     if provider == "openai" and proxy():
         key, url = proxy()
-        return ProxyChat(
+        model = ProxyChat(
             id=model_id, api_key=key, base_url=url, timeout=settings.timeout, max_retries=1, retries=3, delay_between_retries=1,
             extra_body={"cache": {"no-cache": True}},
         )
+        model.on_retry = lambda text: trace.note(text)
+        return model
     key = PROVIDER_KEYS.get(provider)
     if key and not os.environ.get(key):
         trace.note(
