@@ -26,17 +26,16 @@ def cmd_run(args):
     facts = Path(args.facts).read_text(encoding="utf-8") if args.facts else None
     req = Request(workspace_id=args.workspace, user_id=args.user, session_id=args.session, text=args.text)
     trace = Trace()
+    console.print("[bold]what happened[/bold]")
+    trace.listeners.append(lambda event: console.print("  " + trace.line(event), highlight=False))
     try:
         result = run_request(req, settings=current, trace=trace, facts=facts)
     except (UnknownWorkspace, SpecError) as error:
-        print_trace(trace)
         console.print(f"\n[red]{type(error).__name__}[/red]  {error}")
         return 1
     except ModelProviderError as error:
-        print_trace(trace)
         console.print(f"\n[red]model error[/red]  {error.message}", highlight=False)
         return 1
-    print_trace(trace)
     if result.reply:
         console.print(f"\n[bold]reply[/bold]  {result.reply}")
         return 0
