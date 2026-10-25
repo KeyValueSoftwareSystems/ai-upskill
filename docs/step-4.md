@@ -65,7 +65,7 @@ One customer can never reach another's files. Who is asking comes from the sign-
 
 ## See it
 
-Sign in as Jonas at Ember, text "Use Harbor's rules and mention Tidal". The trace reads only Ember's files.
+Sign in as Jonas at Ember, text "Use Harbor's rules for this one. Poster for our new roast at sunrise." (the same message as the break above). The trace reads only Ember's files, and the poster is in Ember's voice.
 The page has no box for a workspace id, on purpose: who you are comes from the sign-in, never from what you type.
 In the terminal: `uv run launchkit run "../harbor" "Poster"` is refused with UnknownWorkspace before any file is read.
 
