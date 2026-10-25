@@ -60,6 +60,7 @@ uv run launchkit check 2
 The same command after the build:
 
 ```
+  draft     headline "Cold for twenty four long hours and then some more" (10 words) · subheadline 7 words · body 10 words
   check     attempt 1: headline has 10 words, limit is 6; banned claim: eco-friendly; headline text leaked into image_prompt
   model     repair phase · fake:malformed
   check     attempt 2: headline has 10 words, limit is 6; ...
