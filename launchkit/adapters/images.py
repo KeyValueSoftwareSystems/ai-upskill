@@ -69,7 +69,7 @@ class RealImages:
         self.calls.append((prompt, colours))
         self.out_dir.mkdir(parents=True, exist_ok=True)
         palette = ", ".join(f"{name} {value}" for name, value in colours.items())
-        full_prompt = f"{prompt}. Colour palette: {palette}. No text, no letters, no logos." if palette else f"{prompt}. No text, no letters, no logos."
+        full_prompt = f"{prompt}. Colour palette: {palette}. The product is plain and unbranded, with a smooth blank surface and no label." if palette else f"{prompt}. The product is plain and unbranded, with a smooth blank surface and no label."
         data = gpu_image(full_prompt, self.settings.image_size)
         if data is None:
             data = base64.b64decode(self.call(full_prompt).data[0].b64_json)
