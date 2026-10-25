@@ -442,6 +442,8 @@ SpecError  headline has 10 words, limit is 6; banned claim: eco-friendly; headli
 
 **What to build.** A tool is a function the model may ask the harness to run. `generate_image(image_prompt)` makes the picture; the picture phase sees only the image prompt, never the headline. `make_leash` is a tool hook that counts every call: 3 pictures per request and 6 tool calls per run (both in `settings.py`). A 4th picture call is refused; the 7th tool call ends the run. `build_picture_agent` wires the tool and the hook. Card: `docs/step-3.md`.
 
+**Keep tools light here.** This is the room's first tool. Say what it is in one line, "a function the model may ask the harness to run", and move on to the leash. If people ask how a tool call works inside, park it: "Session 2 opens on that." Session 2 covers what the model actually sees (the tool's name, inputs and description, taken from the function and its docstring), the round trip (the model asks, the harness runs it, the result goes back, the model is called again), plain-code tools against model tools, and which agent gets which tool. Session 1 only uses tools.
+
 **Break it, after the build.** Before step 3 there is no picture tool, so the leash has nothing to hold: on `session-01-harness-step2` the run only prints `picture   skipped, the image tool is step 3`. Once the step is built, show the failure first by taking the leash off. In `agent.py`, comment out the `tool_hooks=[make_leash(...)]` line in `build_picture_agent`, then run:
 
 ```bash
@@ -587,7 +589,7 @@ Guide step 7, "Then: give it the brand book". Minutes 72–106. CP1.2 is the sec
 
 **Carried in.** "Mention it's dishwasher-safe." Without the brand facts, LaunchKit writes "Fully dishwasher-safe, top to bottom." The fact sheet says the body is dishwasher-safe and the lid is hand-wash only. The model fills the gap with something plausible. Plausible is not true.
 
-**The fix.** The model only knows what is in front of it. Give it a tool it can call when a task needs brand facts. The agent decides when to call it; the harness runs it and decides which brand's file it reads. The tool takes no workspace argument.
+**The fix.** The model only knows what is in front of it. Give it a tool it can call when a task needs brand facts. It is the same kind of tool as `generate_image` in harness step 3; how a tool call works inside is still Session 2. The agent decides when to call it; the harness runs it and decides which brand's file it reads. The tool takes no workspace argument.
 
 **Build.** `launchkit/harness/brand.py` `make_get_brand_details(ws, trace)` returns the tool, which reads the workspace's `brand-book.md` (or `facts.md`). `build_copy_agent` adds it to `tools=[...]`, and one line in the task tells the model to look facts up before it states one. Card: `docs/rag-1.md`.
 
@@ -719,6 +721,8 @@ Guide step 8. All eight parts are back: DNA, Checks and Brand built by the room,
 2. Answer Maya's question, "so, why not just ChatGPT?", with the answer key in the guide ("Maya's needs, from step 1 to the ending"). Five needs close. "Every size" stays open: it was told in guide step 5, not built. Say so plainly; it opens Session 2.
 3. Hand over to the editor: agents make, people finish.
 4. Hand over to Session 2. It opens on **"every size"** (tools and skills), then **"Three variants, pick the best"** (agents working together). If there is time, show why it is needed: on `session-01-rag-step4`, ask Harbor for three variants (hiker, commuter, lakeside) and to pick the best. An off-voice headline that no code check catches can slip through, and the agent rates its own poster on-brand. Adding "review your poster critically" to the prompt does not help: the reviewer shares the writer's context. We need a reviewer that isn't the writer. That is Session 2.
+
+   Session 2 also opens up the tools the room used today (`generate_image`, `get_brand_details`): what the model sees and how a tool call runs. Say so, so nobody leaves thinking they missed it.
 
    Keep the two asks apart. They are easy to mix up:
 
