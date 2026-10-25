@@ -713,12 +713,19 @@ The RAG branches also hold `samples/harbor-brand-book.pdf` and `samples/ember-co
 
 ## 7. Ending
 
-Guide step 8. With DNA, Checks and Brand built by the room, all eight parts are built.
+Guide step 8. All eight parts are back: DNA, Checks and Brand built by the room, the rest told.
 
 1. Walk Scribble's eight parts once more, as in guide step 0, and give the reason each part came in.
 2. Answer Maya's question, "so, why not just ChatGPT?", with the answer key in the guide ("Maya's needs, from step 1 to the ending"). Five needs close. "Every size" stays open: it was told in guide step 5, not built. Say so plainly; it opens Session 2.
 3. Hand over to the editor: agents make, people finish.
 4. Hand over to Session 2. It opens on **"every size"** (tools and skills), then **"Three variants, pick the best"** (agents working together). If there is time, show why it is needed: on `session-01-rag-step4`, ask Harbor for three variants (hiker, commuter, lakeside) and to pick the best. An off-voice headline that no code check catches can slip through, and the agent rates its own poster on-brand. Adding "review your poster critically" to the prompt does not help: the reviewer shares the writer's context. We need a reviewer that isn't the writer. That is Session 2.
+
+   Keep the two asks apart. They are easy to mix up:
+
+   | | What Maya gets | Example | Who builds it in Session 2 |
+   | --- | --- | --- | --- |
+   | **Sizes** | The same approved poster in different shapes: the same words, the same picture, cut to fit. | A square Insta post (1080×1080), a tall story (1080×1920), a wide web banner (1200×628). | Tools and skills (resize) |
+   | **Variants** | Different posters: three ideas for the same launch, each with its own headline and its own picture. Then someone picks the best. | One for a hiker, one for a commuter, one at a lakeside. | Agents working together: a reviewer that isn't the writer |
 
 ## 8. Troubleshooting
 
