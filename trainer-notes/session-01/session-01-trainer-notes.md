@@ -91,7 +91,7 @@ The session is two hours. Timings are given only where the branch sequence gives
 | 7 | Harness hands-on (CP1.1) | `session-01-harness`, then `-step1` to `-step4` | Build the harness in four steps. See [section 4](#4-harness-hands-on-cp11-steps-0-to-4). | `uv run launchkit check all`: 51 passed |
 | 7 | What the model saw | `session-01-harness-step4` | `launchkit explain`, the brand book cut. See [section 5](#5-what-the-model-saw). | n/a |
 | 7 | Brand book lookup: RAG (CP1.2), minutes 72–106 | `session-01-rag-step1` to `-step4` | One tool rebuilt four times. See [section 6](#6-brand-book-lookup-rag-cp12-steps-1-to-4). | `uv run launchkit check rag` on `session-01-rag-step4` |
-| 8 | Ending | none | Walk the eight parts, answer Maya, hand over to Session 2. See [section 7](#7-ending). | n/a |
+| 8 | Ending | none | Walk the eight parts, answer Maya (five needs close, "every size" opens Session 2), hand over to Session 2. See [section 7](#7-ending). | n/a |
 
 **Two codebases.** The opener branches (LiteLLM, `launchkit/scoreboard.py`) and the harness branches (Agno, `launchkit/harness/`, `launchkit/cli.py`) don't share history. Moving from the opener to the harness is a full checkout switch: `git checkout session-01-harness`, then `uv sync` again, because the dependencies differ. The opener's code is still on the harness branches, but its LangGraph parts need the opener's dependencies; run them from `session-01-langgraph`.
 
@@ -716,9 +716,9 @@ The RAG branches also hold `samples/harbor-brand-book.pdf` and `samples/ember-co
 Guide step 8. With DNA, Checks and Brand built by the room, all eight parts are built.
 
 1. Walk Scribble's eight parts once more, as in guide step 0, and give the reason each part came in.
-2. Answer Maya's question, "so, why not just ChatGPT?", with the answer key in the guide ("Maya's needs, from step 1 to the ending").
+2. Answer Maya's question, "so, why not just ChatGPT?", with the answer key in the guide ("Maya's needs, from step 1 to the ending"). Five needs close. "Every size" stays open: it was told in guide step 5, not built. Say so plainly; it opens Session 2.
 3. Hand over to the editor: agents make, people finish.
-4. Hand over to Session 2: **"Three variants, pick the best."** If there is time, show why it is needed: on `session-01-rag-step4`, ask Harbor for three variants (hiker, commuter, lakeside) and to pick the best. An off-voice headline that no code check catches can slip through, and the agent rates its own poster on-brand. Adding "review your poster critically" to the prompt does not help: the reviewer shares the writer's context. We need a reviewer that isn't the writer. That is Session 2.
+4. Hand over to Session 2. It opens on **"every size"** (tools and skills), then **"Three variants, pick the best"** (agents working together). If there is time, show why it is needed: on `session-01-rag-step4`, ask Harbor for three variants (hiker, commuter, lakeside) and to pick the best. An off-voice headline that no code check catches can slip through, and the agent rates its own poster on-brand. Adding "review your poster critically" to the prompt does not help: the reviewer shares the writer's context. We need a reviewer that isn't the writer. That is Session 2.
 
 ## 8. Troubleshooting
 
