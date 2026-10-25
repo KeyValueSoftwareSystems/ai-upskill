@@ -52,11 +52,14 @@ def generate_image(visual_concept: str, brand: dict, *, conversation_id: str,
     placeholder = os.getenv("LAUNCHKIT_IMAGES") == "placeholder"
     if placeholder:
         img = _placeholder(brand, reference)
+        source = "code (placeholder)"
     else:
         data = gpu_image(prompt, reference=reference)
+        source = f"our GPU ({os.getenv('IMAGESVC_MODEL', 'flux-2-klein-9b')})"
         if data is None:
             from .llm import client
             model = os.getenv("LAUNCHKIT_IMAGE_MODEL", "gpt-image-1")
+            source = f"the backup image model ({model})"
             if reference:
                 with open(reference, "rb") as f:
                     reply = client().images.edit(model=model, image=f, prompt=prompt, size="1024x1024")
@@ -65,7 +68,7 @@ def generate_image(visual_concept: str, brand: dict, *, conversation_id: str,
             data = base64.b64decode(reply.data[0].b64_json)
         img = Image.open(io.BytesIO(data)).convert("RGB")
     path = _save(img, conversation_id, "generated")
-    return Picture(path, (img.width, img.height), prompt=prompt, reference=reference, placeholder=placeholder)
+    return Picture(path, (img.width, img.height), prompt=prompt, reference=reference, placeholder=placeholder, source=source)
 
 
 def resize_image(picture: Picture, size: tuple[int, int], *, conversation_id: str) -> Picture:
