@@ -58,7 +58,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path in ("/", "/index.html"):
-            page = PAGE.replace("__REQUESTS__", json.dumps(REQUESTS))
+            start = "graph" if (ROOT / "approach_graph" / "graph.py").is_file() else "llm"
+            page = PAGE.replace("__REQUESTS__", json.dumps(REQUESTS)).replace("__APPROACH__", start)
             return self._send(200, "text/html; charset=utf-8", page.encode())
         # Images: only PNGs inside out/.
         path = (ROOT / self.path.lstrip("/").split("?")[0]).resolve()
@@ -198,7 +199,7 @@ PAGE = r"""<!doctype html>
     <div class="chips" id="chips"></div>
     <div class="hint">Maya's four requests. Send R1 to R4 in order; reload the page to start over.</div>
     <div class="opts">
-      <label><input type="checkbox" id="noimage"> Skip the paid image call (draw a placeholder)</label>
+      <label><input type="checkbox" id="noimage"> Placeholder picture (no GPU, no image model)</label>
       <label>Approach
         <select id="approach"><option value="llm">one LLM call (approach_llm)</option>
         <option value="graph">LangGraph (approach_graph)</option></select></label>
@@ -216,6 +217,7 @@ const $ = id => document.getElementById(id);
 // One conversation per page load: the graph remembers Maya's poster by this id. Reload to start over.
 const conversation = "ui-" + Math.random().toString(36).slice(2, 7);
 let shown = false;  // true once Maya has seen a picture
+$("approach").value = "__APPROACH__";
 
 // Build DOM with textContent only: model output is never treated as HTML.
 function h(tag, attrs = {}, ...kids) {
@@ -239,7 +241,7 @@ $("form").onsubmit = async e => {
   const text = $("text").value.trim();
   if (!text) return $("text").focus();
   $("go").disabled = true;
-  $("go").textContent = $("noimage").checked ? "Calling the model…" : "Working… (a real picture takes about a minute)";
+  $("go").textContent = $("noimage").checked ? "Calling the model…" : "Working… (a picture takes a few seconds on our GPU, about a minute on the backup)";
   try {
     const res = await fetch("/run", {method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({text, conversation, approach: $("approach").value, no_image: $("noimage").checked})});
@@ -269,8 +271,8 @@ function render(r, typed) {
           h("div", {class: "copy"}, h("div", {class: "h", text: field("headline")}),
                                     h("div", {class: "s", text: field("subheadline")}))),
         h("div", {class: "caption", text: r.images[0].placeholder
-          ? "Placeholder picture, drawn by code: no image model was called. Untick \u201cSkip the paid image call\u201d (and remove LAUNCHKIT_IMAGES=placeholder from .env, if set) for a real one."
-          : "Preview: the copy is laid over the picture by code, not drawn by the image model."})));
+          ? "Placeholder picture, drawn by code: no image model was called. Untick \u201cPlaceholder picture\u201d (and remove LAUNCHKIT_IMAGES=placeholder from .env, if set) for a real one."
+          : `Preview: the copy is laid over the picture by code, not drawn by the image model. ${r.images[0].resized_from ? "The earlier picture, resized by code." : `Picture by ${r.images[0].source || "the image model"}.`}`})));
     }
     const table = h("table");
     for (const s of r.spec) {
@@ -295,7 +297,7 @@ function render(r, typed) {
         h("div", {class: "size", text: `${img.size[0]}×${img.size[1]}`}),
         img.resized_from ? h("div", {class: "caption", text: "resized by code"})
           : seenBefore ? h("div", {class: "caption bad", text: "new picture: the one she already saw was not reused"})
-          : h("div", {class: "caption", text: img.placeholder ? "placeholder (no image model call)" : "made by the image model"})));
+          : h("div", {class: "caption", text: img.placeholder ? "placeholder (no image model call)" : `made by ${img.source || "the image model"}`})));
     }
     card.append(h("h2", {text: `Images (${r.images.length})`}), grid);
     const made = r.images.find(i => i.prompt);
@@ -309,8 +311,14 @@ function render(r, typed) {
     r.calls.forEach((c, i) => {
       const body = h("div", {class: "msg"});
       if (c.repeated) body.append(h("div", {class: "note", text: `Everything from call ${i}, including its reply, then:`}));
+      const earlier = c.messages.filter(m => m.role !== "system").slice(0, -1);
+      const history = earlier.length ? h("div", {class: "msg"}) : null;
       for (const m of c.messages) {
         const content = String(m.content);
+        if (earlier.includes(m)) { history.append(h("div", {class: "role", text: m.role}), h("pre", {text: content})); continue; }
+        if (history && m === c.messages.find(x => x.role !== "system" && !earlier.includes(x))) {
+          body.append(h("details", {}, h("summary", {text: `earlier in this conversation (${earlier.length} message${earlier.length === 1 ? "" : "s"}, sent again so the model remembers)`}), history));
+        }
         if (m.role === "system") {
           body.append(h("details", {}, h("summary", {text: `system message (${content.split("\n").length} lines): Harbor's rules and the answer format`}),
                                         h("div", {class: "msg"}, h("pre", {text: content}))));
