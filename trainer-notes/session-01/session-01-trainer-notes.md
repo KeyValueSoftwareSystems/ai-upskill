@@ -538,7 +538,7 @@ LAUNCHKIT_IMAGES=placeholder uv run launchkit run harbor "Poster for the Tidal b
 uv run launchkit explain
 ```
 
-Each run gets its own `--session`, so no earlier history rides along. Without it, every terminal run shares one conversation and `explain` shows earlier messages under *history*.
+Each run gets its own `--session`, so no earlier history rides along. A session name starts empty only the first time: after a rehearsal, use new names (`context3`, `context4`) for the live run. Without it, every terminal run shares one conversation and `explain` shows earlier messages under *history*.
 
 The brand book is about 1,970 tokens against a facts budget of 1,500. The product facts sit at the end of the book, so the cut drops them. `explain` prints the last run section by section:
 
