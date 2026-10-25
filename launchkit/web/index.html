@@ -16,6 +16,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-app
 header{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--surface)}
 header h1{font-size:17px;margin:0 14px 0 0;letter-spacing:-.01em}
 header label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+#session{max-width:18rem}
 select,input,button{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
 button{cursor:pointer;background:var(--accent);color:#fff;border-color:var(--accent)}
 button.quiet{background:transparent;color:var(--ink-2);border-color:var(--line)}
@@ -87,7 +88,7 @@ header button.quiet.on{color:var(--accent);border-color:var(--accent);background
   <h1>LaunchKit</h1>
   <label>Brand <select id="brand"></select></label>
   <label>Person <select id="person"></select></label>
-  <label>Conversation <span id="session" style="font:12px ui-monospace,Menlo,monospace;color:var(--ink-2)"></span></label>
+  <label>Conversation <select id="session"></select></label>
   <button class="quiet" id="new">New conversation</button>
   <button class="quiet" id="onboardToggle">Onboard a brand</button>
   <button class="quiet" id="libraryToggle">Brand library</button>
@@ -145,10 +146,20 @@ function renderTurn(t){
   else if (t.reply) add("", esc(t.reply));
   else if (t.spec) { const d = add("", specHtml(t.spec)); if (t.image) { d.innerHTML += `<img src="${t.image}" alt="poster picture">`; $("poster").innerHTML = `<img src="${t.image}" alt="poster picture">`; } }
 }
-async function loadConversation(){
+function fillSessions(data){
+  session = data.session_id;
+  $("session").innerHTML = data.conversations.map(c => `<option value="${esc(c.session_id)}">${new Date(c.updated * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · ${esc(c.first || "New conversation")}</option>`).join("");
+  $("session").value = session;
+}
+function refreshSessions(){
+  const w = who();
+  fetch(`/conversations/${w.workspace_id}/${w.user_id}?session_id=${encodeURIComponent(session)}`).then(r => r.json()).then(fillSessions);
+}
+async function loadConversation(sessionId){
   const w = who(); if (!w.workspace_id || !w.user_id) return;
-  const data = await (await fetch(`/conversations/${w.workspace_id}/${w.user_id}`)).json();
-  session = data.session_id; $("session").textContent = session;
+  const pick = typeof sessionId === "string" ? `?session_id=${encodeURIComponent(sessionId)}` : "";
+  const data = await (await fetch(`/conversations/${w.workspace_id}/${w.user_id}${pick}`)).json();
+  fillSessions(data);
   $("messages").innerHTML = ""; $("poster").innerHTML = '<div class="empty">The picture appears here after step 3.</div>';
   if (!data.turns.length) add("empty", `Signed in as ${esc($("person").selectedOptions[0].textContent)} at ${esc($("brand").selectedOptions[0].textContent)}. Say hi, or ask for a poster.`);
   data.turns.forEach(renderTurn);
@@ -170,7 +181,8 @@ function loadLogins(select){
 loadLogins("harbor");
 $("brand").onchange = () => { fillPeople(); loadConversation(); if (!$("library").hidden) loadLibrary(); };
 $("person").onchange = loadConversation;
-$("new").onclick = async () => { const w = who(); const data = await (await fetch(`/conversations/${w.workspace_id}/${w.user_id}/new`, { method: "POST" })).json(); session = data.session_id; $("session").textContent = session; $("messages").innerHTML = ""; };
+$("new").onclick = async () => { const w = who(); const data = await (await fetch(`/conversations/${w.workspace_id}/${w.user_id}/new`, { method: "POST" })).json(); fillSessions(data); $("messages").innerHTML = ""; };
+$("session").onchange = () => loadConversation($("session").value);
 function showTop(id){
   ["onboard", "library"].forEach(x => { const open = x === id && $(x).hidden; $(x).hidden = !open; $(x + "Toggle").classList.toggle("on", open); });
   if (!$("library").hidden) loadLibrary();
@@ -267,7 +279,7 @@ $("form").onsubmit = async e => {
   const tick = setInterval(show, 1000);
   let answered = false;
   const finish = () => { clearInterval(tick); pending.remove(); $("send").disabled = false; };
-  const body = { ...w, text };
+  const body = { ...w, text, session_id: session };
   let run_id;
   try {
     ({ run_id } = await (await fetch("/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json());
@@ -287,7 +299,7 @@ $("form").onsubmit = async e => {
     if (ev.type === "result" && ev.reply) showContext(ev.explain);
     if (ev.type === "error") add("error", `<b>${esc(ev.kind)}</b>\n${esc(ev.message)}`);
   };
-  es.addEventListener("done", () => { es.close(); finish(); });
+  es.addEventListener("done", () => { es.close(); finish(); refreshSessions(); });
   es.onerror = () => {
     es.close(); finish();
     if (!answered) add("error", `<b>No answer</b>\nThe page lost the connection to its server before the run finished. Check the page server and the proxy, then send again.`);
