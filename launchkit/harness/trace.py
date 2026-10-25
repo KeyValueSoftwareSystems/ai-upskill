@@ -114,6 +114,8 @@ class Trace:
                     return f"picture   skipped, {d.get('reason', '')}"
                 elif d["status"] == "done":
                     return f"picture   saved {_relative(d['file'])}"
+                elif d["status"] == "rework":
+                    return f"picture   rework {_relative(d['file'])}, {d.get('reason', '')}"
                 elif d["status"] == "reused":
                     return f"picture   reused {_relative(d['file'])}, {d.get('reason', '')}"
                 else:
