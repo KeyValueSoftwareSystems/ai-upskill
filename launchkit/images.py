@@ -48,7 +48,7 @@ def generate_image(visual_concept: str, brand: dict, *, conversation_id: str,
                    reference: str | None = None) -> Picture:
     """Ask the image model for the poster picture. Pass the visual concept only, never the copy."""
     colours = ", ".join(brand["colours"].values())
-    prompt = f"{visual_concept}. Colour palette: {colours}. No text, letters or logos in the image."
+    prompt = f"{visual_concept}. Colour palette: {colours}. The product is plain and unbranded, with a smooth blank surface and no label."
     placeholder = os.getenv("LAUNCHKIT_IMAGES") == "placeholder"
     if placeholder:
         img = _placeholder(brand, reference)
