@@ -207,7 +207,7 @@ def check_gpu(c: Check, blocked: str | None) -> bool:
 
 def check_image(c: Check, blocked: str | None, gpu_ok: bool) -> None:
     """The backup image model behind LiteLLM, used only when the GPU can't be reached."""
-    model = os.getenv("LAUNCHKIT_IMAGE_MODEL", "gpt-image-1")
+    model = os.getenv("LAUNCHKIT_IMAGE_MODEL", "gpt-image-2")
     c.start(f"Backup pictures ({model})")
     if blocked:
         c.skip(blocked)
