@@ -22,7 +22,7 @@ uv run launchkit ui             # open http://localhost:8000, sign in as Maya at
 
 If port 8000 is taken: `uv run launchkit ui --port 8010`.
 
-Everyone makes real pictures: about 30 to 60 seconds each through the proxy. If you only want to see the words, `LAUNCHKIT_IMAGES=placeholder` draws a stand-in picture instead.
+Everyone makes real pictures, on our GPU: a few seconds each. If the trainer says the GPU is down, set `LAUNCHKIT_IMAGE_PROVIDER=litellm` in `.env` (30 to 60 seconds each through the proxy). If you only want to see the words, `LAUNCHKIT_IMAGE_PROVIDER=placeholder` draws a stand-in picture instead.
 
 Without a key everything still runs. Live runs use a fake model and a fake picture, and the trace says so.
 

@@ -25,7 +25,7 @@ uv run launchkit run harbor "Poster for the Tidal bottle on a misty lakeshore at
 uv run launchkit ui         # the harness chat page on http://localhost:8000
 ```
 
-Keys go through KeyValue's LiteLLM proxy: `LITELLM_API_KEY` and `LITELLM_BASE_URL`. Everyone runs the real model and real pictures; a picture takes 30 to 60 seconds through the proxy. `LAUNCHKIT_IMAGES=placeholder` draws a stand-in picture when you want speed over pictures.
+Keys go through KeyValue's LiteLLM proxy: `LITELLM_API_KEY` and `LITELLM_BASE_URL`. Everyone runs the real model and real pictures. `LAUNCHKIT_IMAGE_PROVIDER` picks who makes the pictures: `gpu` (our GPU, a few seconds each, the default), `litellm` (the image model through the proxy, 30 to 60 seconds each; only when the trainer says the GPU is down) or `placeholder` (a stand-in picture drawn by code).
 
 The opener's code is on this branch too (`approach_llm/`, `approach_graph/`, `launchkit/ui.py`, `launchkit/scoreboard.py`), but its LangGraph parts need the opener branches' dependencies; run them from `session-01-langgraph`.
 
