@@ -241,7 +241,7 @@ $("form").onsubmit = async e => {
   const text = $("text").value.trim();
   if (!text) return $("text").focus();
   $("go").disabled = true;
-  $("go").textContent = $("noimage").checked ? "Calling the model…" : "Working… (a picture takes a few seconds on our GPU, about a minute on the backup)";
+  $("go").textContent = $("noimage").checked ? "Calling the model…" : "Working… (a picture takes a few seconds on our GPU, about a minute through LiteLLM)";
   try {
     const res = await fetch("/run", {method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({text, conversation, approach: $("approach").value, no_image: $("noimage").checked})});
@@ -271,7 +271,7 @@ function render(r, typed) {
           h("div", {class: "copy"}, h("div", {class: "h", text: field("headline")}),
                                     h("div", {class: "s", text: field("subheadline")}))),
         h("div", {class: "caption", text: r.images[0].placeholder
-          ? "Placeholder picture, drawn by code: no image model was called. Untick \u201cPlaceholder picture\u201d (and remove LAUNCHKIT_IMAGES=placeholder from .env, if set) for a real one."
+          ? "Placeholder picture, drawn by code: no image model was called. Untick \u201cPlaceholder picture\u201d (and set LAUNCHKIT_IMAGE_PROVIDER back to gpu in .env, if it says placeholder) for a real one."
           : `Preview: the copy is laid over the picture by code, not drawn by the image model. ${r.images[0].resized_from ? "The earlier picture, resized by code." : `Picture by ${r.images[0].source || "the image model"}.`}`})));
     }
     const table = h("table");
