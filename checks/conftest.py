@@ -124,5 +124,6 @@ def brand_pdf(tmp_path):
 
 @pytest.fixture(autouse=True)
 def no_gpu_pictures(monkeypatch):
-    """Checks never call the GPU picture service, even when a trainee's .env points at it."""
+    """Checks never call the GPU picture service, even when a trainee's .env points at it: real-picture checks stand in for LiteLLM."""
     monkeypatch.delenv("IMAGESVC_URL", raising=False)
+    monkeypatch.setenv("LAUNCHKIT_IMAGE_PROVIDER", "litellm")

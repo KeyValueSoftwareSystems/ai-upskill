@@ -119,7 +119,7 @@ class Trace:
                 elif d["status"] == "reused":
                     return f"picture   reused {_relative(d['file'])}, {d.get('reason', '')}"
                 else:
-                    return "picture   none, the tool returned no file"
+                    return f"picture   none, {d.get('reason') or 'the tool returned no file'}"
             case _:
                 return f"{e.kind:<9} {_short(d)}"
 
