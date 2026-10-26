@@ -16,6 +16,14 @@ cp .env.example .env      # then add your LITELLM_API_KEY and IMAGESVC_KEY
 uv run python -m launchkit.check_setup
 ```
 
-The last command checks your Python version, dependencies, `.env`, LiteLLM key and URL, the chat model, pictures from our GPU, the backup image model and the `out/` folder, and prints a fix under anything marked FAIL. When it ends with **Setup complete**, you're ready for the session. A *warning* on the backup image model means pictures still work from the GPU: tell the trainer and carry on. The backup check makes one small paid image call; add `--no-image` to skip it (the GPU is still checked).
+The last command checks your Python version, dependencies, `.env`, LiteLLM key and URL, the chat model, pictures and the `out/` folder, and prints a fix under anything marked FAIL. When it ends with **Setup complete**, you're ready for the session.
 
-Pictures come from our GPU first and fall back to `gpt-image-2` through LiteLLM. To skip real pictures, set `LAUNCHKIT_IMAGES=placeholder` in `.env`.
+`LAUNCHKIT_IMAGE_PROVIDER` in `.env` picks who makes the pictures, and only that one is used:
+
+| Value | Pictures from |
+| --- | --- |
+| `gpu` (the default) | Our GPU, over the VPN: a few seconds each. |
+| `litellm` | `gpt-image-2` through LiteLLM: about a minute each, and paid. Use it only when the trainer says the GPU is down. |
+| `placeholder` | Code draws a stand-in picture. No call. |
+
+The setup check tests only the one you picked. With `litellm` it makes one small paid picture; add `--no-image` to skip it.
