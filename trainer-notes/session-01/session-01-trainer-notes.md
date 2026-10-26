@@ -55,7 +55,7 @@ Fill in `.env`:
 | --- | --- |
 | `LITELLM_API_KEY` | The key for the LiteLLM proxy. Ask the trainer. `LITELLM_BASE_URL` is already set. |
 | `IMAGESVC_URL`, `IMAGESVC_KEY` | KeyValue's GPU for pictures (FLUX.2 klein, a few seconds each, no per-picture cost), reached over the VPN. The URL is already set in `.env.example`; ask the trainer for the key. Anyone with an older `.env` adds both lines by hand. |
-| Picture fallback | If the GPU is down or the key is wrong, pictures switch to `gpt-image-1` through the LiteLLM proxy by themselves: 30 to 60 seconds each, and paid. This needs the VPN on and `LITELLM_API_KEY` set, the same as every text call. |
+| Picture fallback | If the GPU is down or the key is wrong, pictures switch to `gpt-image-2` through the LiteLLM proxy by themselves: 30 to 60 seconds each, and paid. This needs the VPN on and `LITELLM_API_KEY` set, the same as every text call. |
 | `LAUNCHKIT_IMAGES=placeholder` | Optional. Skips real pictures and draws a labelled stand-in picture instead. |
 
 `check_setup` tests the GPU itself (*Pictures: our GPU*). To test only the GPU, from the repo folder:
@@ -64,7 +64,7 @@ Fill in `.env`:
 uv run python -c "from dotenv import load_dotenv; load_dotenv(); from launchkit.gpu_images import gpu_image; print('GPU ok' if gpu_image('a bottle on a lake') else 'GPU not reached')"
 ```
 
-`check_setup` checks Python, dependencies, `.env`, the key and URL, the chat model, pictures from our GPU, the backup image model and the `out/` folder. Under anything marked FAIL it prints a fix. It must end with **Setup complete**. *Pictures: our GPU* must pass. *Backup pictures* is only a warning while the GPU works (for example `The model 'gpt-image-1' does not exist`): the person can carry on; tell the proxy admin. It is a FAIL only when the GPU fails too. The backup check makes one small paid call through the proxy; `--no-image` skips it and still checks the GPU.
+`check_setup` checks Python, dependencies, `.env`, the key and URL, the chat model, pictures from our GPU, the backup image model and the `out/` folder. Under anything marked FAIL it prints a fix. It must end with **Setup complete**. *Pictures: our GPU* must pass. *Backup pictures* is only a warning while the GPU works (for example, the proxy refuses the backup model): the person can carry on; tell the proxy admin. It is a FAIL only when the GPU fails too. The backup check makes one small paid call through the proxy; `--no-image` skips it and still checks the GPU.
 
 ### Pre-read and depth
 
@@ -324,7 +324,7 @@ ai-upskill/
 ├── launchkit/
 │   ├── cli.py              run · ui · explain · check · onboard
 │   ├── settings.py         the section budgets, the model and image settings
-│   ├── gpu_images.py       pictures from our GPU first, gpt-image-1 when it can't be reached
+│   ├── gpu_images.py       pictures from our GPU first, gpt-image-2 when it can't be reached
 │   ├── harness/
 │   │   ├── request.py      Request · resolve_workspace_id        <- step 4
 │   │   ├── workspace.py    Workspace · load_workspace            <- step 1
@@ -740,7 +740,7 @@ Guide step 8. All eight parts are back: DNA, Checks and Brand built by the room,
 | `The key's budget is spent` from `check_setup`, or `budget_exceeded` / `Budget has been exceeded` in any error | The LiteLLM key has used its budget (the proxy answers 400 or 422). Ask the trainer to raise it or for another key. |
 | `AuthenticationError` with `Incorrect API key provided: sk-svcac…` (a 401 from the proxy) | The proxy's own upstream key failed, not the participant's. On the opener branches, run it again; on the harness branches the model call is retried automatically. Tell the proxy admin if it repeats. |
 | Any other `AuthenticationError`, or "The LiteLLM proxy rejected the key" | Check `LITELLM_API_KEY` in `.env` (no quotes or spaces), then run `check_setup` again. |
-| `GPU image service failed (…); using gpt-image-1` | The GPU didn't answer: `IMAGESVC_KEY` wrong (`AuthenticationError`, at once) or the GPU down (`APITimeoutError`, after about 10 seconds). Pictures fall back to `gpt-image-1` through LiteLLM. If the VPN is off, LiteLLM fails too: turn the VPN on. |
+| `GPU image service failed (…); using gpt-image-2` | The GPU didn't answer: `IMAGESVC_KEY` wrong (`AuthenticationError`, at once) or the GPU down (`APITimeoutError`, after about 10 seconds). Pictures fall back to `gpt-image-2` through LiteLLM. If the VPN is off, LiteLLM fails too: turn the VPN on. |
 | Pictures are slow | Through the proxy a picture takes 30 to 60 seconds; from our GPU, a few seconds. To skip real pictures, set `LAUNCHKIT_IMAGES=placeholder` in `.env`, pass `--no-image` to `ask`, or tick *Placeholder picture* in the opener UI. |
 | The picture is a gradient labelled `PLACEHOLDER` | Placeholder mode is on: `LAUNCHKIT_IMAGES=placeholder` in `.env`, or the opener UI box is ticked. |
 | `Can't load 'approach_llm'` or `'approach_graph'` | Wrong branch: check out `session-01-llm-call` or `session-01-langgraph`. |
@@ -755,7 +755,7 @@ Guide step 8. All eight parts are back: DNA, Checks and Brand built by the room,
 | A brand "was never indexed" | From RAG step 3 on, run `uv run launchkit index`, or upload the brand file again. |
 | Words or a label on the product in the picture | The picture prompt asks for a plain, unbranded product; the model still slips now and then. Send the request again. |
 | `check_setup` says *Backup pictures … warning* | The backup image model behind LiteLLM is not working. Pictures still come from the GPU, so carry on, and tell the proxy admin. |
-| Image model access error | Check the key's access to `gpt-image-1`. As a last resort, set `LAUNCHKIT_IMAGES=placeholder`. |
+| Image model access error | Check the key's access to `gpt-image-2`. As a last resort, set `LAUNCHKIT_IMAGES=placeholder`. |
 | Rate limits | Stagger runs across the room, or run the four requests once per pair. |
 | Someone falls behind | `git stash`, check out the next branch, carry on. |
 
