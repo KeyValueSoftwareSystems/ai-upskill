@@ -58,13 +58,13 @@ Fill in `.env`:
 | Picture fallback | If the GPU is down or the key is wrong, pictures switch to `gpt-image-1` through the LiteLLM proxy by themselves: 30 to 60 seconds each, and paid. This needs the VPN on and `LITELLM_API_KEY` set, the same as every text call. |
 | `LAUNCHKIT_IMAGES=placeholder` | Optional. Skips real pictures and draws a labelled stand-in picture instead. |
 
-Test the GPU once, from the repo folder (`check_setup` doesn't test it):
+`check_setup` tests the GPU itself (*Pictures: our GPU*). To test only the GPU, from the repo folder:
 
 ```bash
 uv run python -c "from dotenv import load_dotenv; load_dotenv(); from launchkit.gpu_images import gpu_image; print('GPU ok' if gpu_image('a bottle on a lake') else 'GPU not reached')"
 ```
 
-`check_setup` checks Python, dependencies, `.env`, the key and URL, the chat model, the image model and the `out/` folder. Under anything marked FAIL it prints a fix. It must end with **Setup complete**. The image check makes one small paid call through the proxy; add `--no-image` to skip it.
+`check_setup` checks Python, dependencies, `.env`, the key and URL, the chat model, pictures from our GPU, the backup image model and the `out/` folder. Under anything marked FAIL it prints a fix. It must end with **Setup complete**. *Pictures: our GPU* must pass. *Backup pictures* is only a warning while the GPU works (for example `The model 'gpt-image-1' does not exist`): the person can carry on; tell the proxy admin. It is a FAIL only when the GPU fails too. The backup check makes one small paid call through the proxy; `--no-image` skips it and still checks the GPU.
 
 ### Pre-read and depth
 
@@ -72,7 +72,7 @@ Participants read the Session 1 pre-read before the day (LLM calls, LangGraph, t
 
 ### Trainer checklist
 
-- `check_setup` passes on your machine, including the image check.
+- `check_setup` passes on your machine, including *Pictures: our GPU*.
 - You have rehearsed the opener demo on `session-01-llm-langgraph-solution` and the harness and RAG runs below.
 - From `session-01-rag-step3` on, run `uv sync`, `uv run launchkit index` and `uv run launchkit check rag3` once before class. The first run downloads the embedding model (about 130 MB) and the CPU build of torch, so this sync is the slow one.
 
@@ -754,6 +754,7 @@ Guide step 8. All eight parts are back: DNA, Checks and Brand built by the room,
 | `check rag3` or the first lookup is slow | The first run downloads the embedding model (about 130 MB). Run it before class. |
 | A brand "was never indexed" | From RAG step 3 on, run `uv run launchkit index`, or upload the brand file again. |
 | Words or a label on the product in the picture | The picture prompt asks for a plain, unbranded product; the model still slips now and then. Send the request again. |
+| `check_setup` says *Backup pictures … warning* | The backup image model behind LiteLLM is not working. Pictures still come from the GPU, so carry on, and tell the proxy admin. |
 | Image model access error | Check the key's access to `gpt-image-1`. As a last resort, set `LAUNCHKIT_IMAGES=placeholder`. |
 | Rate limits | Stagger runs across the room, or run the four requests once per pair. |
 | Someone falls behind | `git stash`, check out the next branch, carry on. |
