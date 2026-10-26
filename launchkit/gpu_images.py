@@ -2,7 +2,7 @@
 
 Set IMAGESVC_URL (and IMAGESVC_KEY) in .env; the service is reachable over the VPN.
 gpu_image() returns None when the URL isn't set or the service doesn't answer,
-so the caller falls back to LAUNCHKIT_IMAGE_MODEL (gpt-image-1).
+so the caller falls back to LAUNCHKIT_IMAGE_MODEL (gpt-image-2).
 """
 import base64
 import os
@@ -37,6 +37,6 @@ def gpu_image(prompt: str, size: str = "1024x1024", reference: str | None = None
             reply = client.images.generate(size=nearest_size(size), **args)
         return base64.b64decode(reply.data[0].b64_json)
     except Exception as error:
-        print(f"GPU image service failed ({type(error).__name__}); using {os.getenv('LAUNCHKIT_IMAGE_MODEL', 'gpt-image-1')}",
+        print(f"GPU image service failed ({type(error).__name__}); using {os.getenv('LAUNCHKIT_IMAGE_MODEL', 'gpt-image-2')}",
               file=sys.stderr)
         return None
