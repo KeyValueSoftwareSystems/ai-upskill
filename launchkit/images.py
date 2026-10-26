@@ -1,6 +1,6 @@
 """Pictures: one made by the image model, and a resize that is plain code.
 
-generate_image() tries our GPU first (IMAGESVC_URL), then the image model (LAUNCHKIT_IMAGE_MODEL, default gpt-image-1).
+generate_image() tries our GPU first (IMAGESVC_URL), then the image model (LAUNCHKIT_IMAGE_MODEL, default gpt-image-2).
 Set LAUNCHKIT_IMAGES=placeholder to draw a placeholder instead and skip paid calls.
 resize_image() is plain code, not a model. Both return a Picture: the file, and how it was made.
 """
@@ -58,7 +58,7 @@ def generate_image(visual_concept: str, brand: dict, *, conversation_id: str,
         source = f"our GPU ({os.getenv('IMAGESVC_MODEL', 'flux-2-klein-9b')})"
         if data is None:
             from .llm import client
-            model = os.getenv("LAUNCHKIT_IMAGE_MODEL", "gpt-image-1")
+            model = os.getenv("LAUNCHKIT_IMAGE_MODEL", "gpt-image-2")
             source = f"the backup image model ({model})"
             if reference:
                 with open(reference, "rb") as f:
