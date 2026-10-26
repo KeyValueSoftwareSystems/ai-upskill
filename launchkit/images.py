@@ -1,7 +1,6 @@
 """Pictures: one made by the image model, and a resize that is plain code.
 
-generate_image() tries our GPU first (IMAGESVC_URL), then the image model (LAUNCHKIT_IMAGE_MODEL, default gpt-image-2).
-Set LAUNCHKIT_IMAGES=placeholder to draw a placeholder instead and skip paid calls.
+generate_image() asks the provider set by LAUNCHKIT_IMAGE_PROVIDER: gpu (the default), litellm or placeholder.
 resize_image() is plain code, not a model. Both return a Picture: the file, and how it was made.
 """
 import base64
@@ -11,7 +10,7 @@ import os
 from dotenv import load_dotenv
 from PIL import Image, ImageColor, ImageDraw, ImageFont
 
-from .gpu_images import gpu_image
+from .gpu_images import gpu_image, image_provider
 from .poster import OUT, Picture
 
 load_dotenv()  # the GPU address and key live in .env
@@ -49,17 +48,19 @@ def generate_image(visual_concept: str, brand: dict, *, conversation_id: str,
     """Ask the image model for the poster picture. Pass the visual concept only, never the copy."""
     colours = ", ".join(brand["colours"].values())
     prompt = f"{visual_concept}. Colour palette: {colours}. The product is plain and unbranded, with a smooth blank surface and no label."
-    placeholder = os.getenv("LAUNCHKIT_IMAGES") == "placeholder"
+    provider = image_provider()
+    placeholder = provider == "placeholder"
     if placeholder:
         img = _placeholder(brand, reference)
         source = "code (placeholder)"
     else:
-        data = gpu_image(prompt, reference=reference)
-        source = f"our GPU ({os.getenv('IMAGESVC_MODEL', 'flux-2-klein-9b')})"
-        if data is None:
+        if provider == "gpu":
+            data = gpu_image(prompt, reference=reference)
+            source = f"our GPU ({os.getenv('IMAGESVC_MODEL', 'flux-2-klein-9b')})"
+        else:
             from .llm import client
             model = os.getenv("LAUNCHKIT_IMAGE_MODEL", "gpt-image-2")
-            source = f"the backup image model ({model})"
+            source = f"LiteLLM ({model})"
             if reference:
                 with open(reference, "rb") as f:
                     reply = client().images.edit(model=model, image=f, prompt=prompt, size="1024x1024")

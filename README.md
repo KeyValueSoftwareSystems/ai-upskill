@@ -52,7 +52,7 @@ cp .env.example .env      # then add your LITELLM_API_KEY
 uv run python -m launchkit.check_setup
 ```
 
-It should end with **Setup complete**. Anything marked FAIL comes with a fix printed under it. Add `--no-image` to skip the one paid image call. To skip paid image calls during the session, pass `--no-image` to `ask`, or set `LAUNCHKIT_IMAGES=placeholder` in `.env`.
+It should end with **Setup complete**. Anything marked FAIL comes with a fix printed under it. Pictures come from our GPU (`LAUNCHKIT_IMAGE_PROVIDER=gpu` in `.env`); set it to `litellm` only when the trainer says the GPU is down. To skip pictures, pass `--no-image` to `ask`, or set `LAUNCHKIT_IMAGE_PROVIDER=placeholder` in `.env`.
 
 ## Try it in your browser
 

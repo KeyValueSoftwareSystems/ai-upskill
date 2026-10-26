@@ -27,9 +27,9 @@ def run(text: str, *, handle, workspace: str = "harbor", conversation_id: str = 
     brand = load_brand(workspace)
 
     first_call = len(llm.CALLS)
-    old_images = os.environ.get("LAUNCHKIT_IMAGES")
+    old_images = os.environ.get("LAUNCHKIT_IMAGE_PROVIDER")
     if no_image:
-        os.environ["LAUNCHKIT_IMAGES"] = "placeholder"
+        os.environ["LAUNCHKIT_IMAGE_PROVIDER"] = "placeholder"
     try:
         res = handle(text, workspace=workspace, conversation_id=conversation_id)
         error, spec, images, answer = res.error, res.spec, res.images, res.answer
@@ -37,7 +37,7 @@ def run(text: str, *, handle, workspace: str = "harbor", conversation_id: str = 
         error, spec, images, answer = f"{type(e).__name__}: {e}", None, [], None
     finally:
         if no_image:
-            os.environ.pop("LAUNCHKIT_IMAGES", None) if old_images is None else os.environ.update(LAUNCHKIT_IMAGES=old_images)
+            os.environ.pop("LAUNCHKIT_IMAGE_PROVIDER", None) if old_images is None else os.environ.update(LAUNCHKIT_IMAGE_PROVIDER=old_images)
 
     calls, sent_before = [], []
     for messages, reply in llm.CALLS[first_call:]:
@@ -117,7 +117,7 @@ def main():
             if img["resized_from"]:
                 how = f"resized by code from {img['resized_from']}"
             elif img["placeholder"]:
-                how = ("PLACEHOLDER drawn by code, no image model call (--no-image or LAUNCHKIT_IMAGES=placeholder). "
+                how = ("PLACEHOLDER drawn by code, no image model call (--no-image or LAUNCHKIT_IMAGE_PROVIDER=placeholder). "
                        f"The image model would have been asked for: {img['prompt']}")
             else:
                 how = f"made by the image model from: {img['prompt']}"
