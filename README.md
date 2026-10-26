@@ -8,14 +8,14 @@ LaunchKit is the mini-Pencil we build in this upskill: a marketing assistant pla
 
 ## Setup
 
-You need Python 3.12 or newer, [`uv`](https://docs.astral.sh/uv/), git with access to the KeyValue repo, the coding agent you already use, and a key for KeyValue's LiteLLM proxy (ask the trainer).
+You need Python 3.12 or newer, [`uv`](https://docs.astral.sh/uv/), git with access to the KeyValue repo, the coding agent you already use, a key for KeyValue's LiteLLM proxy and a key for our GPU (ask the trainer for both), and the VPN on.
 
 ```bash
 uv sync
-cp .env.example .env      # then add your LITELLM_API_KEY
+cp .env.example .env      # then add your LITELLM_API_KEY and IMAGESVC_KEY
 uv run python -m launchkit.check_setup
 ```
 
-The last command checks your Python version, dependencies, `.env`, LiteLLM key and URL, chat model, image model and the `out/` folder, and prints a fix under anything marked FAIL. When it ends with **Setup complete**, every check passed and you're ready for the session. The image check makes one small paid image call; add `--no-image` to skip it.
+The last command checks your Python version, dependencies, `.env`, LiteLLM key and URL, the chat model, pictures from our GPU, the backup image model and the `out/` folder, and prints a fix under anything marked FAIL. When it ends with **Setup complete**, you're ready for the session. A *warning* on the backup image model means pictures still work from the GPU: tell the trainer and carry on. The backup check makes one small paid image call; add `--no-image` to skip it (the GPU is still checked).
 
-Images use `gpt-image-1` by default. To skip paid image calls, set `LAUNCHKIT_IMAGES=placeholder` in `.env`.
+Pictures come from our GPU first and fall back to `gpt-image-1` through LiteLLM. To skip real pictures, set `LAUNCHKIT_IMAGES=placeholder` in `.env`.
