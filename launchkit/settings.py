@@ -18,7 +18,7 @@ def _env(name: str, default: str) -> str:
 class Settings:
     model: str = field(default_factory=lambda: _env("LAUNCHKIT_MODEL", "gpt-4.1-mini"))
     image_mode: str = field(default_factory=lambda: _env("LAUNCHKIT_IMAGE", "real"))
-    image_model: str = field(default_factory=lambda: _env("LAUNCHKIT_IMAGE_MODEL", "gpt-image-1"))
+    image_model: str = field(default_factory=lambda: _env("LAUNCHKIT_IMAGE_MODEL", "gpt-image-2"))
     image_size: str = field(default_factory=lambda: _env("LAUNCHKIT_IMAGE_SIZE", "1024x1536"))
     image_quality: str = field(default_factory=lambda: _env("LAUNCHKIT_IMAGE_QUALITY", "medium"))
     timeout: int = field(default_factory=lambda: int(_env("LAUNCHKIT_TIMEOUT", "120")))
