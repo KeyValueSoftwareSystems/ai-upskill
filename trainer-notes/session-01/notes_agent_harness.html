@@ -179,9 +179,7 @@ html { scroll-behavior: smooth; }
   <p class="lede">Notes for the talk and discussion at 0:18–0:38. They cover what an agent harness is, what Agno gives you, and how a folder of plain files can shape an agent's behaviour, with Pencil as the real-world example throughout.</p>
   <ul class="meta">
     <li>About 25 minutes to read</li>
-    <li>Part A · 12 min in session</li>
-    <li>Part B · 8 min in session</li>
-    <li>Hands-on comes later, in CP1.1</li>
+    <li>Hands-on comes later, in the harness part of guide step 7</li>
   </ul>
 </header>
 
@@ -339,7 +337,7 @@ html { scroll-behavior: smooth; }
     <span class="k">return</span> func(**args)
 
 agent = Agent(..., tool_hooks=[image_budget], tool_call_limit=6)</code></pre>
-<p><code>tool_call_limit</code> is Agno's built-in step cap. For CP1.1 we use 6.</p>
+<p><code>tool_call_limit</code> is Agno's built-in step cap. In the hands-on we use 6.</p>
 <div class="pencil">
   <h4>How Pencil does it</h4>
   <p>One Scribble turn made about 50 calls to a search tool over about 14 minutes. The search skill kept telling the model to call a different search tool that wasn't available in that workspace, and the model kept obeying. A sibling turn finished in under 17 seconds, so the problem depended on the model's choices, not on the code path.</p>
@@ -358,7 +356,7 @@ agent = Agent(..., tool_hooks=[image_budget], tool_call_limit=6)</code></pre>
 
 <div class="discuss">
   <p class="eyebrow">Discuss · 3</p>
-  <p class="q">CP1.1 uses a step cap of 6. Why didn't Pencil use one?</p>
+  <p class="q">The hands-on uses a step cap of 6. Why didn't Pencil use one?</p>
   <details><summary>Suggested answer</summary>
     <p>Scribble's real turns vary enormously: a quick reply might take one call, a multi-asset campaign might take dozens of legitimate ones. Any fixed number would either cut good turns short or be too high to catch anything. The incident showed the real danger was one broken tool repeated, so Pencil limits that directly, and backs it with time. For a small, predictable agent like LaunchKit's, a step cap is simple and fine.</p>
   </details>
@@ -432,7 +430,7 @@ agent = Agent(..., tool_hooks=[image_budget], tool_call_limit=6)</code></pre>
   <li><strong>Agent</strong>: the loop, with instructions, a model and tools.</li>
   <li><strong>Tools</strong>: plain Python functions (or ready-made toolkits, or MCP servers) with their schemas generated for the model, plus tool-call parsing for each provider.</li>
   <li><strong>Sessions</strong>: stored conversations and history.</li>
-  <li><strong>Memory and knowledge</strong>: hooks for long-term memory and retrieval (later sessions).</li>
+  <li><strong>Memory and knowledge</strong>: hooks for retrieval (the brand book part of this session) and long-term memory (Session 2).</li>
   <li><strong>Teams</strong>: several agents working together (Session 2).</li>
   <li><strong>Controls</strong>: <code>tool_call_limit</code>, <code>tool_hooks</code>, <code>output_schema</code>, and exceptions a tool can raise to retry or stop the run.</li>
 </ul>
@@ -449,7 +447,7 @@ agent = Agent(
     db=sessions_db, session_id=conversation_id,   <span class="c"># state (A8)</span>
     add_history_to_context=True, num_history_runs=5,
 )</code></pre>
-<p>Illustrative only: you'll build the real one in CP1.1. Notice how many of the arguments are harness decisions passed into the engine.</p>
+<p>Illustrative only: you'll build the real one in the hands-on. Notice how many of the arguments are harness decisions passed into the engine.</p>
 <h4>What stays ours</h4>
 <div class="tbl"><table>
   <tr><th>Agno gives us</th><th>We still own</th></tr>
@@ -702,28 +700,15 @@ prompt = BRAND_PROMPTS[request[<span class="k">"brand"</span>]]   <span class="c
 </ul>
 
 <h3 id="facilitators">For facilitators</h3>
-<details><summary>Sources for every Pencil claim (scribble-orchestration, commit c64658145)</summary>
-<div class="tbl"><table>
-  <tr><th>Claim</th><th>Source</th></tr>
-  <tr><td>Engine on Agno 2.5.17; the main Agent call</td><td><code>runtime/engine.py:6973</code>, <code>9531-9640</code>; <code>pyproject.toml:14</code></td></tr>
-  <tr><td>Last 5 turns to the model</td><td><code>runtime/store/agno_db.py:44</code></td></tr>
-  <tr><td>Agent cache, rebuilt on file edits</td><td><code>runtime/engine.py:9088-9154</code>, <code>7435-7439</code></td></tr>
-  <tr><td>Breaker: by name, 2 / 3 / 12, soft default</td><td><code>runtime/tool_loop_guard.py</code>; <code>config.py:217-223</code></td></tr>
-  <tr><td>The ~50 calls / ~14 minutes incident</td><td><code>architecture/adr/2026-07-20-tool-failure-loop-breaker.md</code></td></tr>
-  <tr><td>Time limits 1800 / 2400 / 3600 s</td><td><code>runtime/engine.py:935-943</code>; <code>runtime/streaming/manager.py:30-39</code></td></tr>
-  <tr><td>Credit check before paid media</td><td><code>runtime/engine.py:24740-24770</code></td></tr>
-  <tr><td>deliver_final refuses later tool calls</td><td><code>runtime/engine.py:5730-5736</code>; <code>config.py:1290-1302</code></td></tr>
-  <tr><td>Blank-answer retry on the same model</td><td><code>architecture/adr/2026-08-03-blank-turn-guard.md</code></td></tr>
-  <tr><td>Model fallback when not enabled</td><td><code>runtime/models/resolver.py:364-366</code></td></tr>
-  <tr><td>SOUL and BOOT admin-only</td><td><code>runtime/engine.py:6725</code>; <code>runtime/instructions.py:669</code></td></tr>
-  <tr><td>Workspace memory needs confirmation</td><td><code>runtime/instructions.py:672-702</code></td></tr>
-  <tr><td>AGENTS.md is a generated roster, not in the prompt</td><td><code>runtime/engine.py:9295-9301</code>; <code>runtime/instructions.py:1264-1270</code></td></tr>
-  <tr><td>Memory notes cut to a short summary (160 chars)</td><td><code>runtime/memory_store.py:231</code></td></tr>
-  <tr><td>Identity from a signed token; membership check</td><td><code>gateway/auth.py:57-77</code>, <code>168-246</code> (dev mode skips the check for non-token users)</td></tr>
-  <tr><td>Per-user paths from the signed-in user</td><td><code>runtime/user_scope.py:1-6</code>, <code>77</code></td></tr>
-</table></div>
-<p>Don't claim: that the model resolver "fails loudly"; that Pencil loads AGENTS.md or keeps rules in it; that Scribble has a step cap; that the agent edits its own SOUL; any documented reason for choosing Agno.</p>
-</details>
+<p>Careful. Don't tell the room that:</p>
+<ul>
+  <li>the model resolver "fails loudly";</li>
+  <li>Pencil loads AGENTS.md or keeps its rules in it;</li>
+  <li>Scribble has a step cap;</li>
+  <li>the agent edits its own SOUL;</li>
+  <li>there is a documented reason for choosing Agno.</li>
+</ul>
+<p>Each is easy to assume, and none of them is true of Pencil today.</p>
 </section>
 
 <footer>LaunchKit, Harbor and Ember Coffee Co. are fictional. OpenClaw details are from its public documentation. Pencil details are simplified for teaching.</footer>

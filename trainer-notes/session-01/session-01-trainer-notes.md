@@ -9,9 +9,9 @@ The story the trainer tells (Maya, Scribble's eight parts, the talk for each ste
 1. [Before the session](#1-before-the-session)
 2. [Running order](#2-running-order)
 3. [Opener demo: one AI call, then LangGraph](#3-opener-demo-one-ai-call-then-langgraph)
-4. [Harness hands-on (CP1.1), steps 0 to 4](#4-harness-hands-on-cp11-steps-0-to-4)
+4. [Harness hands-on, steps 0 to 4](#4-harness-hands-on-steps-0-to-4)
 5. [What the model saw](#5-what-the-model-saw)
-6. [Brand book lookup: RAG (CP1.2), steps 1 to 4](#6-brand-book-lookup-rag-cp12-steps-1-to-4)
+6. [Brand book lookup: RAG, steps 1 to 4](#6-brand-book-lookup-rag-steps-1-to-4)
 7. [Ending](#7-ending)
 8. [Troubleshooting](#8-troubleshooting)
 
@@ -78,7 +78,7 @@ Participants read the Session 1 pre-read before the day (LLM calls, LangGraph, t
 
 ## 2. Running order
 
-The session is two hours. Timings are given only where the branch sequence gives them.
+The session is two hours.
 
 | Guide step | Segment | Branch | What happens | Done when |
 | --- | --- | --- | --- | --- |
@@ -87,10 +87,10 @@ The session is two hours. Timings are given only where the branch sequence gives
 | 2 | Opener demo, part 1: one AI call | `session-01-llm-call` | Trainer demo in `approach_llm/app.py`: TODO 1 the answer shape, TODO 2 four calls. See [section 3](#3-opener-demo-one-ai-call-then-langgraph). | `scoreboard --approach llm`: 0/4 to 1/4 |
 | 2 | Opener demo, part 2: LangGraph | `session-01-langgraph` | Trainer demo in `approach_graph/graph.py`: saved state, router, answer path. | `scoreboard --approach graph`: 1/4 to 3/4 |
 | 2 | Demo without pasting, or catch-up | `session-01-llm-langgraph-solution` | Both parts solved. Nothing to edit. | LLM 1/4, graph 3/4 |
-| 3–6 | Talk (0:18–0:38 in the branch sequence) | none | Expert agents, one main agent, the harness, finding the right tool, the agent's DNA. Talk from the guide. | Discussion |
-| 7 | Harness hands-on (CP1.1) | `session-01-harness`, then `-step1` to `-step4` | Build the harness in four steps. See [section 4](#4-harness-hands-on-cp11-steps-0-to-4). | `uv run launchkit check all`: 51 passed |
+| 3–6 | Talk | none | Expert agents, one main agent, the harness, finding the right tool, the agent's DNA. Talk from the guide. | Discussion |
+| 7 | Harness hands-on | `session-01-harness`, then `-step1` to `-step4` | Build the harness in four steps. See [section 4](#4-harness-hands-on-steps-0-to-4). | `uv run launchkit check all`: 51 passed |
 | 7 | What the model saw | `session-01-harness-step4` | `launchkit explain`, the brand book cut. See [section 5](#5-what-the-model-saw). | n/a |
-| 7 | Brand book lookup: RAG (CP1.2), minutes 72–106 | `session-01-rag-step1` to `-step4` | One tool rebuilt four times. See [section 6](#6-brand-book-lookup-rag-cp12-steps-1-to-4). | `uv run launchkit check rag` on `session-01-rag-step4` |
+| 7 | Brand book lookup: RAG | `session-01-rag-step1` to `-step4` | One tool rebuilt four times. See [section 6](#6-brand-book-lookup-rag-steps-1-to-4). | `uv run launchkit check rag` on `session-01-rag-step4` |
 | 8 | Ending | none | Walk the eight parts, answer Maya (five needs close, "every size" opens Session 2), hand over to Session 2. See [section 7](#7-ending). | n/a |
 
 **Two codebases.** The opener branches (LiteLLM, `launchkit/scoreboard.py`) and the harness branches (Agno, `launchkit/harness/`, `launchkit/cli.py`) don't share history. Moving from the opener to the harness is a full checkout switch: `git checkout session-01-harness`, then `uv sync` again, because the dependencies differ. The opener's code is still on the harness branches, but its LangGraph parts need the opener's dependencies; run them from `session-01-langgraph`.
@@ -267,9 +267,9 @@ LangGraph also gives a save point after each step, a pause for Maya's approval, 
 
 Next: `git checkout session-01-harness`, then `uv sync`.
 
-## 4. Harness hands-on (CP1.1), steps 0 to 4
+## 4. Harness hands-on, steps 0 to 4
 
-Guide step 7, first half. CP1.1 is the first checkpoint: the harness, built on Agno.
+Guide step 7, first half: the harness, built on Agno.
 
 **How each step runs.** Break it first, build the missing piece, run the same command again and see it pass. The break-it-first runs use fake models, so they fail the same way every time and need no key.
 
@@ -507,7 +507,7 @@ Then `uv run launchkit run ../harbor "Poster for the Tidal bottle."` dies with a
 
 ```bash
 uv run launchkit check 4      # 7 passed
-uv run launchkit check all    # 51 passed: the CP1.1 gate
+uv run launchkit check all    # 51 passed: the harness is done
 ```
 
 **On the page.**
@@ -562,9 +562,9 @@ With the facts gone, the model turns a true fact down (the guide's beat). On som
 
 Budgets stop the bill. They do not pick the lines. The facts section needs retrieval, which is the next part.
 
-## 6. Brand book lookup: RAG (CP1.2), steps 1 to 4
+## 6. Brand book lookup: RAG, steps 1 to 4
 
-Guide step 7, "Then: give it the brand book". Minutes 72–106. CP1.2 is the second checkpoint: grounded copy.
+Guide step 7, "Then: give it the brand book". The goal: copy grounded in the brand's own facts.
 
 **Frame it as context engineering.** This part is about what the AI sees, not a fifth harness piece. One lookup tool, `get_brand_details`, built four ways, each fixing what the last one got wrong.
 
@@ -583,9 +583,9 @@ Guide step 7, "Then: give it the brand book". Minutes 72–106. CP1.2 is the sec
 | 1 · A tool to fetch brand details | `get_brand_details()`: the whole brand book | The whole book rides along on every turn; the key rule gets buried | `check rag1`: 8 passed | `session-01-rag-step1` |
 | 2 · Return only what matches | `get_brand_details(query)`: top 5 chunks by keywords (BM25) | "Will it spill in my bag?" finds nothing | `check rag2`: 8 passed | `session-01-rag-step2` |
 | 3 · Match what the words mean | top 5 by meaning, from a vector database | "Warm on a long shift?" gets Ember's Night Shift coffee | `check rag3`: 14 passed | `session-01-rag-step3` |
-| 4 · Keep each brand to its own chunks | the same search, filtered to the requesting brand inside the query | Nothing in CP1.2 | `check rag4`: 14 passed; `check rag`: 41 passed | `session-01-rag-step4` |
+| 4 · Keep each brand to its own chunks | the same search, filtered to the requesting brand inside the query | Nothing in this part | `check rag4`: 14 passed; `check rag`: 41 passed | `session-01-rag-step4` |
 
-### Step 1 · A tool to fetch brand details (CP1.2a)
+### Step 1 · A tool to fetch brand details
 
 **Carried in.** "Mention it's dishwasher-safe." Without the brand facts, LaunchKit writes "Fully dishwasher-safe, top to bottom." The fact sheet says the body is dishwasher-safe and the lid is hand-wash only. The model fills the gap with something plausible. Plausible is not true.
 
@@ -611,7 +611,7 @@ The trace has `tool get_brand_details() → … · 1970 tokens back`: the whole 
 
 **Bridge.** "The tool should return only the parts that match the question."
 
-### Step 2 · Return only what matches (CP1.2b)
+### Step 2 · Return only what matches
 
 **The fix.** Split the guide into chunks: one `## ` section each (`facts.md`: one fact per line). A good chunk is one idea and makes sense alone. Score each chunk by the words it shares with the query (BM25, a keyword score: rare words count more, long chunks a little less) and return the top 5.
 
@@ -642,7 +642,7 @@ uv run launchkit lookup harbor "Warm on a long shift?"
 
 **Bridge.** "We need to match what the words mean, not the words themselves."
 
-### Step 3 · Match what the words mean (CP1.2c)
+### Step 3 · Match what the words mean
 
 **The fix.** Semantic search, in three ideas:
 
@@ -686,7 +686,7 @@ Ember's poster leaks Harbor's embargoed Tidal launch. Harbor's "Warm on a long s
 
 **Bridge.** "Every row already says which brand it belongs to. The search has to use that."
 
-### Step 4 · Keep each brand to its own chunks (CP1.2d)
+### Step 4 · Keep each brand to its own chunks
 
 **The fix.** Every row carries metadata next to its vector: the brand (`workspace`), id, heading and text. The vector database filters on it inside the search, so only that brand's rows are ranked and the top 5 are always its own best 5. The workspace comes from the trusted request (harness step 4), bound by the harness when it builds the tool; the model cannot name another brand. The id is checked against the allow-list again before it goes into the query. Each claim also names the chunk it came from (`sources` on the spec), and the harness refuses a source the tool did not return in this run.
 
@@ -703,7 +703,7 @@ uv run launchkit check rag4
 uv run launchkit check rag     # all four retrieval steps: 41 passed
 ```
 
-The trace says `searched ember's chunks only (filter workspace = 'ember' inside the query)`. Ember's poster is about its own launch. Harbor's says the lid is hand-wash only and lists its chunk ids in `sources`. This clears CP1.2 checks 1 to 4; check 5 (section budgets) belongs to the context builder from [section 5](#5-what-the-model-saw).
+The trace says `searched ember's chunks only (filter workspace = 'ember' inside the query)`. Ember's poster is about its own launch. Harbor's says the lid is hand-wash only and lists its chunk ids in `sources`.
 
 **When a vector database is overkill.** A short, stable document for one customer can live in the prompt. Reach for one, with filters, when documents grow, change, or belong to different customers.
 
