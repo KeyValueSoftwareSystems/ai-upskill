@@ -20,7 +20,7 @@ The picture phase only gets the image prompt. The headline never reaches the ima
 Before you paste the card, run this and keep the output:
 
 ```
-LAUNCHKIT_IMAGES=placeholder uv run launchkit run harbor "Poster for the Tidal bottle on a misty lakeshore at dawn." --model fake:endless
+LAUNCHKIT_IMAGE_PROVIDER=placeholder uv run launchkit run harbor "Poster for the Tidal bottle on a misty lakeshore at dawn." --model fake:endless
 ```
 
 ```
@@ -82,7 +82,7 @@ Spend has a ceiling the model cannot talk its way past. The harness owns the sto
 ## See it
 
 Send a Harbor request with the real model. A picture appears in the poster panel after a few seconds.
-To see the leash fire, in the terminal: `LAUNCHKIT_IMAGES=placeholder uv run launchkit run harbor "Poster for the Tidal bottle" --model fake:endless`: three pictures, three refusals, then "stop".
+To see the leash fire, in the terminal: `LAUNCHKIT_IMAGE_PROVIDER=placeholder uv run launchkit run harbor "Poster for the Tidal bottle" --model fake:endless`: three pictures, three refusals, then "stop".
 
 ## Stuck?
 
