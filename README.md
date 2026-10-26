@@ -18,4 +18,4 @@ uv run python -m launchkit.check_setup
 
 The last command checks your Python version, dependencies, `.env`, LiteLLM key and URL, the chat model, pictures from our GPU, the backup image model and the `out/` folder, and prints a fix under anything marked FAIL. When it ends with **Setup complete**, you're ready for the session. A *warning* on the backup image model means pictures still work from the GPU: tell the trainer and carry on. The backup check makes one small paid image call; add `--no-image` to skip it (the GPU is still checked).
 
-Pictures come from our GPU first and fall back to `gpt-image-1` through LiteLLM. To skip real pictures, set `LAUNCHKIT_IMAGES=placeholder` in `.env`.
+Pictures come from our GPU first and fall back to `gpt-image-2` through LiteLLM. To skip real pictures, set `LAUNCHKIT_IMAGES=placeholder` in `.env`.
