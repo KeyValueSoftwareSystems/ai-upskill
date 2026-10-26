@@ -96,7 +96,11 @@ def run_request(
     files = [e.detail["result"].get("file") for e in trace.tool_calls("generate_image") if e.kind == "tool"]
     files = [f for f in files if f]
     result.image = Path(files[-1]) if files else None
-    trace.picture("done" if result.image else "none", file=str(result.image) if result.image else None)
+    failed = [str(t.result) for t in picture_run.tools or [] if t.tool_call_error and t.result]
+    if failed and not result.image:
+        trace.picture("none", file=None, reason=failed[-1])
+    else:
+        trace.picture("done" if result.image else "none", file=str(result.image) if result.image else None)
     return result
 
 
