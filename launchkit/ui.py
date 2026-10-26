@@ -275,7 +275,7 @@ function render(r, typed) {
           h("div", {class: "copy"}, h("div", {class: "h", text: field("headline")}),
                                     h("div", {class: "s", text: field("subheadline")}))),
         h("div", {class: "caption", text: r.images[0].placeholder
-          ? "Placeholder picture, drawn by code: no image model was called. Untick \u201cSkip the paid image call\u201d (and remove LAUNCHKIT_IMAGES=placeholder from .env, if set) for a real one."
+          ? "Placeholder picture, drawn by code: no image model was called. Untick \u201cSkip the paid image call\u201d (and set LAUNCHKIT_IMAGE_PROVIDER back to gpu in .env, if it says placeholder) for a real one."
           : "Preview: the copy is laid over the picture by code, not drawn by the image model."})));
     }
     const table = h("table");
