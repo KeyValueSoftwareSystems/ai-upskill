@@ -1,8 +1,9 @@
 """Check that a trainee's environment is ready before the session starts.
 
     uv run python -m launchkit.check_setup             # full check
-    uv run python -m launchkit.check_setup --no-image  # skip the paid backup image call
+    uv run python -m launchkit.check_setup --no-image  # skip the paid picture call (LAUNCHKIT_IMAGE_PROVIDER=litellm)
 
+Pictures are checked on the one provider LAUNCHKIT_IMAGE_PROVIDER picks: gpu (the default), litellm or placeholder.
 Prints one line per check, a one-line fix under anything that fails, and exits
 0 when everything passed (or was skipped on request), 1 otherwise.
 """
@@ -30,7 +31,6 @@ class Check:
 
     def __init__(self) -> None:
         self.failed = False
-        self.warned = False
 
     def start(self, label: str) -> None:
         # Print the label before the work, so a slow API call doesn't look like a hang.
@@ -41,11 +41,6 @@ class Check:
 
     def skip(self, reason: str) -> None:
         print(f"skipped ({reason})", flush=True)
-
-    def warn(self, note: str) -> None:
-        self.warned = True
-        print("warning", flush=True)
-        print(f"    {note}", flush=True)
 
     def fail(self, fix: str) -> None:
         self.failed = True
@@ -173,17 +168,17 @@ def check_chat(c: Check, blocked: str | None) -> None:
         c.fail(f"'{model}' answered with an empty reply. Set LAUNCHKIT_MODEL in .env to a chat model such as gpt-4.1-mini")
 
 
-def check_gpu(c: Check, blocked: str | None) -> bool:
-    """Pictures come from our GPU first, so this is the picture check that must pass."""
+def check_gpu(c: Check, blocked: str | None) -> None:
+    """Pictures from our GPU, when LAUNCHKIT_IMAGE_PROVIDER=gpu (the default)."""
     model = os.getenv("IMAGESVC_MODEL", "flux-2-klein-9b")
     c.start(f"Pictures: our GPU ({model})")
     if blocked:
         c.skip(blocked)
-        return False
+        return
     url, key = os.getenv("IMAGESVC_URL", "").strip(), os.getenv("IMAGESVC_KEY", "").strip()
     if not url:
         c.fail("Add IMAGESVC_URL and IMAGESVC_KEY to .env (copy the lines from .env.example; ask the trainer for the key)")
-        return False
+        return
     try:
         import openai
         from PIL import Image
@@ -194,26 +189,24 @@ def check_gpu(c: Check, blocked: str | None) -> bool:
         img = Image.open(io.BytesIO(base64.b64decode(reply.data[0].b64_json)))
     except openai.AuthenticationError:
         c.fail("The GPU refused the key. Check IMAGESVC_KEY in .env (ask the trainer for it)")
-        return False
+        return
     except (openai.APIConnectionError, openai.APITimeoutError):
-        c.fail("Could not reach our GPU. Turn the VPN on, and check IMAGESVC_URL in .env")
-        return False
+        c.fail("Could not reach our GPU. Turn the VPN on, and check IMAGESVC_URL in .env. "
+               "If the GPU is down for everyone, the trainer will say to set LAUNCHKIT_IMAGE_PROVIDER=litellm")
+        return
     except Exception as err:
         c.fail(f"The GPU did not make a picture ({type(err).__name__}: {_said(err)}). Show the trainer")
-        return False
+        return
     c.ok(f"{img.width}x{img.height}")
-    return True
 
 
-def check_image(c: Check, blocked: str | None, gpu_ok: bool) -> None:
-    """The backup image model behind LiteLLM, used only when the GPU can't be reached."""
+def check_image(c: Check, blocked: str | None) -> None:
+    """Pictures from the image model through LiteLLM, when LAUNCHKIT_IMAGE_PROVIDER=litellm."""
     model = os.getenv("LAUNCHKIT_IMAGE_MODEL", "gpt-image-2")
-    c.start(f"Backup pictures ({model})")
+    c.start(f"Pictures: LiteLLM ({model})")
     if blocked:
         c.skip(blocked)
         return
-    problem = c.warn if gpu_ok else c.fail
-    after = " Pictures still work while the GPU is up." if gpu_ok else " With the GPU down too, no pictures can be made."
     try:
         from .llm import client
 
@@ -222,7 +215,7 @@ def check_image(c: Check, blocked: str | None, gpu_ok: bool) -> None:
             **_image_options(model),
         )
     except Exception as err:
-        problem(_api_fix(err, model, "LAUNCHKIT_IMAGE_MODEL") + "." + after)
+        c.fail(_api_fix(err, model, "LAUNCHKIT_IMAGE_MODEL"))
         return
     try:
         from PIL import Image
@@ -230,7 +223,7 @@ def check_image(c: Check, blocked: str | None, gpu_ok: bool) -> None:
         img = Image.open(io.BytesIO(base64.b64decode(reply.data[0].b64_json)))
         c.ok(f"{img.width}x{img.height}")
     except Exception:
-        problem(f"'{model}' answered but the image could not be decoded.{after}")
+        c.fail(f"'{model}' answered but the image could not be decoded. Set LAUNCHKIT_IMAGE_MODEL in .env to an image model such as gpt-image-2")
 
 
 def check_out_dir(c: Check) -> None:
@@ -247,7 +240,7 @@ def check_out_dir(c: Check) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Check that your LaunchKit setup is ready.")
-    parser.add_argument("--no-image", action="store_true", help="skip the paid backup image call (the GPU is still checked)")
+    parser.add_argument("--no-image", action="store_true", help="skip the paid picture call (LAUNCHKIT_IMAGE_PROVIDER=litellm only)")
     args = parser.parse_args(argv)
 
     c = Check()
@@ -259,14 +252,21 @@ def main(argv: list[str] | None = None) -> int:
     api_blocked = None if deps_ok and key_ok else ("no key" if deps_ok else "dependencies missing")
     check_chat(c, api_blocked)
 
-    placeholder = os.getenv("LAUNCHKIT_IMAGES", "").strip() == "placeholder"
-    gpu_ok = check_gpu(c, None if deps_ok and not placeholder else ("dependencies missing" if not deps_ok else "LAUNCHKIT_IMAGES=placeholder"))
-    image_blocked = api_blocked
-    if image_blocked is None and args.no_image:
-        image_blocked = "--no-image"
-    elif image_blocked is None and placeholder:
-        image_blocked = "LAUNCHKIT_IMAGES=placeholder"
-    check_image(c, image_blocked, gpu_ok)
+    from .gpu_images import image_provider
+
+    try:
+        provider = image_provider()
+    except ValueError as err:
+        c.start("Pictures")
+        c.fail(str(err))
+        provider = None
+    if provider == "placeholder":
+        c.start("Pictures: placeholder")
+        c.skip("code draws a stand-in picture; set LAUNCHKIT_IMAGE_PROVIDER=gpu for real ones")
+    elif provider == "gpu":
+        check_gpu(c, None if deps_ok else "dependencies missing")
+    elif provider == "litellm":
+        check_image(c, api_blocked or ("--no-image" if args.no_image else None))
 
     check_out_dir(c)
 
@@ -274,9 +274,7 @@ def main(argv: list[str] | None = None) -> int:
     if c.failed:
         print("Setup incomplete: fix the items marked FAIL and run this again.")
         return 1
-    if c.warned:
-        print("Setup complete, with a warning above: tell the trainer, but you can carry on.")
-    print(f"Setup complete. Next: git checkout {NEXT_BRANCH}" if not c.warned else f"Next: git checkout {NEXT_BRANCH}")
+    print(f"Setup complete. Next: git checkout {NEXT_BRANCH}")
     return 0
 
 

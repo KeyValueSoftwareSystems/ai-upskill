@@ -6,7 +6,7 @@ from time import time
 
 from PIL import Image, ImageDraw, ImageFont
 
-from launchkit.gpu_images import gpu_image
+from launchkit.gpu_images import gpu_image, image_provider
 
 
 class FakeImages:
@@ -75,8 +75,9 @@ class RealImages:
         self.out_dir.mkdir(parents=True, exist_ok=True)
         palette = ", ".join(f"{name} {value}" for name, value in colours.items())
         full_prompt = f"{prompt}. Colour palette: {palette}. The product is plain and unbranded, with a smooth blank surface and no label." if palette else f"{prompt}. The product is plain and unbranded, with a smooth blank surface and no label."
-        data = gpu_image(full_prompt, self.settings.image_size, reference=str(reference) if reference else None)
-        if data is None:
+        if image_provider() == "gpu":
+            data = gpu_image(full_prompt, self.settings.image_size, reference=str(reference) if reference else None)
+        else:
             data = base64.b64decode(self.call(full_prompt, reference).data[0].b64_json)
         path = self.out_dir / f"poster-{int(time() * 1000)}.png"
         path.write_bytes(data)
@@ -98,7 +99,7 @@ class FromPicture:
 def make_images(settings):
     out_dir = settings.data_dir / "outputs"
     has_key = (os.environ.get("LITELLM_API_KEY") and os.environ.get("LITELLM_BASE_URL")) or os.environ.get("OPENAI_API_KEY") or os.environ.get("IMAGESVC_URL")
-    placeholder = settings.image_mode == "fake" or os.environ.get("LAUNCHKIT_IMAGES") == "placeholder"
+    placeholder = settings.image_mode == "fake" or image_provider() == "placeholder"
     if placeholder or not has_key:
         return FakeImages(out_dir)
     return RealImages(settings, out_dir)
