@@ -7,6 +7,7 @@ from launchkit.harness.limits import make_leash
 from launchkit.harness.spec import PosterSpec, Turn
 from launchkit.harness.tools import make_generate_image
 from launchkit.harness.trace import Trace
+from launchkit.harness.web import make_search_web
 from launchkit.harness.workspace import Workspace
 
 SPEC_TASK = """You are talking with a marketer. Decide what kind of turn this is.
@@ -57,4 +58,10 @@ def build_picture_agent(spec: PosterSpec, model, images, colours: dict, trace: T
 
 def build_research_agent(model, settings, trace: Trace) -> Agent | None:
     """CP2.2b: the research subagent. RESEARCH_TASK, search_web only, no session store and no chat history."""
-    return None
+    return Agent(
+        model=model,
+        system_message=RESEARCH_TASK,
+        tools=[make_search_web(settings)],
+        tool_hooks=[make_leash(settings.limits, trace)],
+        telemetry=False,
+    )
