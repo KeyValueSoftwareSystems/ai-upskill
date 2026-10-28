@@ -23,6 +23,7 @@ from launchkit.harness.media import media_entries
 from launchkit.harness.notion import make_board
 from launchkit.harness.picture_tools import PictureDesk
 from launchkit.harness.request import Request, resolve_workspace_id
+from launchkit.harness.research import make_research_entries
 from launchkit.harness.run import history_size, raise_if_failed, tool_result_size
 from launchkit.harness.tools import make_generate_image
 from launchkit.harness.trace import Trace
@@ -84,6 +85,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
         search_entry(settings),
         *media_entries(settings, model, desk),
         *(board or make_board(settings, trace, user)).entries(),
+        *make_research_entries(model, settings, trace),
     ]
     catalogue = Catalogue(entries, load_skills(), trace, approve)
     catalogue.leash = make_leash(replace(settings.limits, step_cap=10_000), trace)

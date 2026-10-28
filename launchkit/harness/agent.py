@@ -53,3 +53,8 @@ def build_picture_agent(spec: PosterSpec, model, images, colours: dict, trace: T
         tool_hooks=[make_leash(settings.limits, trace)],
         telemetry=False,
     )
+
+
+def build_research_agent(model, settings, trace: Trace) -> Agent | None:
+    """CP2.2b: the research subagent. RESEARCH_TASK, search_web only, no session store and no chat history."""
+    return None
