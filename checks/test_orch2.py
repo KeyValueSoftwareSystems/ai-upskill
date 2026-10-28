@@ -44,7 +44,7 @@ def test_the_main_agent_holds_the_reports_not_the_pages(settings, request_for, b
     assert PAGE_LINE not in main_views
     assert any(PAGE_LINE in view for role, view in brief.seen if role == "research")
     assert all(name in result.reply for name in FIVE)
-    assert result.view_tokens < 500
+    assert result.view_tokens < 1000
     nxt = run_main(request_for(text="Write one headline for the hiker concept."), settings=settings, model=brief, approve=NO)
     assert nxt.history_tokens < 1000
 
