@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from launchkit.adapters.fakes import EchoModel, EndlessModel, GoodModel, LookupModel, MalformedModel
+from launchkit.adapters.fakes import BriefModel, EchoModel, EndlessModel, GoodModel, LookupModel, MalformedModel
 from launchkit.adapters.images import FakeImages
 from launchkit.harness.request import Request
 from launchkit.harness.trace import Trace
@@ -74,6 +74,17 @@ def malformed():
 @pytest.fixture
 def endless():
     return EndlessModel()
+
+
+@pytest.fixture
+def brief():
+    return BriefModel()
+
+
+@pytest.fixture
+def slow_search(settings):
+    """Every search_web call takes 0.4 seconds, like a slow page, so one-after-another and side-by-side differ in time."""
+    return replace(settings, search_delay=0.4)
 
 
 def pytest_runtest_logreport(report):

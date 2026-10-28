@@ -359,3 +359,58 @@ class ToolsModel(FakeModel):
             name, arguments = plan[step]
             return tool_call_response(name, arguments, f"call_{step + 2}")
         return text_response("Done. " + done[-1][:200], messages)
+
+
+COMPETITORS = ("Northline", "Ridgeway", "Stillwater", "Kestrel", "Alder Co.", "Ferro")
+
+
+def competitors_in(text: str) -> list[str]:
+    return [name for name in COMPETITORS if name.lower() in text.lower()]
+
+
+def research_report(name: str) -> str:
+    return f"{name}: launch line, channels and what to avoid copying, in two lines from two saved pages."
+
+
+class BriefModel(FakeModel):
+    """Plays both agents in the competitor job. As the main agent it finds the competitor_research skill, loads it and does
+    what the skill names: search_web once per competitor, one after another, or research_many once.
+    As the research subagent it searches once and replies with a two-line report. It keeps every view it was shown in seen."""
+
+    def __init__(self):
+        super().__init__("brief")
+        self.seen: list[tuple[str, str]] = []
+
+    def answer(self, messages, tools):
+        view = " ".join(str(m.content or "") for m in messages)
+        if "run_tool" in tool_names(tools):
+            self.seen.append(("main", view))
+            return self.main(messages)
+        self.seen.append(("research", view))
+        return self.research(messages)
+
+    def research(self, messages):
+        brief = last_user_text(messages)
+        if not has_tool_result(messages):
+            return tool_call_response("search_web", {"query": brief}, "search_1")
+        return text_response(research_report(next(iter(competitors_in(brief)), "The competitor")), messages)
+
+    def main(self, messages):
+        asked = last_user_text(messages)
+        wanted = competitors_in(asked)
+        if not wanted:
+            return text_response("Cold from trail to train." if "headline" in asked.lower() else "Morning, Maya. Ready when you are.", messages)
+        results = [str(m.content or "") for m in messages if getattr(m, "role", None) == "tool" and not getattr(m, "from_history", False)]
+        if not results:
+            return tool_call_response("find_tool", {"query": asked}, "find_1")
+        if len(results) == 1:
+            if "skill competitor_research" not in results[0]:
+                return text_response("I have no skill for competitor research yet.", messages)
+            return tool_call_response("run_skill", {"name": "competitor_research"}, "skill_1")
+        skill, done = results[1], len(results) - 2
+        if "research_many" in skill and done == 0:
+            briefs = [f"How is {name} launching bottles this season? Message, channels, what to avoid copying." for name in wanted]
+            return tool_call_response("run_tool", {"name": "research_many", "inputs": {"briefs": briefs}}, "many_1")
+        if "research_many" not in skill and "search_web" in skill and done < len(wanted):
+            return tool_call_response("run_tool", {"name": "search_web", "inputs": {"query": f"{wanted[done]} bottle launch"}}, f"search_{done + 1}")
+        return text_response("\n".join(research_report(name) for name in wanted), messages)
