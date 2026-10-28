@@ -3,8 +3,8 @@ from launchkit.harness.main import run_main
 from launchkit.harness.research import make_research_entries
 from launchkit.harness.trace import Trace
 
-ASK = "How are Northline, Ridgeway, Stillwater, Kestrel and Alder Co. launching bottles this season? One paragraph each."
-FIVE = ["Northline", "Ridgeway", "Stillwater", "Kestrel", "Alder Co."]
+ASK = "How are Northline, Ridgeway, Stillwater, Kestrel and Hollowmere launching bottles this season? One paragraph each."
+FIVE = ["Northline", "Ridgeway", "Stillwater", "Kestrel", "Hollowmere"]
 PAGE_LINE = "Carry the mountain home"
 NO = lambda name, inputs: False
 
