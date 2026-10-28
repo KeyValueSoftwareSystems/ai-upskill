@@ -17,11 +17,11 @@ The five competitors do not depend on each other, so five research agents can ru
 Run checkpoint 1's command and keep the last line:
 
 ```
-LAUNCHKIT_SEARCH_DELAY=0.4 uv run launchkit main harbor "How are Northline, Ridgeway, Stillwater, Kestrel and Alder Co. launching bottles this season? One paragraph each." --model fake:brief --session cp2
+LAUNCHKIT_SEARCH_DELAY=0.4 uv run launchkit main harbor "How are Northline, Ridgeway, Stillwater, Kestrel and Hollowmere launching bottles this season? One paragraph each." --model fake:brief --session cp2
 ```
 
 ```
-main agent's view  3167 tokens of tool results this turn · 0 tokens of history carried in · took 2.1 s
+main agent's view  3172 tokens of tool results this turn · 0 tokens of history carried in · took 2.1 s
 ```
 
 ## Prompt card, for your coding agent
@@ -71,7 +71,7 @@ Then the gate for the whole part: `uv run launchkit check orch`.
 ## Run it again
 
 ```
-LAUNCHKIT_SEARCH_DELAY=0.4 uv run launchkit main harbor "How are Northline, Ridgeway, Stillwater, Kestrel and Alder Co. launching bottles this season? One paragraph each." --model fake:brief --session cp2b
+LAUNCHKIT_SEARCH_DELAY=0.4 uv run launchkit main harbor "How are Northline, Ridgeway, Stillwater, Kestrel and Hollowmere launching bottles this season? One paragraph each." --model fake:brief --session cp2b
 ```
 
 ```
@@ -87,13 +87,13 @@ main agent's view  507 tokens of tool results this turn · 0 tokens of history c
 And Maya's next ask, `"Write one headline for the hiker concept."` with `--session cp2b`:
 
 ```
-main agent's view  0 tokens of tool results this turn · 665 tokens of history carried in · took 0.1 s
+main agent's view  0 tokens of tool results this turn · 655 tokens of history carried in · took 0.1 s
 ```
 
 | | Checkpoint 1 | Checkpoint 2 |
 | --- | --- | --- |
 | Pages in the main agent's view | about 3,200 tokens | none; five reports |
-| Carried into the next turn | 3,316 tokens | 665 tokens |
+| Carried into the next turn | 3,321 tokens | 655 tokens |
 | Five searches | one after another, 2.1 s | at the same time, 0.5 s |
 
 ## Why it matters

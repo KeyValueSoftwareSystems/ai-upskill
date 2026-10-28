@@ -1,9 +1,9 @@
-# Forum: Alder Co. Heritage Flask, style over substance?
-Address: https://hillwalkers-forum.example/t/alder-heritage-flask
+# Forum: Hollowmere Heritage Flask, style over substance?
+Address: https://hillwalkers-forum.example/t/hollowmere-heritage-flask
 
 Hillwalkers Forum › Gear Talk › Hydration · 23 replies · Please search before starting a new thread
 
-OP (tweed_trekker): Got the Alder Heritage Flask for my birthday. Looks like something my grandad had. Love it.
+OP (tweed_trekker): Got the Hollowmere Heritage Flask for my birthday. Looks like something my grandad had. Love it.
 
 reply (mapandcompass): Looks lovely. The cork cap is a pain to clean and it's 610 g. Not a hill flask.
 
