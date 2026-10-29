@@ -54,5 +54,10 @@ def tool_function(tool, link: McpLink):
 
 
 def connect(server) -> list[Entry]:
-    """Step 4: not built yet. Connect to the server, list its tools, and make each one a catalogue entry."""
-    return []
+    """Connect to an MCP server, list its tools, and make each one a catalogue entry. The server describes its own
+    tools, and says which ones only read."""
+    link = McpLink(server)
+    return [
+        Entry(tool.name, (tool.description or tool.name).split("\n")[0], "read" if tool.annotations and tool.annotations.readOnlyHint else "write", tool_function(tool, link))
+        for tool in link.list_tools()
+    ]
