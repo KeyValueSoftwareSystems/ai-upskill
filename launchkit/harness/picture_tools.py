@@ -34,10 +34,19 @@ def centre_window(size: tuple[int, int], target: tuple[int, int]) -> tuple[int, 
     return (0, (h - nh) // 2, w, (h - nh) // 2 + nh)
 
 
-@todo
 def window_around(box: list[int], size: tuple[int, int], target: tuple[int, int], margin: float = 0.08) -> tuple[int, int, int, int] | None:
-    """Step 2: the bottle-box fit rule. Not built yet."""
-    return None
+    """The bottle-box fit rule. The biggest window of the target's shape, centred on the box and pushed back inside the
+    picture. It counts only if it holds the whole box plus a margin on every side; else None. Plain code, no model."""
+    w, h = size
+    tw, th = target
+    ww, wh = (h * tw / th, h) if w / h > tw / th else (w, w * th / tw)
+    cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
+    left = min(max(cx - ww / 2, 0), w - ww)
+    top = min(max(cy - wh / 2, 0), h - wh)
+    window = (round(left), round(top), round(left + ww), round(top + wh))
+    mx, my = (box[2] - box[0]) * margin, (box[3] - box[1]) * margin
+    fits = window[0] <= box[0] - mx and window[1] <= box[1] - my and window[2] >= box[2] + mx and window[3] >= box[3] + my
+    return window if fits else None
 
 
 def colour_of(name: str, colours: dict) -> str:
