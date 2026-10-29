@@ -48,6 +48,7 @@ crop(width, height, left, top, right, bottom): cut that window and resize it to
 expand_canvas(width, height, colour): fit the whole poster inside (width, height)
 without cutting, centred, and fill the new space with colour_of(colour, self.colours).
 scale(width, height): stretch the poster to (width, height).
+In entries(), drop the centre_crop line: the one tool is now split into these four.
 ```
 
 ## Prove it
@@ -59,7 +60,7 @@ uv run launchkit check tools1
 - `centre_crop` makes every Harbor size, and cuts the bottle in the web banner only.
 - `detect_focal_point` finds the bottle and asks the model once.
 - `crop` cuts the window it is given; `expand_canvas` keeps everything and adds bars in the brand colour; `scale` stretches.
-- The built tools join the catalogue.
+- The four tools join the catalogue, and `centre_crop` leaves it.
 
 ## Run it again
 

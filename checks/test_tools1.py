@@ -61,7 +61,8 @@ def test_scale_stretches_to_the_new_size(settings):
     assert Image.open(desk(settings).scale(1080, 1920)["file"]).size == (1080, 1920)
 
 
-def test_the_built_tools_join_the_catalogue(settings):
-    """Once built, the five picture tools are in the main agent's catalogue."""
+def test_the_four_tools_replace_centre_crop_in_the_catalogue(settings):
+    """Once built, the four small tools are in the main agent's catalogue, and centre_crop is not: it was split into them."""
     entries = build_catalogue(settings, Trace(), lambda name, inputs: False).entries
-    assert {"centre_crop", "detect_focal_point", "crop", "expand_canvas", "scale"} <= set(entries)
+    assert {"detect_focal_point", "crop", "expand_canvas", "scale"} <= set(entries)
+    assert "centre_crop" not in entries

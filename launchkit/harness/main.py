@@ -40,8 +40,13 @@ class MainResult:
     history_tokens: int = 0
 
 
+def placements_text(ws) -> str:
+    sizes = [f"{name} {size}" for name, group in ws.rules.get("placements", {}).items() for size in group]
+    return "This brand's placements (every size): " + ", ".join(sizes) + "." if sizes else ""
+
+
 def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue) -> Agent:
-    ctx.set("rules", f"{ws.soul}\n\n{ws.agents}")
+    ctx.set("rules", f"{ws.soul}\n\n{ws.agents}\n\n{placements_text(ws)}")
     ctx.set("task", MAIN_TASK)
     return Agent(
         model=model,
