@@ -14,26 +14,28 @@ from typing import Literal
 from agno.agent import Agent
 from agno.tools.function import Function
 
-from launchkit.adapters.image_providers import FromPicture, make_images
-from launchkit.adapters.models import check_reachable, model_name, resolve_model
-from launchkit.agents.prompt import ContextBuilder
-from launchkit.brands.request import Request, resolve_workspace_id
-from launchkit.guardrails.limits import make_leash
-from launchkit.memory.attached_pictures import Pictures
-from launchkit.memory.chat_history import session_db
-from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal
-from launchkit.tools.get_brand_details import make_get_brand_details
-from launchkit.tools.resize_poster import PictureDesk
+from launchkit.adapters.images import make_images
+from launchkit.adapters.models import model_name, resolve_model
+from launchkit.harness.agent import session_db
+from launchkit.harness.brand import make_get_brand_details
+from launchkit.harness.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
+from launchkit.harness.copy_check import make_check_copy
+from launchkit.harness.context import ContextBuilder
+from launchkit.harness.limits import make_leash
+from launchkit.harness.picture_tools import PictureDesk
+from launchkit.harness.pictures import Pictures
+from launchkit.harness.request import Request, resolve_workspace_id
 from pydantic import BaseModel, Field
 
-from launchkit.agents.poster_flow import history_size, looked_up, raise_if_failed, tool_result_size
-from launchkit.brands.workspace import Workspace, load_workspace
-from launchkit.guardrails.poster_check import PosterSpec, SpecError, repair_message, validate_spec
+from launchkit.harness.run import history_size, looked_up, raise_if_failed, tool_result_size
+from launchkit.harness.spec import PosterSpec, SpecError, repair_message, validate_spec
+from launchkit.harness.tools import make_generate_image
+from launchkit.harness.trace import Trace
+from launchkit.harness.workspace import Workspace, load_workspace
 from launchkit.settings import settings as default_settings
-from launchkit.tools.generate_image import make_generate_image
-from launchkit.trace import Trace
 
 MAIN_TASK = """You work for the marketer you are talking with. Decide what each request needs and use your tools for it.
+When a skill fits the job, load it once with run_skill and do the job the way its steps say.
 Brand and product facts come only from get_brand_details. Answer in plain words, in the brand's voice."""
 
 MAIN_STEP_CAP = 12
@@ -56,7 +58,6 @@ class MainResult:
     seconds: float = 0.0
     view_tokens: int = 0
     history_tokens: int = 0
-    kept: list[Path] = field(default_factory=list)
 
 
 def placements_text(ws) -> str:
@@ -67,7 +68,7 @@ def placements_text(ws) -> str:
 def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue, pictures: Pictures | None = None) -> Agent:
     ctx.set("rules", f"{ws.soul}\n\n{ws.agents}\n\n{placements_text(ws)}")
     ctx.set("facts", f"Today is {date.today():%-d %B %Y}. {pictures.describe() if pictures else ''}".strip())
-    ctx.set("task", MAIN_TASK)
+    ctx.set("task", "\n\n".join(part for part in (MAIN_TASK, catalogue.skills_text()) if part))
     return Agent(
         model=model,
         system_message=ctx.render(),
@@ -86,9 +87,10 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
     entries: list[Entry] = [
         Entry("get_brand_details", "look up this brand's guide and product facts", "read", make_get_brand_details(ws, trace, settings)),
         Entry("generate_image", "make a new poster picture from a scene description", "read", make_generate_image(make_images(settings), ws.colours, trace, pictures.made if pictures else None)),
-        *PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None).entries(),
+        *PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None).entries(),
+        Entry("check_copy", "check a headline, subheadline and body against the brand's word limits and banned claims", "read", make_check_copy(ws)),
     ]
-    return Catalogue(entries, trace, approve)
+    return Catalogue(entries, load_skills(), trace, approve)
 
 
 def run_main(req: Request, *, settings=default_settings, model=None, trace: Trace | None = None, approve=ask_in_terminal, board=None, attach=()) -> MainResult:
@@ -97,7 +99,6 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     wid = resolve_workspace_id(req, settings)
     ws = load_workspace(wid, settings, trace)
     model = model if model is not None else resolve_model(settings, trace)
-    check_reachable(model)
     pictures = Pictures(settings, wid, req.user_id, req.session_id)
     for picture in attach:
         trace.note(f"attached {Path(picture).name} to this conversation")
@@ -115,9 +116,7 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
         turn.spec = checked_spec(turn.spec, agent, session, req, ws, model, trace, result)
     result.spec = turn.spec
     if turn.spec is not None and not any(trace.tool_calls(name) for name in PICTURE_WORK):
-        kept = make_picture(turn.spec, catalogue, trace, pictures, settings, ws)
-        if kept is not None:
-            result.kept.append(kept)
+        make_picture(turn.spec, catalogue, trace)
     result.reply = turn.reply or (poster_words(turn.spec) if turn.spec else "")
     result.seconds = time.perf_counter() - started
     result.view_tokens = tool_result_size(run)[0]
@@ -181,28 +180,9 @@ def loose(tools: list) -> list[Function]:
 PICTURE_WORK = ("generate_image", "centre_crop", "crop", "expand_canvas", "scale", "describe_image")
 
 
-def make_picture(spec: PosterSpec, catalogue: Catalogue, trace: Trace, pictures: Pictures | None = None, settings=None, ws=None) -> Path | None:
+def make_picture(spec: PosterSpec, catalogue: Catalogue, trace: Trace):
     """Session 1's picture phase, kept: a checked poster gets its picture, made from the image prompt, never from the
-    words. It joins the conversation, so "now all the sizes" works on it. As in Session 1, the same image prompt keeps
-    the poster's picture, and a changed one reworks it. Returns the kept picture, if any."""
+    words. It joins the conversation, so "now all the sizes" works on it."""
     generate = catalogue.entries.get("generate_image")
-    if generate is None:
-        return None
-    last = pictures.last_poster() if pictures is not None else None
-    given = [i for i in pictures.all() if i["by"] != "size"] if pictures is not None else []
-    if given and given[-1]["by"] == "attached":
-        trace.picture("kept", file=given[-1]["file"], reason="the marketer gave this photo, so the poster uses it")
-        pictures.mark_poster(Path(given[-1]["file"]), spec.image_prompt)
-        return Path(given[-1]["file"])
-    if last is not None and last["image_prompt"] == spec.image_prompt:
-        trace.picture("reused", file=last["file"], reason="the image prompt did not change")
-        return Path(last["file"])
-    fn = generate.fn
-    if last is not None and settings is not None and ws is not None:
-        trace.picture("rework", file=last["file"], reason="the image prompt changed, so the new picture starts from this one")
-        fn = make_generate_image(FromPicture(make_images(settings), Path(last["file"])), ws.colours, trace, pictures.made)
-    made = fn(spec.image_prompt)
-    trace.tool("generate_image", {"image_prompt": spec.image_prompt}, made)
-    if pictures is not None:
-        pictures.mark_poster(Path(made["file"]), spec.image_prompt)
-    return None
+    if generate is not None:
+        trace.tool("generate_image", {"image_prompt": spec.image_prompt}, generate.fn(spec.image_prompt))
