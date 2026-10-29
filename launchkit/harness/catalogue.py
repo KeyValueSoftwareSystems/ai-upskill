@@ -113,7 +113,23 @@ class Catalogue:
         return find_tool
 
     def make_run_tool(self):
-        return run_tool_todo
+        def run_tool(name: str, inputs: dict) -> str:
+            """Run a tool from the catalogue by name, with its inputs as an object."""
+            entry = self.entries.get(name.removeprefix("functions."))
+            if entry is None:
+                return f"No tool named {name}. Call find_tool to see what exists."
+            try:
+                inspect.signature(entry.fn).bind(**inputs)
+            except TypeError as error:
+                return f"Wrong inputs for {name}: {error}. Check the skill's steps or call find_tool."
+            if self.leash is None:
+                result = entry.fn(**inputs)
+                self.trace.tool(name, inputs, result)
+            else:
+                result = self.leash(name, entry.fn, inputs)
+            return result if isinstance(result, str) else json.dumps(result)
+
+        return run_tool
 
 def call_shape(entry: Entry) -> str:
     """The exact call to make, e.g. run_tool("crop", {"width": int, "height": int}). Optional inputs are left out."""
@@ -125,11 +141,3 @@ def call_shape(entry: Entry) -> str:
 def stems(text: str) -> set[str]:
     """Words, cut to their first five letters, so "competitors" meets "competitor" and "sizes" meets "size"."""
     return {w[:5] for w in re.findall(r"[a-z]+", text.lower()) if len(w) > 2} - {"the", "and", "for", "you", "with", "this"}
-
-
-def run_tool_todo(name: str, inputs: dict) -> str:
-    """Step 3: not built yet."""
-    return "not built"
-
-
-run_tool_todo.todo = True

@@ -77,7 +77,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
     desk = PictureDesk(settings, ws.colours, trace, model)
     entries: list[Entry] = [
         Entry("get_brand_details", "look up this brand's guide and product facts", "read", make_get_brand_details(ws, trace, settings)),
-        Entry("generate_image", "make a new poster picture from a scene description", "read", make_generate_image(make_images(settings), ws.colours, trace)),
+        Entry("generate_image", "make a new poster picture from a scene description, only when no photo is given", "read", make_generate_image(make_images(settings), ws.colours, trace)),
         *desk.entries(),
         Entry("check_copy", "check a headline, subheadline and body against the brand's word limits and banned claims", "read", make_check_copy(ws)),
         search_entry(settings),
