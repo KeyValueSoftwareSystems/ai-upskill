@@ -17,6 +17,7 @@ dependencies = [
     "sentence-transformers>=3.0",
     "torch>=2.4",
     "lancedb>=0.25",
+    "mcp>=1.20,<2",
 ]
 
 [project.scripts]

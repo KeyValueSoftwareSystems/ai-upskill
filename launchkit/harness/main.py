@@ -14,6 +14,7 @@ from launchkit.adapters.fakes import FakeModel
 from launchkit.adapters.images import make_images
 from launchkit.adapters.models import model_name, resolve_model
 from launchkit.harness.agent import session_db
+from launchkit.harness.board import Board
 from launchkit.harness.brand import make_get_brand_details
 from launchkit.harness.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
 from launchkit.harness.copy_check import make_check_copy
@@ -82,6 +83,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
         Entry("check_copy", "check a headline, subheadline and body against the brand's word limits and banned claims", "read", make_check_copy(ws)),
         search_entry(settings),
         *media_entries(settings, model, desk),
+        *(board or Board()).entries(),
     ]
     catalogue = Catalogue(entries, load_skills(), trace, approve)
     catalogue.leash = make_leash(replace(settings.limits, step_cap=10_000), trace)
