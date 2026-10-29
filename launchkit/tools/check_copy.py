@@ -8,7 +8,7 @@ from launchkit.guardrails.poster_check import WORD_LIMITS
 
 
 def make_check_copy(ws: Workspace):
-    def check_copy(headline: str, subheadline: str = "", body: str = "") -> dict:
+    def check_copy(headline: str = "", subheadline: str = "", body: str = "") -> dict:
         """Check poster words against this brand's word limits and banned claims before you answer. Returns ok and
         the problems to fix."""
         problems = []
