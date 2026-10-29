@@ -99,6 +99,10 @@ class PictureDesk:
         window = centre_window(img.size, (width, height))
         return {"file": self.save(img.crop(window).resize((width, height)), "centre"), "size": f"{width}x{height}", "window": list(window)}
 
+    def use_photo(self, photo: Path):
+        """The marketer's photo becomes the picture to work on. The kept box belonged to the old picture."""
+        self.source, self.box = Path(photo), None
+
     def detect_focal_point(self) -> dict:
         """Find the main subject of the approved poster, here the bottle, and give back its box [left, top, right, bottom]
         in pixels. It asks a vision model, so it costs money: the box is kept for the next call."""

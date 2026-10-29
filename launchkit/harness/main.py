@@ -18,19 +18,26 @@ from launchkit.harness.catalogue import Catalogue, Entry, ask_in_terminal, load_
 from launchkit.harness.copy_check import make_check_copy
 from launchkit.harness.context import ContextBuilder
 from launchkit.harness.limits import make_leash
+from launchkit.harness.media import media_entries
 from launchkit.harness.picture_tools import PictureDesk
 from launchkit.harness.request import Request, resolve_workspace_id
 from launchkit.harness.run import history_size, raise_if_failed, tool_result_size
 from launchkit.harness.tools import make_generate_image
 from launchkit.harness.trace import Trace
+from launchkit.harness.web import search_entry
 from launchkit.harness.workspace import Workspace, load_workspace
 from launchkit.settings import settings as default_settings
 
-MAIN_TASK = """You work for the marketer you are talking with. Decide what each request needs and use your tools for it.
+MAIN_TASK = """You work for the marketer you are talking with. For any job beyond a greeting, call find_tool first.
+When find_tool lists a skill for the job, load it once with run_skill before you call any tool, and do the job the way its steps say, not another way.
+Call tools only through run_tool.
+Answer in plain words, in the brand's voice."""
+
+DIRECT_TASK = """You work for the marketer you are talking with. Decide what each request needs and use your tools for it.
 When a skill below fits the job, load it once with run_skill before you call any other tool, and do the job the way its steps say, not another way.
 Brand and product facts come only from get_brand_details. Answer in plain words, in the brand's voice."""
 
-MAIN_STEP_CAP = 12
+MAIN_STEP_CAP = 20
 
 
 @dataclass
@@ -51,7 +58,7 @@ def placements_text(ws) -> str:
 def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue) -> Agent:
     ctx.set("rules", f"{ws.soul}\n\n{ws.agents}\n\n{placements_text(ws)}")
     ctx.set("facts", f"Today is {date.today():%-d %B %Y}.")
-    ctx.set("task", "\n\n".join(part for part in (MAIN_TASK, catalogue.skills_text()) if part))
+    ctx.set("task", MAIN_TASK if catalogue.lookup else "\n\n".join(part for part in (DIRECT_TASK, catalogue.skills_text()) if part))
     return Agent(
         model=model,
         system_message=ctx.render(),
@@ -66,13 +73,18 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
 
 def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None) -> Catalogue:
     ws = ws or load_workspace("harbor", settings, trace)
+    desk = PictureDesk(settings, ws.colours, trace, model)
     entries: list[Entry] = [
         Entry("get_brand_details", "look up this brand's guide and product facts", "read", make_get_brand_details(ws, trace, settings)),
         Entry("generate_image", "make a new poster picture from a scene description", "read", make_generate_image(make_images(settings), ws.colours, trace)),
-        *PictureDesk(settings, ws.colours, trace, model).entries(),
+        *desk.entries(),
         Entry("check_copy", "check a headline, subheadline and body against the brand's word limits and banned claims", "read", make_check_copy(ws)),
+        search_entry(settings),
+        *media_entries(settings, model, desk),
     ]
-    return Catalogue(entries, load_skills(), trace, approve)
+    catalogue = Catalogue(entries, load_skills(), trace, approve)
+    catalogue.leash = make_leash(replace(settings.limits, step_cap=10_000), trace)
+    return catalogue
 
 
 def run_main(req: Request, *, settings=default_settings, model=None, trace: Trace | None = None, approve=ask_in_terminal, board=None) -> MainResult:

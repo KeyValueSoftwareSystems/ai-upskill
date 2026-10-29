@@ -277,9 +277,11 @@ class ToolsModel(FakeModel):
 
     def answer(self, messages, tools):
         asked = last_user_text(messages).lower()
+        names = tool_names(tools)
+        if "find_tool" in names and any(word in asked for word in ("size", "photo", "talking about", "voice")):
+            return self.through_the_doors(asked, fresh_results(messages), messages)
         if "size" not in asked:
             return text_response("Morning, Maya. What do you need today?", messages)
-        names = tool_names(tools)
         done = fresh_results(messages)
         plan = self.plan(names, system_text(messages), done)
         if len(done) < len(plan):
@@ -313,3 +315,30 @@ class ToolsModel(FakeModel):
             if len(results) >= len(plan) - 2 and "does not fit" in results[len(plan) - 3]:
                 plan.append(("expand_canvas", {"width": w, "height": h, "colour": "navy"}))
         return plan
+
+    def through_the_doors(self, asked: str, done: list[str], messages: list) -> ModelResponse:
+        """Step 3 on: find_tool first, then the skill it lists, then each tool through run_tool."""
+        if not done:
+            return tool_call_response("find_tool", {"query": asked}, "find_1")
+        listing = done[0]
+        if "photo" in asked and "tool generate_image" in listing and "only when no photo" not in listing:
+            plan = [("run_tool", {"name": "generate_image", "inputs": {"image_prompt": "our shoot photo, story size"}})]
+        elif "photo" in asked and "skill ingest_image" in listing:
+            plan = [("run_skill", {"name": "ingest_image"}), ("run_tool", {"name": "describe_image", "inputs": {}}),
+                    ("run_tool", {"name": "detect_focal_point", "inputs": {}}), ("run_tool", {"name": "crop", "inputs": {"width": 1080, "height": 1920}})]
+        elif "size" in asked and "skill resize_image" in listing:
+            plan = [("run_skill", {"name": "resize_image"}), ("run_tool", {"name": "detect_focal_point", "inputs": {}})]
+            plan += [("run_tool", {"name": "crop", "inputs": {"width": w, "height": h}}) for w, h in SIZES]
+        elif "talking about" in asked and "skill market_research" in listing:
+            plan = [("run_skill", {"name": "market_research"}), ("run_tool", {"name": "search_web", "inputs": {"query": "hikers trends this season"}})]
+        elif "voice" in asked and "skill voice_over" in listing:
+            script = "Cold at the summit, cold on the train. Tidal keeps your water cold for 24 hours."
+            plan = [("run_skill", {"name": "voice_over"}), ("run_tool", {"name": "check_copy", "inputs": {"headline": "", "body": script}}),
+                    ("run_tool", {"name": "text_to_speech", "inputs": {"script": script}})]
+        else:
+            return text_response("I could not find a skill or tool for that.", messages)
+        step = len(done) - 1
+        if step < len(plan):
+            name, arguments = plan[step]
+            return tool_call_response(name, arguments, f"call_{step + 2}")
+        return text_response("Done. " + done[-1][:200], messages)
