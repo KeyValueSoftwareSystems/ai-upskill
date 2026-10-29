@@ -54,7 +54,7 @@ def find_subject(picture: Path, model) -> list[int]:
     reply = client().chat.completions.create(
         model=model.id,
         messages=[{"role": "user", "content": [{"type": "text", "text": ask}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image}"}}]}],
-        extra_body={"cache": {"no-cache": True}},
+        extra_body=None if "api.openai.com" in str(client().base_url) else {"cache": {"no-cache": True}},
     )
     text = reply.choices[0].message.content or ""
     return json.loads(text[text.find("{"): text.rfind("}") + 1])["box"]
@@ -78,34 +78,43 @@ class PictureDesk:
         img.save(path)
         return str(path)
 
-    @todo
     def centre_crop(self, width: int, height: int) -> dict:
-        """Step 1, move 1: not built yet."""
-        return {"status": "not built"}
+        """Cut the approved poster to a new size from its centre, then scale it. Plain code: free, the same every time."""
+        img = self.open()
+        window = centre_window(img.size, (width, height))
+        return {"file": self.save(img.crop(window).resize((width, height)), "centre"), "size": f"{width}x{height}", "window": list(window)}
 
-    @todo
     def detect_focal_point(self) -> dict:
-        """Step 1, move 2: not built yet."""
-        return {"status": "not built"}
+        """Find the main subject of the approved poster, here the bottle, and give back its box [left, top, right, bottom]
+        in pixels. It asks a vision model, so it costs money: the box is kept for the next call."""
+        if self.box is None:
+            self.box = find_subject(self.source, self.model)
+            self.trace.note(f"detect_focal_point asked the vision model once: box {self.box}")
+        return {"box": self.box}
 
-    @todo
     def crop(self, width: int, height: int, left: int = -1, top: int = -1, right: int = -1, bottom: int = -1) -> dict:
-        """Step 1, move 2: not built yet."""
-        return {"status": "not built"}
+        """Cut a window [left, top, right, bottom] out of the approved poster and scale it to width x height.
+        The window should already have the new size's shape. Plain code."""
+        if min(left, top, right, bottom) < 0:
+            return {"status": "refused", "reason": "give the window to cut: left, top, right, bottom"}
+        window = (left, top, right, bottom)
+        return {"file": self.save(self.open().crop(window).resize((width, height)), "crop"), "size": f"{width}x{height}", "window": list(window)}
 
-    @todo
     def expand_canvas(self, width: int, height: int, colour: str = "") -> dict:
-        """Step 1, move 2: not built yet."""
-        return {"status": "not built"}
+        """Fit the whole approved poster into width x height without cutting anything, and fill the new space with a
+        brand colour, e.g. "navy". Plain code."""
+        img = self.open()
+        img.thumbnail((width, height))
+        canvas = Image.new("RGB", (width, height), ImageColor.getrgb(colour_of(colour, self.colours)))
+        canvas.paste(img, ((width - img.width) // 2, (height - img.height) // 2))
+        return {"file": self.save(canvas, "bars"), "size": f"{width}x{height}"}
 
-    @todo
     def scale(self, width: int, height: int) -> dict:
-        """Step 1, move 2: not built yet."""
-        return {"status": "not built"}
+        """Stretch the approved poster to width x height. Fast, plain code, and it changes the poster's proportions."""
+        return {"file": self.save(self.open().resize((width, height)), "scaled"), "size": f"{width}x{height}"}
 
     def entries(self) -> list[Entry]:
         return [
-            Entry("centre_crop", "cut the approved poster to a new size from its centre", "read", self.centre_crop),
             Entry("detect_focal_point", "find where the product sits in the approved poster", "read", self.detect_focal_point),
             Entry("crop", "cut any window out of the approved poster at a new size", "read", self.crop),
             Entry("expand_canvas", "fit the whole approved poster into a new size, with bars of a brand colour", "read", self.expand_canvas),
