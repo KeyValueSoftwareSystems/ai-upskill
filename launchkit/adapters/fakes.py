@@ -280,8 +280,8 @@ class ToolsModel(FakeModel):
         if "size" not in asked:
             return text_response("Morning, Maya. What do you need today?", messages)
         names = tool_names(tools)
-        plan = self.plan(names)
         done = fresh_results(messages)
+        plan = self.plan(names, system_text(messages), done)
         if len(done) < len(plan):
             name, arguments = plan[len(done)]
             return tool_call_response(name, arguments, f"call_{len(done) + 1}")
@@ -293,7 +293,23 @@ class ToolsModel(FakeModel):
             )
         return text_response(f"Done: {len(SIZES)} sizes of the approved poster.", messages)
 
-    def plan(self, names: set[str]) -> list[tuple[str, dict]]:
+    def plan(self, names: set[str], system: str = "", done: list[str] | None = None) -> list[tuple[str, dict]]:
+        done = done or []
+        if "run_skill" in names and "resize_image:" in system:
+            return self.follow_resize_skill(done)
         if "centre_crop" in names:
             return [("centre_crop", {"width": w, "height": h}) for w, h in SIZES]
+        if "scale" in names:
+            return [("scale", {"width": w, "height": h}) for w, h in SIZES]
         return []
+
+    def follow_resize_skill(self, done: list[str]) -> list[tuple[str, dict]]:
+        """The resize_image skill's steps: load it, find the product once, then for each size crop around it, or add
+        bars in the brand colour when crop says the product does not fit."""
+        plan = [("run_skill", {"name": "resize_image"}), ("detect_focal_point", {})]
+        results = done[len(plan):]
+        for w, h in SIZES:
+            plan.append(("crop", {"width": w, "height": h}))
+            if len(results) >= len(plan) - 2 and "does not fit" in results[len(plan) - 3]:
+                plan.append(("expand_canvas", {"width": w, "height": h, "colour": "navy"}))
+        return plan

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from PIL import Image, ImageColor
 
-from launchkit.harness.catalogue import Entry
+from launchkit.harness.catalogue import Entry, built
 from launchkit.harness.trace import Trace
 from launchkit.settings import ROOT
 
@@ -32,6 +32,12 @@ def centre_window(size: tuple[int, int], target: tuple[int, int]) -> tuple[int, 
         return ((w - nw) // 2, 0, (w - nw) // 2 + nw, h)
     nh = int(w * th / tw)
     return (0, (h - nh) // 2, w, (h - nh) // 2 + nh)
+
+
+@todo
+def window_around(box: list[int], size: tuple[int, int], target: tuple[int, int], margin: float = 0.08) -> tuple[int, int, int, int] | None:
+    """Step 2: the bottle-box fit rule. Not built yet."""
+    return None
 
 
 def colour_of(name: str, colours: dict) -> str:
@@ -93,12 +99,19 @@ class PictureDesk:
         return {"box": self.box}
 
     def crop(self, width: int, height: int, left: int = -1, top: int = -1, right: int = -1, bottom: int = -1) -> dict:
-        """Cut a window [left, top, right, bottom] out of the approved poster and scale it to width x height.
-        The window should already have the new size's shape. Plain code."""
+        """Cut a window [left, top, right, bottom] out of the approved poster and scale it to width x height. The window
+        should already have the new size's shape. Leave the window out to cut around the product. Plain code."""
+        img = self.open()
         if min(left, top, right, bottom) < 0:
-            return {"status": "refused", "reason": "give the window to cut: left, top, right, bottom"}
-        window = (left, top, right, bottom)
-        return {"file": self.save(self.open().crop(window).resize((width, height)), "crop"), "size": f"{width}x{height}", "window": list(window)}
+            if not built(window_around):
+                return {"status": "refused", "reason": "give the window to cut: left, top, right, bottom"}
+            window = window_around(self.detect_focal_point()["box"], img.size, (width, height))
+            if window is None:
+                return {"status": "does not fit", "reason": "the product and its margin do not fit this shape", "next": "expand_canvas"}
+        else:
+            window = (left, top, right, bottom)
+        whole = self.box is None or (window[0] <= self.box[0] and window[1] <= self.box[1] and window[2] >= self.box[2] and window[3] >= self.box[3])
+        return {"file": self.save(img.crop(window).resize((width, height)), "crop"), "size": f"{width}x{height}", "window": list(window), "product_whole": whole}
 
     def expand_canvas(self, width: int, height: int, colour: str = "") -> dict:
         """Fit the whole approved poster into width x height without cutting anything, and fill the new space with a

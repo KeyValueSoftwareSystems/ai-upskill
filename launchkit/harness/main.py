@@ -14,7 +14,8 @@ from launchkit.adapters.images import make_images
 from launchkit.adapters.models import model_name, resolve_model
 from launchkit.harness.agent import session_db
 from launchkit.harness.brand import make_get_brand_details
-from launchkit.harness.catalogue import Catalogue, Entry, ask_in_terminal
+from launchkit.harness.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
+from launchkit.harness.copy_check import make_check_copy
 from launchkit.harness.context import ContextBuilder
 from launchkit.harness.limits import make_leash
 from launchkit.harness.picture_tools import PictureDesk
@@ -26,6 +27,7 @@ from launchkit.harness.workspace import Workspace, load_workspace
 from launchkit.settings import settings as default_settings
 
 MAIN_TASK = """You work for the marketer you are talking with. Decide what each request needs and use your tools for it.
+When a skill fits the job, load it once with run_skill and do the job the way its steps say.
 Brand and product facts come only from get_brand_details. Answer in plain words, in the brand's voice."""
 
 MAIN_STEP_CAP = 12
@@ -49,7 +51,7 @@ def placements_text(ws) -> str:
 def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue) -> Agent:
     ctx.set("rules", f"{ws.soul}\n\n{ws.agents}\n\n{placements_text(ws)}")
     ctx.set("facts", f"Today is {date.today():%-d %B %Y}.")
-    ctx.set("task", MAIN_TASK)
+    ctx.set("task", "\n\n".join(part for part in (MAIN_TASK, catalogue.skills_text()) if part))
     return Agent(
         model=model,
         system_message=ctx.render(),
@@ -68,8 +70,9 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
         Entry("get_brand_details", "look up this brand's guide and product facts", "read", make_get_brand_details(ws, trace, settings)),
         Entry("generate_image", "make a new poster picture from a scene description", "read", make_generate_image(make_images(settings), ws.colours, trace)),
         *PictureDesk(settings, ws.colours, trace, model).entries(),
+        Entry("check_copy", "check a headline, subheadline and body against the brand's word limits and banned claims", "read", make_check_copy(ws)),
     ]
-    return Catalogue(entries, trace, approve)
+    return Catalogue(entries, load_skills(), trace, approve)
 
 
 def run_main(req: Request, *, settings=default_settings, model=None, trace: Trace | None = None, approve=ask_in_terminal, board=None) -> MainResult:
