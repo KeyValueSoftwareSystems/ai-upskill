@@ -122,6 +122,9 @@ class Catalogue:
                 inspect.signature(entry.fn).bind(**inputs)
             except TypeError as error:
                 return f"Wrong inputs for {name}: {error}. Check the skill's steps or call find_tool."
+            if entry.kind == "write" and not self.approve(name, inputs):
+                self.trace.refused(name, "Maya said no")
+                return f"Maya did not allow {name}. Do not try it again; tell her what you wanted to do."
             if self.leash is None:
                 result = entry.fn(**inputs)
                 self.trace.tool(name, inputs, result)
