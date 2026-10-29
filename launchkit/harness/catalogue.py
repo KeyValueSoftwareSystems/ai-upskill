@@ -72,8 +72,9 @@ class Catalogue:
 
     def make_run_skill(self):
         def run_skill(name: str) -> str:
-            """Load a skill by name. It returns the steps to follow; follow them."""
             skill = self.skills.get(name)
             return skill.text if skill else f"No skill named {name}."
 
+        listed = "; ".join(f"{s.name}: {s.note}" for s in self.skills.values())
+        run_skill.__doc__ = f"Load a skill's steps. When a skill fits the job, call this before any other tool, then follow its steps. Skills: {listed}"
         return run_skill

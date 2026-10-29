@@ -27,7 +27,7 @@ from launchkit.harness.workspace import Workspace, load_workspace
 from launchkit.settings import settings as default_settings
 
 MAIN_TASK = """You work for the marketer you are talking with. Decide what each request needs and use your tools for it.
-When a skill fits the job, load it once with run_skill and do the job the way its steps say.
+When a skill below fits the job, load it once with run_skill before you call any other tool, and do the job the way its steps say, not another way.
 Brand and product facts come only from get_brand_details. Answer in plain words, in the brand's voice."""
 
 MAIN_STEP_CAP = 12
