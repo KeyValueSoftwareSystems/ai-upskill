@@ -22,6 +22,7 @@ class Settings:
     image_size: str = field(default_factory=lambda: _env("LAUNCHKIT_IMAGE_SIZE", "1024x1536"))
     image_quality: str = field(default_factory=lambda: _env("LAUNCHKIT_IMAGE_QUALITY", "medium"))
     timeout: int = field(default_factory=lambda: int(_env("LAUNCHKIT_TIMEOUT", "120")))
+    search_delay: float = field(default_factory=lambda: float(_env("LAUNCHKIT_SEARCH_DELAY", "0")))
     workspaces_dir: Path = field(default_factory=lambda: Path(_env("LAUNCHKIT_WORKSPACES_DIR", str(ROOT / "workspaces"))))
     data_dir: Path = ROOT / "data"
     limits: Limits = Limits()

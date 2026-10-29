@@ -65,3 +65,8 @@ def resolve_model(settings, trace: Trace):
 
 def model_name(model) -> str:
     return model if isinstance(model, str) else f"{model.provider}:{model.id}"
+
+
+from launchkit.adapters.fakes import ToolsModel  # noqa: E402  Session 2's fake for the main agent
+
+FAKES["tools"] = ToolsModel

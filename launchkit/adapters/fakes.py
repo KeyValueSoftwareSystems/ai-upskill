@@ -259,3 +259,41 @@ class ProfileModel(FakeModel):
             "facts": ["Pots ship in 3 days."],
         }
         return text_response(json.dumps(profile), messages)
+
+
+SIZES = [(1080, 1080), (1080, 1350), (1080, 1920), (1200, 628), (300, 250)]
+
+
+def fresh_results(messages: list) -> list[str]:
+    return [str(m.content or "") for m in messages if getattr(m, "role", None) == "tool" and not getattr(m, "from_history", False)]
+
+
+class ToolsModel(FakeModel):
+    """Plays the main agent for "every size", using whatever the harness gives it, the way a model tends to.
+    With no resize tool it says so. With one resize tool it uses that tool for every size."""
+
+    def __init__(self):
+        super().__init__("tools")
+
+    def answer(self, messages, tools):
+        asked = last_user_text(messages).lower()
+        if "size" not in asked:
+            return text_response("Morning, Maya. What do you need today?", messages)
+        names = tool_names(tools)
+        plan = self.plan(names)
+        done = fresh_results(messages)
+        if len(done) < len(plan):
+            name, arguments = plan[len(done)]
+            return tool_call_response(name, arguments, f"call_{len(done) + 1}")
+        if not plan:
+            return text_response(
+                "I cannot resize the approved poster. I only have get_brand_details and generate_image. "
+                "I could draw five new pictures, but each one would be a new bottle and a new bill.",
+                messages,
+            )
+        return text_response(f"Done: {len(SIZES)} sizes of the approved poster.", messages)
+
+    def plan(self, names: set[str]) -> list[tuple[str, dict]]:
+        if "centre_crop" in names:
+            return [("centre_crop", {"width": w, "height": h}) for w, h in SIZES]
+        return []

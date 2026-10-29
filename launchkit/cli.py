@@ -47,6 +47,32 @@ def cmd_run(args):
     return 0
 
 
+def cmd_main(args):
+    from launchkit.harness.main import run_main
+
+    current = replace(settings, model=args.model) if args.model else settings
+    req = Request(workspace_id=args.workspace, user_id=args.user, session_id=args.session, text=args.text)
+    trace = Trace()
+    try:
+        result = run_main(req, settings=current, trace=trace)
+    except UnknownWorkspace as error:
+        print_trace(trace)
+        console.print(f"\n[red]{type(error).__name__}[/red]  {error}")
+        return 1
+    except ModelProviderError as error:
+        print_trace(trace)
+        console.print(f"\n[red]model error[/red]  {error.message}", highlight=False)
+        return 1
+    print_trace(trace)
+    console.print("\n[bold]reply[/bold]")
+    console.print(result.reply, highlight=False, markup=False)
+    console.print(
+        f"\n[bold]main agent's view[/bold]  {result.view_tokens} tokens of tool results this turn · "
+        f"{result.history_tokens} tokens of history carried in · took {result.seconds:.1f} s"
+    )
+    return 0
+
+
 def print_trace(trace: Trace):
     console.print("[bold]what happened[/bold]")
     for line in trace.lines():
@@ -173,6 +199,9 @@ def cmd_explain(args):
 
 
 RAG_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_rag*.py"))
+TOOLS_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_tools*.py"))
+ORCH_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_orch*.py"))
+ORCH_GATE = ORCH_STEPS + [name for name in TOOLS_STEPS if name in ("tools3", "tools4", "tools5")]
 
 
 def cmd_check(args):
@@ -181,8 +210,10 @@ def cmd_check(args):
         names = [f"step{n}" for n in range(5)] + extra
     elif args.step == "rag":
         names = RAG_STEPS
+    elif args.step == "orch":
+        names = ORCH_GATE
     else:
-        names = [args.step if args.step in extra + RAG_STEPS else f"step{args.step}"]
+        names = [args.step if args.step in extra + RAG_STEPS + TOOLS_STEPS + ORCH_STEPS else f"step{args.step}"]
     targets = [ROOT / "checks" / f"test_{name}.py" for name in names]
     command = [sys.executable, "-m", "pytest", "-q", "--tb=no", "-rN", "-p", "no:cacheprovider", *map(str, targets)]
     proc = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
@@ -219,6 +250,14 @@ def main(argv=None):
     run.add_argument("--facts", help="a text file to load into the facts section")
     run.set_defaults(func=cmd_run)
 
+    main_agent = sub.add_parser("main", help="talk to the main agent: it finds skills and tools and runs them")
+    main_agent.add_argument("workspace")
+    main_agent.add_argument("text")
+    main_agent.add_argument("--user", default="maya")
+    main_agent.add_argument("--session", default="terminal")
+    main_agent.add_argument("--model", help="override LAUNCHKIT_MODEL, e.g. fake:brief")
+    main_agent.set_defaults(func=cmd_main)
+
     lookup = sub.add_parser("lookup", help="call get_brand_details as the agent would and print what the model gets back")
     lookup.add_argument("workspace")
     lookup.add_argument("query", nargs="?", default="", help="the question the agent would ask (from RAG step 2 on)")
@@ -244,8 +283,8 @@ def main(argv=None):
     explain.add_argument("--show", action="store_true", help="print the system message as sent")
     explain.set_defaults(func=cmd_explain)
 
-    check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all; retrieval: check rag1.. or rag")
-    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag"])
+    check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all; retrieval: check rag1.. or rag; orchestration: check orch0.. or orch")
+    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch"])
     check.set_defaults(func=cmd_check)
 
     ui = sub.add_parser("ui", help="start the chat page")
