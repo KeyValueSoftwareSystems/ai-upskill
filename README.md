@@ -7,9 +7,11 @@ A marketing assistant built in steps across the session. A marketer asks for a p
 | `session-01-00-setup` | shared code and the setup check |
 | `session-01-llm-call` | one LLM call, `approach_llm/app.py`; hands-on sheet in the trainer notes |
 | `session-01-langgraph` | a LangGraph pipeline, `approach_graph/graph.py` |
-| **`session-01-harness`** (you are here) | the agent harness on Agno, built in four steps; the opener's code stays in the repo |
+| `session-01-harness` | the agent harness on Agno, built in four steps; the opener's code stays in the repo |
 | `session-01-harness-step1` … `step4` | each step's answer |
 | `session-01-rag-step1` … `step4` | retrieval (CP1.2): one `get_brand_details` tool, rebuilt four times |
+| **`session-02-tools`** (you are here) | tools, skills, lookup, MCP and permissions (Session 2, part 1): the main agent and Maya's "every size" |
+| `session-02-tools-step1` … `step5` | each step's answer |
 
 Each branch contains the previous branch's solution. Fall behind, check out the next one.
 
@@ -53,6 +55,20 @@ Each step fills one TODO slot in `launchkit/harness/`. Each step has a check. Th
 | 4 · The request says who you are | `request.py` `resolve_workspace_id` | `check 4` | `session-01-harness-step4` |
 
 Prompt cards for each step are in `docs/`.
+
+## Tools, skills and MCP, five steps
+
+Talk to the main agent with `uv run launchkit main harbor "Love the poster. Now all the sizes, please."`. Each step fills one slot, has a check, a card in `docs/` and a branch with the answer.
+
+| Step | Slot | Check | Branch with the answer |
+| --- | --- | --- | --- |
+| 1 · Tools: one tool, then a toolbox | `picture_tools.py` `PictureDesk` | `check tools1` | `session-02-tools-step1` |
+| 2 · Skills: write the know-how down | `launchkit/skills/resize_image/skill.md`, `picture_tools.py` `window_around` | `check tools2` | `session-02-tools-step2` |
+| 3 · Lookup: find the right skill | `catalogue.py` `make_run_tool`, the note on `generate_image` in `main.py` | `check tools3` | `session-02-tools-step3` |
+| 4 · MCP: plug in Maya's board | `mcp_link.py` `connect` | `check tools4` | `session-02-tools-step4` |
+| 5 · Permissions: read freely, ask before you write | `catalogue.py` `run_tool` | `check tools5` | `session-02-tools-step5` |
+
+Cards: `docs/tools-1.md` … `docs/tools-5.md`.
 
 ## Layout
 
