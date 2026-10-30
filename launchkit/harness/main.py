@@ -10,6 +10,7 @@ from datetime import date
 
 from agno.agent import Agent
 
+from launchkit.adapters.fakes import FakeModel
 from launchkit.adapters.images import make_images
 from launchkit.adapters.models import model_name, resolve_model
 from launchkit.harness.agent import session_db
@@ -93,6 +94,9 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     wid = resolve_workspace_id(req, settings)
     ws = load_workspace(wid, settings, trace)
     model = model if model is not None else resolve_model(settings, trace)
+    if isinstance(model, FakeModel):
+        # The fakes are scripted against the saved pages, so a fake never searches the live web.
+        settings = replace(settings, search="saved")
     catalogue = build_catalogue(settings, trace, approve, board, model, ws)
     agent = build_main_agent(ws, ContextBuilder(settings.budgets), model, settings, trace, catalogue)
     started = time.perf_counter()

@@ -30,7 +30,7 @@ def settings(tmp_path, indexed_store):
     workspaces = tmp_path / "workspaces"
     shutil.copytree(ROOT / "workspaces", workspaces)
     shutil.copytree(indexed_store, tmp_path / "data" / "brand-store")
-    return replace(base_settings, workspaces_dir=workspaces, data_dir=tmp_path / "data", image_mode="fake")
+    return replace(base_settings, workspaces_dir=workspaces, data_dir=tmp_path / "data", image_mode="fake", search="saved")
 
 
 @pytest.fixture

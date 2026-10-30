@@ -8,6 +8,8 @@ Maya keeps asking for new things, one at a time. Each one fails, then works once
 | `ingest_image` + `describe_image` | "Use our shoot photo, not an AI one." | Checks her photo has no words and no other brand, then uses it. No paid picture |
 | `voice_over` + `text_to_speech` | "A 10-second voice-over for the story ad." | A new kind of output: audio, within a word limit |
 
+`search_web` searches the real web through Tavily: put your `TAVILY_API_KEY` in `.env`. The checks and the fakes use the saved pages in `samples/`, the same every run; `LAUNCHKIT_SEARCH=saved` gives you those too, offline.
+
 Each addition also makes the prompt longer: every tool's name, inputs and description, and every skill's line, ride along on every turn, used or not.
 
 The fix: the agent holds three doors instead of every tool. `find_tool` matches each "pick me when" note against a short query and gives back only the best few, each with the exact call to make. `run_skill` loads one skill's file, for this job only. `run_tool` runs any tool by name. A skill's "Hides" line keeps the raw tools it prefers over out of `find_tool`'s answer, so the agent cannot skip the skill. `find_tool`'s ranking comes ready-made.
