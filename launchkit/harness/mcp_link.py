@@ -16,21 +16,24 @@ class McpLink:
     def __init__(self, server):
         self.loop = asyncio.new_event_loop()
         threading.Thread(target=self.loop.run_forever, daemon=True).start()
-        self.wait(self.open(server))
+        self.wait(self.open(server), timeout=300)
 
     async def open(self, server):
-        self.opened = create_connected_server_and_client_session(server)
+        self.only = getattr(server, "only", None)
+        self.opened = server.session() if hasattr(server, "session") else create_connected_server_and_client_session(server)
         self.session = await self.opened.__aenter__()
 
-    def wait(self, coroutine):
-        return asyncio.run_coroutine_threadsafe(coroutine, self.loop).result(timeout=30)
+    def wait(self, coroutine, timeout: float = 60):
+        return asyncio.run_coroutine_threadsafe(coroutine, self.loop).result(timeout=timeout)
 
     def list_tools(self) -> list:
-        return self.wait(self.session.list_tools()).tools
+        tools = self.wait(self.session.list_tools()).tools
+        return [tool for tool in tools if self.only is None or tool.name in self.only]
 
     def call_tool(self, name: str, arguments: dict) -> str:
         result = self.wait(self.session.call_tool(name, arguments))
-        return "\n".join(getattr(part, "text", "") for part in result.content)
+        text = "\n".join(getattr(part, "text", "") for part in result.content)
+        return f"{name} failed: {text}" if result.isError else text
 
 
 def tool_function(tool, link: McpLink):

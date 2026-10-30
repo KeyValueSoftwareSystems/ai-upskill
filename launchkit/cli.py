@@ -168,6 +168,14 @@ def cmd_onboard(args):
     return 0
 
 
+def cmd_notion(args):
+    from launchkit.harness.notion import set_up_card
+
+    console.print(set_up_card(settings), highlight=False)
+    console.print("\nThe Tidal card is in your Notion. With LAUNCHKIT_BOARD=notion the agent reaches it through Notion's MCP server.")
+    return 0
+
+
 def cmd_explain(args):
     path = settings.data_dir / "last_run.json"
     if not path.exists():
@@ -278,6 +286,9 @@ def main(argv=None):
     onboard.add_argument("--id", help="the workspace to draft into; by default it is made from the brand name in the pack. An existing workspace has its drafted files replaced")
     onboard.add_argument("--model", help="override LAUNCHKIT_MODEL, e.g. fake:profile")
     onboard.set_defaults(func=cmd_onboard)
+
+    notion = sub.add_parser("notion", help="log in to Notion once and put the Tidal card in your Notion")
+    notion.set_defaults(func=cmd_notion)
 
     explain = sub.add_parser("explain", help="what the model saw on the last run, in what order, at what cost")
     explain.add_argument("--show", action="store_true", help="print the system message as sent")

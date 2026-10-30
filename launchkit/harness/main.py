@@ -14,13 +14,13 @@ from launchkit.adapters.fakes import FakeModel
 from launchkit.adapters.images import make_images
 from launchkit.adapters.models import model_name, resolve_model
 from launchkit.harness.agent import session_db
-from launchkit.harness.board import Board
 from launchkit.harness.brand import make_get_brand_details
 from launchkit.harness.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
 from launchkit.harness.copy_check import make_check_copy
 from launchkit.harness.context import ContextBuilder
 from launchkit.harness.limits import make_leash
 from launchkit.harness.media import media_entries
+from launchkit.harness.notion import make_board
 from launchkit.harness.picture_tools import PictureDesk
 from launchkit.harness.request import Request, resolve_workspace_id
 from launchkit.harness.run import history_size, raise_if_failed, tool_result_size
@@ -83,7 +83,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
         Entry("check_copy", "check a headline, subheadline and body against the brand's word limits and banned claims", "read", make_check_copy(ws)),
         search_entry(settings),
         *media_entries(settings, model, desk),
-        *(board or Board()).entries(),
+        *(board or make_board(settings)).entries(),
     ]
     catalogue = Catalogue(entries, load_skills(), trace, approve)
     catalogue.leash = make_leash(replace(settings.limits, step_cap=10_000), trace)
@@ -97,8 +97,8 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     ws = load_workspace(wid, settings, trace)
     model = model if model is not None else resolve_model(settings, trace)
     if isinstance(model, FakeModel):
-        # The fakes are scripted against the saved pages, so a fake never searches the live web.
-        settings = replace(settings, search="saved")
+        # The fakes are scripted against the saved pages and the local board, so a fake never reaches the live web or Notion.
+        settings = replace(settings, search="saved", board="local")
     catalogue = build_catalogue(settings, trace, approve, board, model, ws)
     agent = build_main_agent(ws, ContextBuilder(settings.budgets), model, settings, trace, catalogue)
     started = time.perf_counter()
