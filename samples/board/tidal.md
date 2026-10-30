@@ -11,7 +11,7 @@ Audience. People who hike at the weekend and commute in the week.
 
 Tasks
 1. Trends: what are hikers talking about this season? Check forums and outdoor blogs. Give us 3 themes we could use, with sources.
-2. Competitors: how are Northline, Ridgeway, Stillwater, Kestrel and Hollowmere launching bottles this season? One paragraph each: message, channels, what to avoid copying.
+2. Competitors: how are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season? One paragraph each: message, channels, what to avoid copying.
 3. Concepts: 3 poster concepts (hiker, commuter, lakeside), built on tasks 1 and 2. Pick the strongest and say why.
 4. Every size: the chosen poster in all our placements: feed 1080x1080 and 1080x1350, story 1080x1920, web 1200x628, display 300x250.
 5. Hand back: attach the sizes to this card and move it to Ready for review.

@@ -27,7 +27,7 @@ def test_the_board_tools_join_the_catalogue_with_read_or_write():
 def test_run_tool_reads_the_tidal_card_over_mcp(settings):
     """run_tool runs an MCP tool like any other: the Tidal card's brief comes back from the board's server."""
     card = build_catalogue(settings, Trace(), NO, Board()).make_run_tool()("read_card", {"card": "tidal"})
-    assert "Tidal launch" in card and "Hollowmere" in card and "approved.png" in card
+    assert "Tidal launch" in card and "Klean Kanteen" in card and "approved.png" in card
 
 
 def test_an_mcp_write_changes_the_board(settings):
