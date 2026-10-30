@@ -39,7 +39,7 @@ The opener's code is on this branch too (`approach_llm/`, `approach_graph/`, `la
 | --- | --- |
 | `uv run launchkit run harbor "Poster for the Tidal bottle on a misty lakeshore at dawn."` | One request in the terminal: trace, spec, picture path |
 | `uv run launchkit ui` | The chat page: sign in as a person, chat with the main agent, live trace, context view, the files it made, Allow and Deny before a write |
-| `uv run launchkit main harbor "How are Northline, Ridgeway, Stillwater, Kestrel and Hollowmere launching bottles this season?"` | Talk to the main agent: trace, reply, how much its view holds, how long it took |
+| `uv run launchkit main harbor "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season?"` | Talk to the main agent: trace, reply, how much its view holds, how long it took |
 | `uv run launchkit check orch1` | Prove a checkpoint with fake models. `check orch` is the CP2.2 gate |
 | `uv run launchkit explain` | What the model saw on the last run, in what order, at what cost |
 | `uv run launchkit check 1` | Prove step 1 with fake models. `check all` is the CP1.1 gate |

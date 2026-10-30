@@ -3,8 +3,8 @@ from launchkit.harness.catalogue import load_skills
 from launchkit.harness.main import build_catalogue, run_main
 from launchkit.harness.trace import Trace
 
-ASK = "How are Northline, Ridgeway, Stillwater, Kestrel and Hollowmere launching bottles this season? One paragraph each."
-FIVE = ["Northline", "Ridgeway", "Stillwater", "Kestrel", "Hollowmere"]
+ASK = "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season? One paragraph each."
+FIVE = ["Hydro Flask", "Stanley", "Yeti", "Owala", "Klean Kanteen"]
 
 
 def test_the_skill_exists_and_says_when_to_pick_it():

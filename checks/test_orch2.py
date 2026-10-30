@@ -3,9 +3,9 @@ from launchkit.harness.main import run_main
 from launchkit.harness.research import make_research_entries
 from launchkit.harness.trace import Trace
 
-ASK = "How are Northline, Ridgeway, Stillwater, Kestrel and Hollowmere launching bottles this season? One paragraph each."
-FIVE = ["Northline", "Ridgeway", "Stillwater", "Kestrel", "Hollowmere"]
-PAGE_LINE = "Carry the mountain home"
+ASK = "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season? One paragraph each."
+FIVE = ["Hydro Flask", "Stanley", "Yeti", "Owala", "Klean Kanteen"]
+PAGE_LINE = "We Make It. You Own It."
 NO = lambda name, inputs: False
 
 
@@ -60,5 +60,5 @@ def test_five_briefs_run_side_by_side(slow_search, request_for, brief):
 def test_reports_come_back_in_the_order_of_the_briefs(settings, brief):
     """research_many hands back one report per brief, in the order the briefs were given."""
     research_many = {e.name: e for e in make_research_entries(brief, settings, Trace())}["research_many"].fn
-    reports = research_many(["How is Kestrel launching?", "How is Northline launching?", "How is Stillwater launching?"])
-    assert [r.split(":")[0] for r in reports] == ["Kestrel", "Northline", "Stillwater"]
+    reports = research_many(["How is Owala launching?", "How is Hydro Flask launching?", "How is Yeti launching?"])
+    assert [r.split(":")[0] for r in reports] == ["Owala", "Hydro Flask", "Yeti"]
