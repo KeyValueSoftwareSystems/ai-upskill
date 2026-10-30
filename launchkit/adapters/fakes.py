@@ -361,7 +361,7 @@ class ToolsModel(FakeModel):
         return text_response("Done. " + done[-1][:200], messages)
 
 
-COMPETITORS = ("Northline", "Ridgeway", "Stillwater", "Kestrel", "Hollowmere", "Ferro")
+COMPETITORS = ("Hydro Flask", "Stanley", "Yeti", "Owala", "Klean Kanteen", "Contigo")
 
 
 def competitors_in(text: str) -> list[str]:

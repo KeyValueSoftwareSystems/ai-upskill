@@ -1,6 +1,6 @@
 # Checkpoint 1 · One agent and a skill (CP2.2a)
 
-Task 2 on the Tidal card: "How are Northline, Ridgeway, Stillwater, Kestrel and Hollowmere launching bottles this season? One paragraph each: message, channels, what to avoid copying."
+Task 2 on the Tidal card: "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season? One paragraph each: message, channels, what to avoid copying."
 
 We start the way the opening ended: one agent plus a skill. A skill is a plain-words file. It tells the main agent how to do a job: which tool to call, in what order, and what to hand back. The main agent finds it with `find_tool`, loads it with `run_skill`, and calls tools through `run_tool`.
 
@@ -15,11 +15,11 @@ It works. Then look at what it cost.
 Before you paste the card, run this and keep the output:
 
 ```
-uv run launchkit main harbor "How are Northline, Ridgeway, Stillwater, Kestrel and Hollowmere launching bottles this season? One paragraph each." --model fake:brief
+uv run launchkit main harbor "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season? One paragraph each." --model fake:brief
 ```
 
 ```
-  tool      find_tool("How are Northline, Ridgeway, Stillwater, Kestrel and Hollo…) → tool search_web (read): search the web and read the pages t… · 79 tokens back
+  tool      find_tool("How are Hydro Flask, Stanley, Yeti, Owala and Klean Kantee…) → skill market_research: finding out what people are talking … · 38 tokens back
 
 reply
 I have no skill for competitor research yet.
@@ -56,16 +56,16 @@ uv run launchkit check orch1
 The same command after the build, with the pages as slow as a real web search:
 
 ```
-LAUNCHKIT_SEARCH_DELAY=0.4 uv run launchkit main harbor "How are Northline, Ridgeway, Stillwater, Kestrel and Hollowmere launching bottles this season? One paragraph each." --model fake:brief --session cp1
+LAUNCHKIT_SEARCH_DELAY=0.4 uv run launchkit main harbor "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season? One paragraph each." --model fake:brief --session cp1
 ```
 
 ```
-  tool      run_skill("competitor_research") → # competitor_research Pick me when: the job is to find out … · 138 tokens back
-  tool      run_tool("search_web", {'query': 'Northline bottle launch'}) → # Northline drops the Summit 1L for spring … · 744 tokens back
-  tool      run_tool("search_web", {'query': 'Ridgeway bottle launch'}) → # Ridgeway Commuter Pro review: … · 586 tokens back
+  tool      run_skill("competitor_research") → # competitor_research Pick me when: the job is to find out … · 152 tokens back
+  tool      run_tool("search_web", {'query': 'Hydro Flask bottle launch'}) → # Role Model and Hydro Flask Launch Limited Edition Drinkwa… · 1977 tokens back
+  tool      run_tool("search_web", {'query': 'Stanley bottle launch'}) → # Stanley Cup Marketing Strategy - Soar With Us Address: ht… · 2083 tokens back
   ...three more, one after another...
 
-main agent's view  3172 tokens of tool results this turn · 0 tokens of history carried in · took 2.1 s
+main agent's view  9858 tokens of tool results this turn · 0 tokens of history carried in · took 2.1 s
 ```
 
 Then Maya's next ask, in the same conversation:
@@ -75,10 +75,10 @@ uv run launchkit main harbor "Write one headline for the hiker concept." --model
 ```
 
 ```
-main agent's view  0 tokens of tool results this turn · 3321 tokens of history carried in · took 0.1 s
+main agent's view  0 tokens of tool results this turn · 10005 tokens of history carried in · took 0.0 s
 ```
 
-Five paragraphs came back, and every page the agent read came with them. Ten pages, about 3,200 tokens, sit in the main agent's view. A headline needs none of them, yet they ride along on every turn that follows. And the five searches ran one after another.
+Five paragraphs came back, and every page the agent read came with them. Ten pages, about 9,900 tokens, sit in the main agent's view. A headline needs none of them, yet they ride along on every turn that follows. And the five searches ran one after another.
 
 ## Why it matters
 
@@ -86,7 +86,7 @@ A skill adds ability inside one view. It changes what the agent knows, not what 
 
 ## See it
 
-The trainer runs the same ask on the real model (drop `--model fake:brief`). On 28 Oct, gpt-4.1-mini: 3,167 to 3,720 tokens of pages in view, 8 to 11 seconds with instant pages, about 20 seconds with `LAUNCHKIT_SEARCH_DELAY=2`.
+The trainer runs the same ask on the real model (drop `--model fake:brief`). On 30 Oct, gpt-4.1-mini with live web search, 2 runs: about 10,300 tokens of pages in view, 13 to 21 seconds. The five searches run one after another.
 
 ## Stuck?
 

@@ -17,11 +17,11 @@ The five competitors do not depend on each other, so five research agents can ru
 Run checkpoint 1's command and keep the last line:
 
 ```
-LAUNCHKIT_SEARCH_DELAY=0.4 uv run launchkit main harbor "How are Northline, Ridgeway, Stillwater, Kestrel and Hollowmere launching bottles this season? One paragraph each." --model fake:brief --session cp2
+LAUNCHKIT_SEARCH_DELAY=0.4 uv run launchkit main harbor "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season? One paragraph each." --model fake:brief --session cp2
 ```
 
 ```
-main agent's view  3172 tokens of tool results this turn · 0 tokens of history carried in · took 2.1 s
+main agent's view  9858 tokens of tool results this turn · 0 tokens of history carried in · took 2.1 s
 ```
 
 ## Prompt card, for your coding agent
@@ -71,29 +71,29 @@ Then the gate for the whole part: `uv run launchkit check orch`.
 ## Run it again
 
 ```
-LAUNCHKIT_SEARCH_DELAY=0.4 uv run launchkit main harbor "How are Northline, Ridgeway, Stillwater, Kestrel and Hollowmere launching bottles this season? One paragraph each." --model fake:brief --session cp2b
+LAUNCHKIT_SEARCH_DELAY=0.4 uv run launchkit main harbor "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season? One paragraph each." --model fake:brief --session cp2b
 ```
 
 ```
-  tool      run_skill("competitor_research") → # competitor_research Pick me when: the job is to find out … · 209 tokens back
-  tool      search_web("How is Northline launching bottles this season? …) → # Northline drops the Summit 1L for spring … · 744 tokens back
-  model     research phase · fake:brief · sent 840 tokens, got back 24
+  tool      run_skill("competitor_research") → # competitor_research Pick me when: the job is to find out … · 223 tokens back
+  tool      search_web("How is Hydro Flask launching bottles this season? Message,…) → # Role Model and Hydro Flask Launch Limited Edition Drinkwa… · 1977 tokens back
+  model     research phase · fake:brief · sent 2179 tokens, got back 23
   ...four more research agents, at the same time...
-  tool      run_tool("research_many", {'briefs': ['How is Northline launching bo…) → ["Northline: launch line, … · 122 tokens back
+  tool      run_tool("research_many", {'briefs': ['How is Hydro Flask launching …) → ["Hydro Flask: launch line, channels and what to avoid copy… · 121 tokens back
 
-main agent's view  507 tokens of tool results this turn · 0 tokens of history carried in · took 0.5 s
+main agent's view  514 tokens of tool results this turn · 0 tokens of history carried in · took 0.4 s
 ```
 
 And Maya's next ask, `"Write one headline for the hiker concept."` with `--session cp2b`:
 
 ```
-main agent's view  0 tokens of tool results this turn · 655 tokens of history carried in · took 0.1 s
+main agent's view  0 tokens of tool results this turn · 660 tokens of history carried in · took 0.0 s
 ```
 
 | | Checkpoint 1 | Checkpoint 2 |
 | --- | --- | --- |
-| Pages in the main agent's view | about 3,200 tokens | none; five reports |
-| Carried into the next turn | 3,321 tokens | 655 tokens |
+| Pages in the main agent's view | about 9,900 tokens | none; five reports |
+| Carried into the next turn | 10,005 tokens | 660 tokens |
 | Five searches | one after another, 2.1 s | at the same time, 0.5 s |
 
 ## Why it matters
@@ -104,7 +104,7 @@ It is not free. Count the model calls in the trace: six instead of one. Each res
 
 ## See it
 
-The trainer runs the same ask on the real model. On 28 Oct, gpt-4.1-mini, 3 runs: the main agent's view held 1,080 to 1,916 tokens instead of 3,100 to 3,700. With `LAUNCHKIT_SEARCH_DELAY=2`, about 15 seconds instead of about 20; the parallel run is only as fast as its slowest research agent. Total tokens across all six model calls went up, from about 5,400 to about 8,200.
+The trainer runs the same ask on the real model. On 30 Oct, gpt-4.1-mini with live web search, 2 runs: the main agent's view held 1,163 to 1,333 tokens instead of about 10,300, and the next turn carried 1,522 tokens of history. 17 to 22 seconds: the parallel run is only as fast as its slowest research agent.
 
 ## Stuck?
 
