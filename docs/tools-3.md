@@ -59,7 +59,7 @@ uv run launchkit check tools3
 
 ## Run it again
 
-The photo ask, on the real model. Search, read, act, answer: `find_tool`, then `run_skill("ingest_image")`, then `describe_image`, `detect_focal_point` and `crop` through `run_tool`. The agent never sees the whole list.
+The photo ask, on the real model, on the chat page. Search, read, act, answer: `find_tool`, then `run_skill("ingest_image")`, then `describe_image`, `detect_focal_point` and `crop` through `run_tool`. The agent never sees the whole list.
 
 ## Stuck?
 
