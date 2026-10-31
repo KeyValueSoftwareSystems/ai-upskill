@@ -30,6 +30,13 @@ main{flex:1;display:grid;grid-template-columns:minmax(320px,1fr) minmax(360px,1.
 .msg.pending{color:var(--muted);font-style:italic;border-style:dashed}
 .msg .k{display:inline-block;width:110px;color:var(--muted);font-size:12.5px}
 .msg img{display:block;max-width:100%;border-radius:6px;margin-top:8px}
+.msg audio{display:block;width:100%;margin-top:8px}
+.msg.ask{border-color:var(--model);background:var(--model-soft)}
+.msg.ask pre{margin:8px 0}
+.msg.ask .row{display:flex;gap:8px}
+.media{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:8px}
+.media figure{margin:0;font:11.5px ui-monospace,Menlo,monospace;color:var(--muted);word-break:break-all}
+.media img{margin:0 0 4px}
 .compose{display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line);background:var(--surface)}
 .compose input{flex:1}
 .side{display:flex;flex-direction:column;min-width:0}
@@ -90,6 +97,8 @@ header button.quiet.on{color:var(--accent);border-color:var(--accent);background
   <label>Brand <select id="brand"></select></label>
   <label>Person <select id="person"></select></label>
   <label>Conversation <select id="session"></select></label>
+  <label>Model <input id="model" list="models" placeholder="from .env" size="11"></label>
+  <datalist id="models"><option value="fake:tools"><option value="fake:brief"></datalist>
   <button class="quiet" id="new">New conversation</button>
   <button class="quiet" id="onboardToggle">Onboard a brand</button>
   <button class="quiet" id="libraryToggle">Brand library</button>
@@ -119,7 +128,7 @@ header button.quiet.on{color:var(--accent);border-color:var(--accent);background
   <section class="chat">
     <div class="messages" id="messages"><div class="msg empty">Loading…</div></div>
     <form class="compose" id="form">
-      <input id="text" placeholder="What should the poster say?" autocomplete="off">
+      <input id="text" placeholder="Ask the agent, e.g. Love the poster. Now all the sizes, please." autocomplete="off">
       <button id="send">Run</button>
     </form>
   </section>
@@ -127,11 +136,11 @@ header button.quiet.on{color:var(--accent);border-color:var(--accent);background
     <div class="tabs">
       <button class="on" data-tab="trace">Trace</button>
       <button data-tab="context">Context</button>
-      <button data-tab="poster">Poster</button>
+      <button data-tab="poster">Files</button>
     </div>
     <div class="panel on trace" id="trace"><div class="empty">What happens during a run, line by line. "sent" is what the model read, "got back" is what it wrote, in tokens.</div></div>
-    <div class="panel" id="context"><div class="empty">After a run: what the model saw, in what order, at what cost.</div></div>
-    <div class="panel poster" id="poster"><div class="empty">The picture appears here after step 3.</div></div>
+    <div class="panel" id="context"><div class="empty">After a run: how much the main agent had in view.</div></div>
+    <div class="panel poster" id="poster"><div class="empty">Pictures and sounds the agent makes appear here.</div></div>
   </section>
 </main>
 <script>
@@ -141,10 +150,14 @@ const who = () => ({ workspace_id: $("brand").value, user_id: $("person").value 
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 function add(cls, html){ const d = document.createElement("div"); d.className = "msg " + cls; d.innerHTML = html; $("messages").appendChild(d); $("messages").scrollTop = 1e9; return d; }
 function specHtml(s){ return `<span class="k">headline</span>${esc(s.headline)}\n<span class="k">subheadline</span>${esc(s.subheadline)}\n<span class="k">body</span>${esc(s.body)}\n<span class="k">image prompt</span>${esc(s.image_prompt)}\n<span class="k">format</span>${esc(s.format)}${s.sources && s.sources.length ? `\n<span class="k">sources</span>${esc(s.sources.join(", "))}` : ""}`; }
+function mediaHtml(files){
+  if (!files || !files.length) return "";
+  return `<div class="media">${files.map(f => `<figure>${/\.(mp3|wav)$/i.test(f) ? `<audio controls src="${esc(f)}"></audio>` : `<a href="${esc(f)}" target="_blank"><img src="${esc(f)}" alt=""></a>`}${esc(f.split("/").pop())}</figure>`).join("")}</div>`;
+}
 function renderTurn(t){
   if (t.role === "user") add("user", esc(t.text));
   else if (t.role === "error") add("error", `<b>${esc(t.kind)}</b>\n${esc(t.message)}`);
-  else if (t.reply) add("", esc(t.reply));
+  else if (t.reply || t.files) { add("", esc(t.reply || "") + mediaHtml(t.files)); if (t.files && t.files.length) $("poster").innerHTML = mediaHtml(t.files); }
   else if (t.spec) { const d = add("", specHtml(t.spec)); if (t.image) { d.innerHTML += `<img src="${t.image}" alt="poster picture">`; $("poster").innerHTML = `<img src="${t.image}" alt="poster picture">`; } }
 }
 function fillSessions(data){
@@ -161,8 +174,8 @@ async function loadConversation(sessionId){
   const pick = typeof sessionId === "string" ? `?session_id=${encodeURIComponent(sessionId)}` : "";
   const data = await (await fetch(`/conversations/${w.workspace_id}/${w.user_id}${pick}`)).json();
   fillSessions(data);
-  $("messages").innerHTML = ""; $("poster").innerHTML = '<div class="empty">The picture appears here after step 3.</div>';
-  if (!data.turns.length) add("empty", `Signed in as ${esc($("person").selectedOptions[0].textContent)} at ${esc($("brand").selectedOptions[0].textContent)}. Say hi, or ask for a poster.`);
+  $("messages").innerHTML = ""; $("poster").innerHTML = '<div class="empty">Pictures and sounds the agent makes appear here.</div>';
+  if (!data.turns.length) add("empty", `Signed in as ${esc($("person").selectedOptions[0].textContent)} at ${esc($("brand").selectedOptions[0].textContent)}. Ask the agent for something.`);
   data.turns.forEach(renderTurn);
 }
 function fillPeople(){
@@ -258,16 +271,23 @@ document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => {
 });
 
 function traceLine(ev){ const d = document.createElement("div"); d.className = ev.kind; d.textContent = ev.line; $("trace").appendChild(d); $("trace").scrollTop = 1e9; }
-function showContext(x){
-  const rows = x.sections.map(s => `<tr><td>${s.section}</td><td class="n">${s.tokens}</td><td class="n">${s.budget}</td><td>${s.given === 0 ? "(empty)" : (s.trimmed ? "trimmed from " + s.given : "")}</td></tr>`).join("");
-  const cost = x.cost_usd == null ? "price unknown" : "$" + x.cost_usd.toFixed(4);
-  $("context").innerHTML = `<p><b>${esc(x.workspace)}</b> · ${esc(x.model)} · copy phase</p>
-    <table><tr><th>section</th><th class="n">tokens</th><th class="n">budget</th><th></th></tr>${rows}
-    <tr><td>history</td><td class="n">${x.history_tokens}</td><td class="n">2000</td><td>${x.history_messages} earlier messages</td></tr>
-    <tr><td>tool results</td><td class="n">${x.tool_tokens ?? 0}</td><td class="n">–</td><td>${x.tool_results ?? 0} tool calls this turn</td></tr></table>
-    <p>input ${x.input_tokens} · cached ${x.cached_tokens} · output ${x.output_tokens} · ${cost}</p>
-    <p class="empty">Section tokens are approximate (4 characters each). Totals are the provider's.</p>
-    <details><summary>System message as sent</summary><pre>${esc(x.system_message)}</pre></details>`;
+function showView(x){
+  $("context").innerHTML = `<table><tr><th>main agent's view, this turn</th><th class="n">tokens</th></tr>
+    <tr><td>tool results</td><td class="n">${x.tool_tokens}</td></tr>
+    <tr><td>history carried in</td><td class="n">${x.history_tokens}</td></tr></table>
+    <p>took ${x.seconds} s</p><p class="empty">Everything a tool returns stays in the main agent's view and rides along on later turns.</p>`;
+}
+function askHtml(ev){
+  return `<b>The agent wants to ${esc(ev.name)}</b><pre>${esc(JSON.stringify(ev.inputs, null, 2))}</pre><div class="row"><button data-allow="1">Allow</button><button class="quiet" data-allow="0">Deny</button></div>`;
+}
+function showAsk(ev){
+  const d = add("ask", askHtml(ev));
+  d.querySelectorAll("button").forEach(b => b.onclick = async () => {
+    const allow = b.dataset.allow === "1";
+    d.querySelectorAll("button").forEach(x => x.disabled = true);
+    await fetch(`/answer/${ev.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ allow }) });
+    d.querySelector(".row").outerHTML = `<div>${allow ? "Allowed." : "Denied."}</div>`;
+  });
 }
 $("form").onsubmit = async e => {
   e.preventDefault();
@@ -281,7 +301,7 @@ $("form").onsubmit = async e => {
   const tick = setInterval(show, 1000);
   let answered = false;
   const finish = () => { clearInterval(tick); pending.remove(); $("send").disabled = false; };
-  const body = { ...w, text, session_id: session };
+  const body = { ...w, text, session_id: session, model: $("model").value.trim() || null };
   let run_id;
   try {
     ({ run_id } = await (await fetch("/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json());
@@ -293,12 +313,8 @@ $("form").onsubmit = async e => {
     const ev = JSON.parse(m.data);
     if (ev.type === "trace") { traceLine(ev); stage = " · " + ev.line.replace(/\s+/g, " ").slice(0, 70); show(); }
     if (ev.type === "result" || ev.type === "error") answered = true;
-    if (ev.type === "result" && ev.reply) { add("", esc(ev.reply)); }
-    if (ev.type === "result" && ev.spec) {
-      renderTurn({ role: "assistant", spec: ev.spec, image: ev.image });
-      showContext(ev.explain);
-    }
-    if (ev.type === "result" && ev.reply) showContext(ev.explain);
+    if (ev.type === "ask") showAsk(ev);
+    if (ev.type === "result") { renderTurn({ role: "assistant", reply: ev.reply, files: ev.files }); showView(ev.view); }
     if (ev.type === "error") add("error", `<b>${esc(ev.kind)}</b>\n${esc(ev.message)}`);
   };
   es.addEventListener("done", () => { es.close(); finish(); refreshSessions(); });

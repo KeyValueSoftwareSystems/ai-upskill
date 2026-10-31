@@ -84,7 +84,14 @@ def test_the_page_shows_the_tool_results_and_the_terminal_prints_the_trace(setti
 
     page = (ROOT / "launchkit" / "web" / "index.html").read_text(encoding="utf-8")
     assert "<td>tool results</td>" in page and "x.tool_tokens" in page
+    from launchkit.harness.main import MainResult
+
+    def one_lookup(req, *, settings, trace, approve):
+        trace.tool("get_brand_details", {"query": "dishwasher"}, "The lid is hand-wash only.")
+        return MainResult(reply="Noted.", trace=trace)
+
     monkeypatch.setattr(web, "settings", settings)
-    web._worker(web.RunBody(workspace_id="harbor", user_id="maya", text=DISHWASHER, model="fake:lookup"), Queue())
+    monkeypatch.setattr(web, "run_main", one_lookup)
+    web._worker(web.RunBody(workspace_id="harbor", user_id="maya", text=DISHWASHER), Queue())
     out = capsys.readouterr().out
     assert 'run · harbor · maya · "' in out and "tool      get_brand_details" in out and "tokens back" in out

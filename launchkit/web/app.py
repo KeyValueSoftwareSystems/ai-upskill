@@ -2,6 +2,7 @@ import asyncio
 import json
 import re
 import threading
+import time
 import uuid
 from dataclasses import replace
 from pathlib import Path
@@ -14,7 +15,7 @@ from pydantic import BaseModel
 from launchkit.harness.library import asset_path, read_library, workspace_root
 from launchkit.harness.onboard import onboard_workspace
 from launchkit.harness.request import Request, UnknownWorkspace, resolve_workspace_id
-from launchkit.harness.run import run_request
+from launchkit.harness.main import run_main
 from launchkit.harness.spec import SpecError
 from launchkit.harness.trace import Trace
 from launchkit.harness.users import list_logins
@@ -23,7 +24,10 @@ from launchkit.settings import settings
 app = FastAPI(title="LaunchKit")
 HERE = Path(__file__).parent
 RUNS: dict[str, Queue] = {}
+ASKS: dict[str, tuple[threading.Event, dict]] = {}
 DONE = object()
+ASK_WAIT = 300
+MEDIA = {".png", ".jpg", ".jpeg", ".webp", ".mp3", ".wav"}
 
 
 class RunBody(BaseModel):
@@ -32,6 +36,10 @@ class RunBody(BaseModel):
     text: str
     model: str | None = None
     session_id: str | None = None
+
+
+class Answer(BaseModel):
+    allow: bool
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -113,11 +121,36 @@ def start_run(body: RunBody):
     return {"run_id": run_id}
 
 
-def _previous_picture(conversation: dict, current) -> dict | None:
-    for turn in reversed(conversation["turns"]):
-        if turn.get("role") == "assistant" and turn.get("spec") and turn.get("image"):
-            return {"image_prompt": turn["spec"].get("image_prompt"), "image": str(current.data_dir / "outputs" / Path(turn["image"]).name)}
-    return None
+def ask_on_page(queue: Queue):
+    """The page's version of ask_in_terminal: the run stops, the chat shows Allow and Deny, and the answer comes back
+    through /answer. No answer in five minutes counts as no."""
+
+    def approve(name: str, inputs: dict) -> bool:
+        ask_id = uuid.uuid4().hex[:8]
+        answered, answer = threading.Event(), {"allow": False}
+        ASKS[ask_id] = (answered, answer)
+        queue.put({"type": "ask", "id": ask_id, "name": name, "inputs": inputs})
+        answered.wait(ASK_WAIT)
+        ASKS.pop(ask_id, None)
+        return answer["allow"]
+
+    return approve
+
+
+@app.post("/answer/{ask_id}")
+def answer(ask_id: str, body: Answer):
+    if ask_id not in ASKS:
+        raise HTTPException(404, "that question is no longer open")
+    answered, answer = ASKS[ask_id]
+    answer["allow"] = body.allow
+    answered.set()
+    return {"ok": True}
+
+
+def new_files(current, since: float) -> list[str]:
+    """Pictures and sounds the run wrote under data/, as page addresses."""
+    found = [p for p in current.data_dir.rglob("*") if p.suffix.lower() in MEDIA and p.stat().st_mtime >= since]
+    return [f"/files/{p.relative_to(current.data_dir).as_posix()}" for p in sorted(found)]
 
 
 def refuse_bad_workspace(body: RunBody, current) -> str | None:
@@ -148,16 +181,16 @@ def _worker(body: RunBody, queue: Queue):
     conversation = _load_conversation(body.workspace_id, body.user_id, body.session_id)
     req = Request(workspace_id=body.workspace_id, user_id=body.user_id, session_id=conversation["session_id"], text=body.text)
     conversation["turns"].append({"role": "user", "text": body.text})
+    started = time.time()
     try:
-        result = run_request(req, settings=current, trace=trace, previous=_previous_picture(conversation, current))
+        result = run_main(req, settings=current, trace=trace, approve=ask_on_page(queue))
         answer = {
             "type": "result",
             "reply": result.reply,
-            "spec": result.spec.model_dump() if result.spec else None,
-            "image": f"/outputs/{result.image.name}" if result.image else None,
-            "explain": json.loads((current.data_dir / "last_run.json").read_text(encoding="utf-8")),
+            "files": new_files(current, started),
+            "view": {"tool_tokens": result.view_tokens, "history_tokens": result.history_tokens, "seconds": round(result.seconds, 1)},
         }
-        conversation["turns"].append({"role": "assistant", "reply": answer["reply"], "spec": answer["spec"], "image": answer["image"]})
+        conversation["turns"].append({"role": "assistant", "reply": answer["reply"], "files": answer["files"]})
         queue.put(answer)
     except (UnknownWorkspace, SpecError) as error:
         conversation["turns"].append({"role": "error", "kind": type(error).__name__, "message": str(error)})
@@ -245,6 +278,15 @@ async def events(run_id: str):
 def output(name: str):
     path = settings.data_dir / "outputs" / Path(name).name
     if not path.exists():
+        raise HTTPException(404)
+    return FileResponse(path)
+
+
+@app.get("/files/{name:path}")
+def data_file(name: str):
+    root = settings.data_dir.resolve()
+    path = (root / name).resolve()
+    if not path.is_relative_to(root) or path.suffix.lower() not in MEDIA or not path.exists():
         raise HTTPException(404)
     return FileResponse(path)
 
