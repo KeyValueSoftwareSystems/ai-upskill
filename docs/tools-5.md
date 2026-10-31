@@ -33,7 +33,7 @@ self.trace.refused(name, "Maya said no") and return "Maya did not allow {name}. 
 not try it again; tell her what you wanted to do." Reads never ask.
 ```
 
-`self.approve` is ready-made: in the terminal it prints the tool and its inputs and asks "Allow? [y/N]".
+`self.approve` is ready-made: on the chat page it shows the tool and its inputs with **Allow** and **Deny**; in the terminal it asks "Allow? [y/N]". No answer in five minutes counts as no.
 
 ## Prove it
 
@@ -47,9 +47,9 @@ uv run launchkit check tools5
 
 ## Run it again
 
-The same ask on the fake. The terminal asks before each write. Say yes to `attach_files` and `update_status`, no to `remove_files`. The card ends up with both weeks' files, ready for review.
+The same ask on the fake, on the chat page: type `fake:tools` in **Model**. The chat asks before each write. Allow `attach_files` and `update_status`, deny `remove_files`. The card ends up with both weeks' files, ready for review.
 
-Then on the real model and your Notion: `uv run launchkit main harbor "Put these new sizes on the Tidal card: tidal-feed-1080x1350.png, tidal-web-1200x628.png. Then move it to Ready for review."` Notion's server marks its own tools, and the same rule asks before `notion-update-page` and `notion-create-comment`. Read what each one is about to change before you say yes. `uv run launchkit notion` sets the card back.
+Then on the real model and your Notion: empty **Model**, and send "Put these new sizes on the Tidal card: tidal-feed-1080x1350.png, tidal-web-1200x628.png. Then move it to Ready for review." Notion's server marks its own tools, and the same rule asks before `notion-update-page` and `notion-create-comment`. Read what each one is about to change before you press Allow. **Notion connected** sets the card back.
 
 ## Stuck?
 
