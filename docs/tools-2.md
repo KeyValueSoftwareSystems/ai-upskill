@@ -42,7 +42,9 @@ In launchkit/harness/picture_tools.py, build window_around(box, size, target, ma
 and remove its @todo. Take the biggest window of the target's shape that fits in the
 picture, centre it on the box, and push it back inside the picture. Return it as
 (left, top, right, bottom) if it holds the whole box plus the margin on every side,
-else None. Plain code, no model: it gives the same answer every time.
+else None. margin is a share of the box's own size, not pixels: 0.08 adds 8% of the
+box's width on the left and on the right, and 8% of its height on the top and bottom.
+Plain code, no model: it gives the same answer every time.
 ```
 
 ## Prove it
