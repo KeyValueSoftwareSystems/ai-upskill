@@ -59,7 +59,7 @@ uv run launchkit check tools2
 
 ## Run it again
 
-The same ask on the real model. Every size, bottle whole, the brand's sizes only. On this poster the bottle fits every Harbor size, so every size is a crop around it; the bars are the safety net for a shape the bottle cannot fit. The tools are the same as in step 1. What is new is the skill file and the fit rule.
+The same ask on the real model, on the chat page, in a new conversation. Every size, bottle whole, the brand's sizes only. On this poster the bottle fits every Harbor size, so every size is a crop around it; the bars are the safety net for a shape the bottle cannot fit. The tools are the same as in step 1. What is new is the skill file and the fit rule.
 
 ## Stuck?
 
