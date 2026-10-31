@@ -53,30 +53,20 @@ uv run launchkit check orch1
 
 ## Run it again
 
-The same command after the build, with the pages as slow as a real web search:
-
-```
-LAUNCHKIT_SEARCH_DELAY=0.4 uv run launchkit main harbor "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season? One paragraph each." --model fake:brief --session cp1
-```
+The same ask after the build, on the chat page, with the pages as slow as a real web search. Start the page with `LAUNCHKIT_SEARCH_DELAY=0.4 uv run launchkit ui`, sign in as Maya at Harbor, press **New conversation**, type `fake:brief` in **Model** and send "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season? One paragraph each." The Trace tab shows:
 
 ```
   tool      run_skill("competitor_research") → # competitor_research Pick me when: the job is to find out … · 152 tokens back
-  tool      run_tool("search_web", {'query': 'Hydro Flask bottle launch'}) → # Role Model and Hydro Flask Launch Limited Edition Drinkwa… · 1977 tokens back
-  tool      run_tool("search_web", {'query': 'Stanley bottle launch'}) → # Stanley Cup Marketing Strategy - Soar With Us Address: ht… · 2083 tokens back
+  tool      search_web("Hydro Flask bottle launch") → # Role Model and Hydro Flask Launch Limited Edition Drinkwa… · 1977 tokens back
+  tool      search_web("Stanley bottle launch") → # Stanley Cup Marketing Strategy - Soar With Us Address: ht… · 2083 tokens back
   ...three more, one after another...
-
-main agent's view  9858 tokens of tool results this turn · 0 tokens of history carried in · took 2.1 s
 ```
 
-Then Maya's next ask, in the same conversation:
+The Context tab: 9,858 tokens of tool results, 0 of history carried in, 2.1 s.
 
-```
-uv run launchkit main harbor "Write one headline for the hiker concept." --model fake:brief --session cp1
-```
+Then Maya's next ask, in the same conversation: "Write one headline for the hiker concept." The Context tab: 0 tokens of tool results, 10,005 tokens of history carried in.
 
-```
-main agent's view  0 tokens of tool results this turn · 10005 tokens of history carried in · took 0.0 s
-```
+In the terminal, `uv run launchkit main harbor "..." --model fake:brief --session cp1` does the same; `--session` keeps the conversation.
 
 Five paragraphs came back, and every page the agent read came with them. Ten pages, about 9,900 tokens, sit in the main agent's view. A headline needs none of them, yet they ride along on every turn that follows. And the five searches ran one after another.
 
@@ -86,7 +76,7 @@ A skill adds ability inside one view. It changes what the agent knows, not what 
 
 ## See it
 
-The trainer runs the same ask on the real model (drop `--model fake:brief`). On 30 Oct, gpt-4.1-mini with live web search, 2 runs: about 10,300 tokens of pages in view, 13 to 21 seconds. The five searches run one after another.
+The trainer runs the same ask on the real model: leave **Model** empty. On 30 Oct, gpt-4.1-mini with live web search, 2 runs: about 10,300 tokens of pages in view, 13 to 21 seconds. The five searches run one after another.
 
 ## Stuck?
 
