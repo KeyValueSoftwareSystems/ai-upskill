@@ -2,6 +2,7 @@ import json
 
 from PIL import Image
 
+from launchkit.harness.limits import Limits, make_leash
 from launchkit.harness.main import build_catalogue, run_main
 from launchkit.harness.picture_tools import APPROVED
 from launchkit.harness.trace import Trace
@@ -92,3 +93,19 @@ def test_the_main_agent_knows_todays_date(settings):
     ws = load_workspace("harbor", settings, Trace())
     agent = build_main_agent(ws, ContextBuilder(settings.budgets), None, settings, Trace(), build_catalogue(settings, Trace(), NO))
     assert f"Today is {date.today():%-d %B %Y}." in agent.system_message
+
+
+def test_a_tool_run_through_run_tool_shows_once_on_the_trace():
+    """run_tool records the tool it ran, so the leash adds no second run_tool line; a call it refuses still shows."""
+    trace = Trace()
+    leash = make_leash(Limits(), trace)
+
+    def run_tool(name, inputs):
+        if name == "crop":
+            trace.tool(name, inputs, "cropped")
+            return "cropped"
+        return f"No tool named {name}."
+
+    leash("run_tool", run_tool, {"name": "crop", "inputs": {}})
+    leash("run_tool", run_tool, {"name": "shrink", "inputs": {}})
+    assert [e.detail["name"] for e in trace.tool_calls()] == ["crop", "run_tool"]
