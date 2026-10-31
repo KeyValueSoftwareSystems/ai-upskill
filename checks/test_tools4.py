@@ -53,3 +53,34 @@ def test_the_main_agent_puts_the_sizes_on_the_card(settings, request_for):
     run_main(request_for(text="Put the new sizes on the Tidal card."), settings=settings, model=ToolsModel(), trace=trace, approve=YES, board=board)
     assert [e.detail["arguments"] for e in trace.tool_calls("run_skill")] == [{"name": "post_to_board"}]
     assert "tidal-1080x1920.png" in board.cards["tidal"]["files"]
+
+
+def test_a_person_without_a_notion_login_gets_no_board_tools_and_no_browser(settings, monkeypatch):
+    """Ready-made: a run never starts a Notion login. Nobody connected: no board tools, a note in the trace, no wait."""
+    from dataclasses import replace
+
+    import launchkit.harness.notion as notion
+
+    monkeypatch.setattr(notion.webbrowser, "open", lambda url: (_ for _ in ()).throw(AssertionError("opened a browser")))
+    trace = Trace()
+    assert notion.make_board(replace(settings, board="notion"), trace, "sam").entries() == []
+    assert any("Notion is not connected for sam" in line for line in trace.lines())
+
+
+def test_each_person_keeps_their_own_notion_login(settings):
+    """Ready-made: Maya's login is hers. Sam is still not connected, and the file sits under data/users/<id>/."""
+    import asyncio
+    import json
+
+    import launchkit.harness.notion as notion
+
+    path = notion.auth_file(settings, "maya")
+    assert path == settings.data_dir / "users" / "maya" / "notion-auth.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps({"tokens": {"access_token": "t", "token_type": "Bearer"}}))
+    assert notion.connected(settings, "maya") and not notion.connected(settings, "sam")
+    registered = {"client_id": "c", "redirect_uris": ["http://localhost:8765/callback"]}
+    path.write_text(json.dumps({"client": registered}))
+    page = notion.FileTokens(path, "http://localhost:8000/connect/notion/callback")
+    terminal = notion.FileTokens(path, "http://localhost:8765/callback")
+    assert asyncio.run(page.get_client_info()) is None and asyncio.run(terminal.get_client_info()).client_id == "c"

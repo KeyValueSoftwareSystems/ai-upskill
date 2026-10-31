@@ -103,7 +103,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
     )
 
 
-def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, pictures: Pictures | None = None) -> Catalogue:
+def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya") -> Catalogue:
     ws = ws or load_workspace("harbor", settings, trace)
     desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None)
     entries: list[Entry] = [
@@ -113,7 +113,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
         Entry("check_copy", "check a headline, subheadline and body against the brand's word limits and banned claims", "read", make_check_copy(ws)),
         search_entry(settings),
         *media_entries(settings, model, desk),
-        *(board or make_board(settings)).entries(),
+        *(board or make_board(settings, trace, user)).entries(),
     ]
     catalogue = Catalogue(entries, load_skills(), trace, approve)
     catalogue.leash = make_leash(replace(settings.limits, step_cap=10_000), trace)
@@ -129,7 +129,7 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     if isinstance(model, FakeModel):
         # The fakes are scripted against the saved pages and the local board, so a fake never reaches the live web or Notion.
         settings = replace(settings, search="saved", board="local")
-    catalogue = build_catalogue(settings, trace, approve, board, model, ws)
+    catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id)
     agent = build_main_agent(ws, ContextBuilder(settings.budgets), model, settings, trace, catalogue)
     started = time.perf_counter()
     session = f"{wid}:{req.user_id}:{req.session_id}:main"
