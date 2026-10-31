@@ -23,8 +23,10 @@ def make_leash(limits: Limits, trace):
                 reason = f"image budget of {limits.image_budget} spent"
                 trace.refused(function_name, reason)
                 return {"status": "refused", "reason": reason}
+        before = len(trace.events)
         result = function_call(**arguments)
-        trace.tool(function_name, arguments, result)
+        if function_name != "run_tool" or len(trace.events) == before:
+            trace.tool(function_name, arguments, result)
         return result
 
     return leash

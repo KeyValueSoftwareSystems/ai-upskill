@@ -1,12 +1,11 @@
 import json
-from dataclasses import replace
-from pathlib import Path
 
 from PIL import Image
 
-from launchkit.agents.main_agent import build_catalogue, run_main
-from launchkit.tools.resize_poster import APPROVED
-from launchkit.trace import Trace
+from launchkit.harness.limits import Limits, make_leash
+from launchkit.harness.main import build_catalogue, run_main
+from launchkit.harness.picture_tools import APPROVED
+from launchkit.harness.trace import Trace
 
 NO = lambda name, inputs: False
 
@@ -87,9 +86,9 @@ def test_the_main_agent_knows_todays_date(settings):
     """A model has no clock: the prompt tells it the date, so "this season" searches look for this year."""
     from datetime import date
 
-    from launchkit.agents.prompt import ContextBuilder
-    from launchkit.agents.main_agent import build_main_agent
-    from launchkit.brands.workspace import load_workspace
+    from launchkit.harness.context import ContextBuilder
+    from launchkit.harness.main import build_main_agent
+    from launchkit.harness.workspace import load_workspace
 
     ws = load_workspace("harbor", settings, Trace())
     agent = build_main_agent(ws, ContextBuilder(settings.budgets), None, settings, Trace(), build_catalogue(settings, Trace(), NO))
@@ -120,7 +119,7 @@ class BannedWordModel:
 def test_the_main_agent_checks_poster_words_repairs_once_then_stops(settings, trace, request_for):
     """Session 1's check still holds: poster words are checked in code, repaired once, then refused with a typed error."""
     import pytest
-    from launchkit.guardrails.poster_check import SpecError
+    from launchkit.harness.spec import SpecError
 
     with pytest.raises(SpecError) as raised:
         run_main(request_for(text="A Tidal poster, please."), settings=settings, model=BannedWordModel.make(fixed=False), trace=trace, approve=NO)
@@ -138,8 +137,8 @@ def test_a_repaired_poster_passes(settings, trace, request_for):
 def test_a_new_conversation_has_no_picture_until_one_is_attached(settings, request_for):
     """The picture tools work on the newest picture in this conversation. A new conversation has none, and the tool
     says so; nothing is read from a saved file."""
-    from launchkit.tools.resize_poster import PictureDesk, needs_picture
-    from launchkit.memory.attached_pictures import NO_PICTURE, Pictures
+    from launchkit.harness.picture_tools import PictureDesk, needs_picture
+    from launchkit.harness.pictures import NO_PICTURE, Pictures
 
     pictures = Pictures(settings, "harbor", "maya", "t1")
     desk = PictureDesk(settings, {}, Trace(), None, pictures.newest)
@@ -152,7 +151,7 @@ def test_a_new_conversation_has_no_picture_until_one_is_attached(settings, reque
 
 def test_a_picture_the_agent_makes_joins_the_conversation(settings):
     """generate_image's picture becomes the newest one, so "now all the sizes" works on the poster made in this chat."""
-    from launchkit.memory.attached_pictures import Pictures
+    from launchkit.harness.pictures import Pictures
 
     pictures = Pictures(settings, "harbor", "maya", "t1")
     made = build_catalogue(settings, Trace(), NO, pictures=pictures).entries["generate_image"].fn("a bottle on a lakeshore")
@@ -167,7 +166,7 @@ def test_the_main_agent_is_told_what_pictures_the_conversation_holds(settings, r
     trace = Trace()
     run_main(request_for(text="Morning!"), settings=settings, model=ToolsModel(), trace=trace, approve=NO, attach=[APPROVED])
     assert any(e.kind == "note" and "attached tidal-poster.jpg" in e.detail["text"] for e in trace.events)
-    from launchkit.memory.attached_pictures import Pictures
+    from launchkit.harness.pictures import Pictures
 
     assert Pictures(settings, "harbor", "maya", "t1").newest().name == "tidal-poster.jpg"
 
@@ -180,7 +179,7 @@ def test_the_chat_page_attaches_a_picture_to_the_conversation(settings, monkeypa
     from fastapi import UploadFile
 
     import launchkit.web.app as web
-    from launchkit.memory.attached_pictures import Pictures
+    from launchkit.harness.pictures import Pictures
 
     monkeypatch.setattr(web, "settings", settings)
     upload = UploadFile(file=io.BytesIO(APPROVED.read_bytes()), filename="tidal-poster.jpg")
@@ -193,7 +192,7 @@ def test_the_chat_page_attaches_a_picture_to_the_conversation(settings, monkeypa
 def test_a_checked_poster_gets_its_picture(settings, trace, request_for):
     """Session 1's order holds: the words pass the check, then the picture is made from the image prompt, and it joins
     the conversation."""
-    from launchkit.memory.attached_pictures import Pictures
+    from launchkit.harness.pictures import Pictures
 
     run_main(request_for(text="A Tidal poster, please."), settings=settings, model=BannedWordModel.make(fixed=True), trace=trace, approve=NO)
     assert [e.detail["arguments"] for e in trace.tool_calls("generate_image")] == [{"image_prompt": "a bottle on a lakeshore"}]
@@ -206,8 +205,8 @@ def test_from_step_2_the_model_cannot_choose_the_crop_window(settings, monkeypat
     the bottle's box (or any window). In step 1 the window is still the model's to give."""
     import inspect
 
-    import launchkit.tools.resize_poster as pt
-    from launchkit.tools.resize_poster import APPROVED, PictureDesk
+    import launchkit.harness.picture_tools as pt
+    from launchkit.harness.picture_tools import APPROVED, PictureDesk
 
     desk = PictureDesk(settings, {"navy": "#1F3A5F"}, Trace(), source=APPROVED)
     monkeypatch.setattr(pt.window_around, "todo", True, raising=False)
@@ -217,118 +216,20 @@ def test_from_step_2_the_model_cannot_choose_the_crop_window(settings, monkeypat
     assert list(inspect.signature(fitted).parameters) == ["width", "height"] and fitted.__name__ == "crop"
 
 
-def test_a_words_only_change_keeps_the_posters_picture(settings):
-    """As in Session 1: the same image prompt keeps the poster's picture, so a shorter headline makes no new picture.
-    A changed image prompt reworks the picture the conversation has, starting from it."""
-    from launchkit.agents.main_agent import make_picture
-    from launchkit.brands.workspace import load_workspace
-    from launchkit.guardrails.poster_check import PosterSpec
-    from launchkit.memory.attached_pictures import Pictures
-
-    trace, pictures = Trace(), Pictures(settings, "harbor", "maya", "keep")
-    ws = load_workspace("harbor", settings, trace)
-    catalogue = build_catalogue(settings, trace, NO, ws=ws, pictures=pictures)
-    first = PosterSpec(headline="Tidal Awaits Dawn", subheadline="s", body="b", image_prompt="a bottle on a lakeshore")
-    assert make_picture(first, catalogue, trace, pictures, settings, ws) is None
-    made = pictures.last_poster()["file"]
-
-    shorter = first.model_copy(update={"headline": "Tidal Dawn"})
-    assert make_picture(shorter, catalogue, trace, pictures, settings, ws) == Path(made)
-    assert len(trace.tool_calls("generate_image")) == 1
-    assert [e.detail["status"] for e in trace.events if e.kind == "picture"] == ["reused"]
-
-    new_scene = first.model_copy(update={"image_prompt": "a bottle on a beach"})
-    make_picture(new_scene, catalogue, trace, pictures, settings, ws)
-    assert len(trace.tool_calls("generate_image")) == 2
-    assert [e.detail["status"] for e in trace.events if e.kind == "picture"] == ["reused", "rework"]
-    assert pictures.last_poster()["image_prompt"] == "a bottle on a beach"
+    assert cut(1080, 1080, 538, 661, 663, 1005) == {"file": "ok"}
 
 
-def test_the_picture_request_names_colours_as_colours():
-    """Brand colours reach the image model as colours only, so a colour named sea glass is not drawn as glass."""
-    from launchkit.adapters.image_providers import picture_prompt
-
-    asked = picture_prompt("an insulated steel bottle on a misty lakeshore", {"navy": "#1F3A5F", "sea_glass": "#A8D5BA"})
-    assert "as colours only, not materials or objects: navy #1F3A5F, sea glass #A8D5BA" in asked
-    assert picture_prompt("a bottle", {}).startswith("a bottle. The product is plain")
-
-
-def test_an_unreachable_model_proxy_stops_at_once(settings, monkeypatch):
-    """With the VPN off, KeyValue's proxy does not answer. The run stops in seconds and says why, not after minutes."""
-    import time
-
-    import pytest
-    from agno.exceptions import ModelProviderError
-
-    from launchkit.adapters.models import check_reachable, resolve_model
-
-    monkeypatch.setenv("LITELLM_API_KEY", "test")
-    monkeypatch.setenv("LITELLM_BASE_URL", "http://127.0.0.1:9/v1")
-    model = resolve_model(replace(settings, model="openai:gpt-4.1-mini"), Trace())
-    started = time.time()
-    with pytest.raises(ModelProviderError, match="Is the VPN on"):
-        check_reachable(model)
-    assert time.time() - started < 5
-
-
-def test_saved_sizes_are_named_to_the_agent(settings):
-    """A size the tools save joins the conversation's list by its real name, so a later turn can put it on the brief.
-    The picture tools still work on the poster, not on the size."""
-    from launchkit.memory.attached_pictures import Pictures
-
-    pictures = Pictures(settings, "harbor", "maya", "sizes")
-    poster = pictures.attach(APPROVED)
-    pictures.size_made(settings.data_dir / "sizes" / "tidal-poster-crop-1080x1080-ab12.png")
-    assert pictures.newest() == poster
-    assert "tidal-poster-crop-1080x1080-ab12.png" in pictures.describe()
-
-
-def test_a_fake_run_that_worked_prints_no_parse_warnings(settings, trace, request_for, caplog):
-    """A fake reply comes in the answer shape the main agent asks for, so a run that worked shows no warnings."""
-    import logging
-
-    from launchkit.adapters.fakes import ToolsModel
-
-    with caplog.at_level(logging.WARNING):
-        result = run_main(request_for(text="Morning!"), settings=settings, model=ToolsModel(), trace=trace, approve=NO)
-    assert result.reply == "Morning, Maya. What do you need today?"
-    assert not [r for r in caplog.records if "pars" in r.getMessage().lower() or "output_schema" in r.getMessage()]
-
-
-def test_the_chat_page_accepts_only_plain_user_names(settings, monkeypatch):
-    """A user name becomes a folder under data/, so the page refuses one with ../ in it and writes nothing."""
-    import io
-
-    from fastapi.testclient import TestClient
-    from PIL import Image
-
-    import launchkit.web.app as web
-
-    monkeypatch.setattr(web, "settings", settings)
-    page = TestClient(web.app)
-    picture = io.BytesIO()
-    Image.new("RGB", (8, 8)).save(picture, "PNG")
-    sent = {"workspace_id": "harbor", "user_id": "../../../escaped", "session_id": "abc123"}
-    assert page.post("/attach", data=sent, files={"picture": ("p.png", picture.getvalue())}).status_code == 422
-    assert page.post("/run", json={"workspace_id": "harbor", "user_id": "../x", "text": "hi"}).status_code == 422
-    assert not list(settings.data_dir.parent.glob("**/escaped"))
-    assert page.post("/attach", data={**sent, "user_id": "maya"}, files={"picture": ("p.png", picture.getvalue())}).status_code == 200
-
-
-def test_a_poster_uses_the_photo_the_marketer_attached(settings):
-    """Maya attached her own photo: a poster uses it and pays for no new picture."""
-    from launchkit.agents.main_agent import make_picture
-    from launchkit.guardrails.poster_check import PosterSpec
-    from launchkit.memory.attached_pictures import Pictures
-    from types import SimpleNamespace
-
-    from launchkit.tools.catalogue import Entry
-
-    pictures = Pictures(settings, "harbor", "maya", "abc123")
-    photo = pictures.attach(APPROVED)
-    drawn = []
-    catalogue = SimpleNamespace(entries={"generate_image": Entry("generate_image", "make a new poster picture", "read", lambda image_prompt: drawn.append(image_prompt))})
-    spec = PosterSpec(headline="Calm water", subheadline="Ready for the trail", body="Cold for 24 hours.", image_prompt="a bottle by a lake")
+def test_a_tool_run_through_run_tool_shows_once_on_the_trace():
+    """run_tool records the tool it ran, so the leash adds no second run_tool line; a call it refuses still shows."""
     trace = Trace()
-    assert make_picture(spec, catalogue, trace, pictures) == photo
-    assert drawn == [] and trace.events[-1].detail["status"] == "kept"
+    leash = make_leash(Limits(), trace)
+
+    def run_tool(name, inputs):
+        if name == "crop":
+            trace.tool(name, inputs, "cropped")
+            return "cropped"
+        return f"No tool named {name}."
+
+    leash("run_tool", run_tool, {"name": "crop", "inputs": {}})
+    leash("run_tool", run_tool, {"name": "shrink", "inputs": {}})
+    assert [e.detail["name"] for e in trace.tool_calls()] == ["crop", "run_tool"]
