@@ -70,25 +70,19 @@ Then the gate for the whole part: `uv run launchkit check orch`.
 
 ## Run it again
 
-```
-LAUNCHKIT_SEARCH_DELAY=0.4 uv run launchkit main harbor "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season? One paragraph each." --model fake:brief --session cp2b
-```
+On the chat page, started with `LAUNCHKIT_SEARCH_DELAY=0.4` as in checkpoint 1: press **New conversation**, keep `fake:brief` in **Model** and send the same ask. The Trace tab shows:
 
 ```
   tool      run_skill("competitor_research") → # competitor_research Pick me when: the job is to find out … · 223 tokens back
   tool      search_web("How is Hydro Flask launching bottles this season? Message,…) → # Role Model and Hydro Flask Launch Limited Edition Drinkwa… · 1977 tokens back
   model     research phase · fake:brief · sent 2179 tokens, got back 23
   ...four more research agents, at the same time...
-  tool      run_tool("research_many", {'briefs': ['How is Hydro Flask launching …) → ["Hydro Flask: launch line, channels and what to avoid copy… · 121 tokens back
-
-main agent's view  514 tokens of tool results this turn · 0 tokens of history carried in · took 0.4 s
+  tool      research_many(['How is Hydro Flask launching bottles this season? Message…) → ['Hydro Flask: launch line, channels and what to avoid copy… · 121 tokens back
 ```
 
-And Maya's next ask, `"Write one headline for the hiker concept."` with `--session cp2b`:
+The Context tab: 514 tokens of tool results, 0 of history carried in, 0.4 s.
 
-```
-main agent's view  0 tokens of tool results this turn · 660 tokens of history carried in · took 0.0 s
-```
+And Maya's next ask in the same conversation, "Write one headline for the hiker concept.": 0 tokens of tool results, 660 tokens of history carried in.
 
 | | Checkpoint 1 | Checkpoint 2 |
 | --- | --- | --- |
@@ -104,7 +98,7 @@ It is not free. Count the model calls in the trace: six instead of one. Each res
 
 ## See it
 
-The trainer runs the same ask on the real model. On 30 Oct, gpt-4.1-mini with live web search, 2 runs: the main agent's view held 1,163 to 1,333 tokens instead of about 10,300, and the next turn carried 1,522 tokens of history. 17 to 22 seconds: the parallel run is only as fast as its slowest research agent.
+The trainer runs the same ask on the real model: leave **Model** empty. On 30 Oct, gpt-4.1-mini with live web search, 2 runs: the main agent's view held 1,163 to 1,333 tokens instead of about 10,300, and the next turn carried 1,522 tokens of history. 17 to 22 seconds: the parallel run is only as fast as its slowest research agent.
 
 ## Stuck?
 
