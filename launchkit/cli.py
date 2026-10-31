@@ -171,7 +171,7 @@ def cmd_onboard(args):
 def cmd_notion(args):
     from launchkit.harness.notion import set_up_card
 
-    console.print(set_up_card(settings), highlight=False)
+    console.print(set_up_card(settings, args.user), highlight=False)
     console.print("\nThe Tidal card is in your Notion. With LAUNCHKIT_BOARD=notion the agent reaches it through Notion's MCP server.")
     return 0
 
@@ -287,7 +287,8 @@ def main(argv=None):
     onboard.add_argument("--model", help="override LAUNCHKIT_MODEL, e.g. fake:profile")
     onboard.set_defaults(func=cmd_onboard)
 
-    notion = sub.add_parser("notion", help="log in to Notion once and put the Tidal card in your Notion")
+    notion = sub.add_parser("notion", help="log in to Notion once and put the Tidal card in your Notion (the chat page has a Connect Notion button too)")
+    notion.add_argument("--user", default="maya", help="whose Notion: a person id from the brand's users.yaml")
     notion.set_defaults(func=cmd_notion)
 
     explain = sub.add_parser("explain", help="what the model saw on the last run, in what order, at what cost")

@@ -102,6 +102,7 @@ header button.quiet.on{color:var(--accent);border-color:var(--accent);background
   <button class="quiet" id="new">New conversation</button>
   <button class="quiet" id="onboardToggle">Onboard a brand</button>
   <button class="quiet" id="libraryToggle">Brand library</button>
+  <button class="quiet" id="notion" hidden>Connect Notion</button>
 </header>
 <section class="onboard" id="onboard" hidden>
   <form id="onboardForm">
@@ -189,12 +190,33 @@ function loadLogins(select){
     brands.forEach(b => { const o = document.createElement("option"); o.value = b.id; o.textContent = b.label; sel.appendChild(o); });
     if (current && brands.some(b => b.id === current)) sel.value = current;
     $("onboardTarget").innerHTML = '<option value="">New brand (named from the pack)</option>' + brands.map(b => `<option value="${esc(b.id)}">${esc(b.label)} (${esc(b.id)})</option>`).join("");
-    fillPeople(); if (!$("library").hidden) loadLibrary(); return loadConversation();
+    fillPeople(); showNotion(); if (!$("library").hidden) loadLibrary(); return loadConversation();
   });
 }
 loadLogins("harbor");
-$("brand").onchange = () => { fillPeople(); loadConversation(); if (!$("library").hidden) loadLibrary(); };
-$("person").onchange = loadConversation;
+$("brand").onchange = () => { fillPeople(); showNotion(); loadConversation(); if (!$("library").hidden) loadLibrary(); };
+$("person").onchange = () => { loadConversation(); showNotion(); };
+async function showNotion(){
+  const w = who(); if (!w.user_id) return;
+  const c = await (await fetch(`/connections/${w.workspace_id}/${w.user_id}`)).json();
+  $("notion").hidden = c.board !== "notion";
+  $("notion").classList.toggle("on", c.notion);
+  $("notion").textContent = c.notion ? "Notion connected" : "Connect Notion";
+  $("notion").title = c.notion ? "Press to log in again and set the Tidal card back to the brief" : "Log in to your Notion; the Tidal card is put there";
+  return c;
+}
+$("notion").onclick = async () => {
+  const w = who(); const tab = window.open("", "_blank");
+  $("notion").disabled = true; $("notion").textContent = "Connecting…";
+  const start = await (await fetch("/connect/notion", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(w) })).json();
+  if (start.url) tab.location = start.url; else tab.close();
+  for (let i = 0; i < 150; i++) {
+    const c = await (await fetch(`/connections/${w.workspace_id}/${w.user_id}`)).json();
+    if (c.status && c.status !== "waiting for Notion") { add(c.status.startsWith("Not connected") ? "error" : "", esc(c.status)); break; }
+    await new Promise(r => setTimeout(r, 2000));
+  }
+  $("notion").disabled = false; showNotion();
+};
 $("new").onclick = async () => { const w = who(); const data = await (await fetch(`/conversations/${w.workspace_id}/${w.user_id}/new`, { method: "POST" })).json(); fillSessions(data); $("messages").innerHTML = ""; };
 $("session").onchange = () => loadConversation($("session").value);
 function showTop(id){

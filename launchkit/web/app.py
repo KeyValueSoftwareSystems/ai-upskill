@@ -6,9 +6,11 @@ import time
 import uuid
 from dataclasses import replace
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 from queue import Queue
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Request as HttpRequest
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
@@ -16,6 +18,7 @@ from launchkit.harness.library import asset_path, read_library, workspace_root
 from launchkit.harness.onboard import onboard_workspace
 from launchkit.harness.request import Request, UnknownWorkspace, resolve_workspace_id
 from launchkit.harness.main import run_main
+from launchkit.harness.notion import NotionServer, connected, set_up_card
 from launchkit.harness.spec import SpecError
 from launchkit.harness.trace import Trace
 from launchkit.harness.users import list_logins
@@ -26,6 +29,8 @@ HERE = Path(__file__).parent
 RUNS: dict[str, Queue] = {}
 ASKS: dict[str, tuple[threading.Event, dict]] = {}
 DONE = object()
+LOGINS_OPEN: dict[str, tuple[asyncio.AbstractEventLoop, asyncio.Future]] = {}
+CONNECTING: dict[str, str] = {}
 ASK_WAIT = 300
 MEDIA = {".png", ".jpg", ".jpeg", ".webp", ".mp3", ".wav"}
 
@@ -40,6 +45,11 @@ class RunBody(BaseModel):
 
 class Answer(BaseModel):
     allow: bool
+
+
+class Person(BaseModel):
+    workspace_id: str
+    user_id: str
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -289,6 +299,60 @@ def data_file(name: str):
     if not path.is_relative_to(root) or path.suffix.lower() not in MEDIA or not path.exists():
         raise HTTPException(404)
     return FileResponse(path)
+
+
+@app.get("/connections/{workspace_id}/{user_id}")
+def connections(workspace_id: str, user_id: str):
+    """What this person has connected, for the header button."""
+    return {"board": settings.board, "notion": connected(settings, user_id), "status": CONNECTING.get(user_id, "")}
+
+
+@app.post("/connect/notion")
+def connect_notion(body: Person, request: HttpRequest):
+    """Start this person's Notion login: the page opens the address this returns, Notion sends the browser back to
+    /connect/notion/callback, and then the Tidal card is put in their Notion."""
+    redirect_uri = f"{str(request.base_url).rstrip('/')}/connect/notion/callback"
+    ready, box = threading.Event(), {}
+
+    async def send_to_notion(url: str):
+        state = parse_qs(urlparse(url).query).get("state", [""])[0]
+        LOGINS_OPEN[state] = (asyncio.get_running_loop(), asyncio.get_running_loop().create_future())
+        box["url"], box["state"] = url, state
+        ready.set()
+
+    async def back_from_notion():
+        loop, future = LOGINS_OPEN[box["state"]]
+        return await asyncio.wait_for(future, timeout=300), box["state"]
+
+    def log_in():
+        CONNECTING[body.user_id] = "waiting for Notion"
+        try:
+            server = NotionServer(settings, body.user_id, redirect_uri, send_to_notion, back_from_notion)
+            CONNECTING[body.user_id] = set_up_card(settings, body.user_id, server)
+        except Exception as error:
+            CONNECTING[body.user_id] = f"Not connected: {error or type(error).__name__}"
+        finally:
+            LOGINS_OPEN.pop(box.get("state", ""), None)
+            ready.set()
+
+    threading.Thread(target=log_in, daemon=True).start()
+    ready.wait(60)
+    if "url" in box:
+        return {"url": box["url"]}
+    return {"url": None, "status": CONNECTING.get(body.user_id, "")}
+
+
+@app.get("/connect/notion/callback", response_class=HTMLResponse)
+def notion_callback(code: str = "", state: str = "", error: str = ""):
+    waiting = LOGINS_OPEN.get(state)
+    if waiting is None:
+        return "<p>This Notion login has ended. Go back to LaunchKit and press Connect Notion again.</p>"
+    loop, future = waiting
+    if code:
+        loop.call_soon_threadsafe(future.set_result, code)
+    else:
+        loop.call_soon_threadsafe(future.set_exception, PermissionError(error or "Notion said no"))
+    return "<p>Notion is connected. Go back to LaunchKit; you can close this tab.</p>"
 
 
 @app.get("/explain")
