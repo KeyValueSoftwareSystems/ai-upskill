@@ -1,5 +1,5 @@
 # Tidal launch: campaign brief
-Brand: Harbor · Owner: Maya · Status: Brief ready
+Brand: Harbor · Owner: Maya
 
 Product. Flask Trail 750 in the new Tidal colourway (navy with sea glass). Launches in six weeks.
 
