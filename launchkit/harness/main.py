@@ -6,6 +6,7 @@ leash, same sessions. It holds get_brand_details and generate_image, and every t
 
 import time
 from dataclasses import dataclass, field, replace
+from datetime import date
 
 from agno.agent import Agent
 
@@ -47,6 +48,7 @@ def placements_text(ws) -> str:
 
 def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue) -> Agent:
     ctx.set("rules", f"{ws.soul}\n\n{ws.agents}\n\n{placements_text(ws)}")
+    ctx.set("facts", f"Today is {date.today():%-d %B %Y}.")
     ctx.set("task", MAIN_TASK)
     return Agent(
         model=model,

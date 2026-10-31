@@ -79,3 +79,16 @@ def test_the_chat_page_serves_only_pictures_and_sounds_under_data(settings, monk
     for name in ("notes.json", "../pyproject.toml"):
         with pytest.raises(HTTPException):
             web.data_file(name)
+
+
+def test_the_main_agent_knows_todays_date(settings):
+    """A model has no clock: the prompt tells it the date, so "this season" searches look for this year."""
+    from datetime import date
+
+    from launchkit.harness.context import ContextBuilder
+    from launchkit.harness.main import build_main_agent
+    from launchkit.harness.workspace import load_workspace
+
+    ws = load_workspace("harbor", settings, Trace())
+    agent = build_main_agent(ws, ContextBuilder(settings.budgets), None, settings, Trace(), build_catalogue(settings, Trace(), NO))
+    assert f"Today is {date.today():%-d %B %Y}." in agent.system_message
