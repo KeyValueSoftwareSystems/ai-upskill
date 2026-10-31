@@ -280,6 +280,8 @@ class ToolsModel(FakeModel):
         names = tool_names(tools)
         if "find_tool" in names and any(word in asked for word in ("size", "photo", "talking about", "voice")):
             return self.through_the_doors(asked, fresh_results(messages), messages)
+        if "photo" in asked and "generate_image" in names:
+            return self.paid_picture(fresh_results(messages), messages)
         if "size" not in asked:
             return text_response("Morning, Maya. What do you need today?", messages)
         done = fresh_results(messages)
@@ -294,6 +296,13 @@ class ToolsModel(FakeModel):
                 messages,
             )
         return text_response(f"Done: {len(SIZES)} sizes of the approved poster.", messages)
+
+    def paid_picture(self, done: list[str], messages) -> ModelResponse:
+        """Before step 3 the agent holds every tool, and generate_image's note sounds like "the poster's picture" too:
+        asked to use her photo, it pays for a new picture instead."""
+        if not done:
+            return tool_call_response("generate_image", {"image_prompt": "our shoot photo, story size"}, "call_1")
+        return text_response("Done: a new picture for the story size.", messages)
 
     def plan(self, names: set[str], system: str = "", done: list[str] | None = None) -> list[tuple[str, dict]]:
         done = done or []
