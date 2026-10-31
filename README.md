@@ -36,7 +36,7 @@ The opener's code is on this branch too (`approach_llm/`, `approach_graph/`, `la
 | Command | What it does |
 | --- | --- |
 | `uv run launchkit run harbor "Poster for the Tidal bottle on a misty lakeshore at dawn."` | One request in the terminal: trace, spec, picture path |
-| `uv run launchkit ui` | The chat page: sign in as a person, chat, live trace, context view, poster |
+| `uv run launchkit ui` | The chat page: sign in as a person, chat with the main agent, live trace, context view, the files it made, Allow and Deny before a write |
 | `uv run launchkit explain` | What the model saw on the last run, in what order, at what cost |
 | `uv run launchkit check 1` | Prove step 1 with fake models. `check all` is the CP1.1 gate |
 | `uv run launchkit run harbor "..." --model fake:echo` | Force a fake model for one run |

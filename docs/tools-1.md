@@ -64,7 +64,9 @@ uv run launchkit check tools1
 
 ## Run it again
 
-Ask for all the sizes again on the real model, with the four new tools. Watch the trace: the model drives them a different way on each run. It picks `scale` and squashes the bottle, crops before it finds the bottle, or adds bars where a crop was fine. Each tool did its job. Nobody told the model which one to use, in what order, or when the result is good enough.
+Ask for all the sizes again on the real model, with the four new tools, on the chat page. Start `uv run launchkit ui`, sign in as Maya at Harbor, press **New conversation** and send "Love the poster. Now all the sizes, please." Leave **Model** empty for the real model; type `fake:tools` there for the fake. The sizes show in the chat, and each tool call shows in the Trace tab. After each `git checkout`, restart `launchkit ui`: it does not reload code.
+
+Watch the trace: the model drives them a different way on each run. It picks `scale` and squashes the bottle, crops before it finds the bottle, or adds bars where a crop was fine. Each tool did its job. Nobody told the model which one to use, in what order, or when the result is good enough.
 
 ## Stuck?
 
