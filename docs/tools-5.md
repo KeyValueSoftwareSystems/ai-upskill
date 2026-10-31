@@ -19,7 +19,7 @@ uv run launchkit main harbor "Put the new sizes on the Tidal card." --model fake
 ```
 
 ```
-  tool      run_tool("remove_files", {'card': 'tidal', 'files': ['tidal-feed-1080x1080-approved.png', …]}) → Removed 2 files from tidal.
+  tool      remove_files("tidal", ['tidal-feed-1080x1080-approved.png', 'tidal-story…) → Removed 2 files from tidal. · 7 tokens back
 ```
 
 The fake runs on the local board and shows the cleanup every time. On the real model it is rare: if it does not happen on the day, show it here and say so.
