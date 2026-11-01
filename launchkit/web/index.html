@@ -355,6 +355,7 @@ $("form").onsubmit = async e => {
   es.onmessage = m => {
     const ev = JSON.parse(m.data);
     if (ev.type === "trace") { traceLine(ev); stage = " · " + ev.line.replace(/\s+/g, " ").slice(0, 70); show(); }
+    if (ev.type === "trace" && ev.kind === "warning") { add("error", esc(ev.detail.text)); showNotion(); }
     if (ev.type === "result" || ev.type === "error") answered = true;
     if (ev.type === "ask") showAsk(ev);
     if (ev.type === "result") { renderTurn({ role: "assistant", reply: ev.reply, files: ev.files }); showView(ev.view); }

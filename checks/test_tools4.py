@@ -67,6 +67,35 @@ def test_a_person_without_a_notion_login_gets_no_board_tools_and_no_browser(sett
     assert any("Notion is not connected for sam" in line for line in trace.lines())
 
 
+def test_an_ended_notion_login_asks_the_person_to_connect_again(settings, monkeypatch):
+    """Ready-made: a dead login does not stop the run. The board tools are left out, the login is dropped so the page
+    shows Connect Notion, and the person and the main agent are both told to press it."""
+    import json
+    from dataclasses import replace
+
+    import launchkit.harness.mcp_link as mcp_link
+    import launchkit.harness.notion as notion
+    from launchkit.harness.context import ContextBuilder
+    from launchkit.harness.main import build_main_agent
+    from launchkit.harness.workspace import load_workspace
+
+    path = notion.auth_file(settings, "maya")
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps({"client": {"client_id": "c"}, "tokens": {"access_token": "old", "token_type": "Bearer"}}))
+
+    def dead_login(server):
+        raise ExceptionGroup("unhandled errors in a TaskGroup", [notion.NotConnected("Notion is not connected")])
+
+    monkeypatch.setattr(mcp_link, "connect", dead_login)
+    notion_settings, trace = replace(settings, board="notion"), Trace()
+    catalogue = build_catalogue(notion_settings, trace, lambda *_: False)
+    assert not any(name.startswith("notion-") for name in catalogue.entries)
+    assert not notion.connected(settings, "maya") and json.loads(path.read_text())["client"] == {"client_id": "c"}
+    assert any(line.startswith("warning") and "press Connect Notion" in line for line in trace.lines())
+    agent = build_main_agent(load_workspace("harbor", settings, Trace()), ContextBuilder(settings.budgets), None, notion_settings, trace, catalogue)
+    assert "Maya's Notion login has ended" in agent.system_message
+
+
 def test_each_person_keeps_their_own_notion_login(settings):
     """Ready-made: Maya's login is hers. Sam is still not connected, and the file sits under data/users/<id>/."""
     import asyncio

@@ -72,6 +72,21 @@ async def no_login(*_):
     raise NotConnected("Notion is not connected")
 
 
+def login_ended(error: BaseException) -> bool:
+    """The MCP client raises from inside a task group, so NotConnected can come wrapped in an ExceptionGroup."""
+    if isinstance(error, NotConnected):
+        return True
+    return isinstance(error, BaseExceptionGroup) and any(login_ended(e) for e in error.exceptions)
+
+
+def forget_login(settings, user: str):
+    """Drop a dead login, so the chat page shows Connect Notion again. The client registration stays."""
+    tokens = FileTokens(auth_file(settings, user))
+    data = tokens.read()
+    data.pop("tokens", None)
+    tokens.path.write_text(json.dumps(data))
+
+
 async def open_browser(url: str):
     print("Opening the browser to log in to Notion. Pick the workspace for the session.")
     webbrowser.open(url)
@@ -139,8 +154,11 @@ class NotionBoard:
             return []
         try:
             return connect(NotionServer(self.settings, self.user))
-        except NotConnected:
-            self.trace.note(f"{self.user}'s Notion login has ended: press Connect Notion on the chat page again")
+        except Exception as error:
+            if not login_ended(error):
+                raise
+            forget_login(self.settings, self.user)
+            self.trace.warn(f"{self.user.capitalize()}'s Notion login has ended. To use the Notion board, press Connect Notion, then send the ask again.")
             return []
 
 

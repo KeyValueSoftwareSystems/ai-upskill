@@ -26,6 +26,10 @@ class Trace:
     def note(self, text: str):
         self.add("note", text=text)
 
+    def warn(self, text: str):
+        """Something the person must act on: the chat page shows it in the chat, not only on the trace."""
+        self.add("warning", text=text)
+
     def context(self, report: list[dict]):
         self.add("context", sections=report)
 
@@ -83,6 +87,8 @@ class Trace:
                 return f"file      read {_relative(d['path'])}"
             case "note":
                 return f"note      {d['text']}"
+            case "warning":
+                return f"warning   {d['text']}"
             case "written":
                 return f"wrote     {_relative(d['path'])}"
             case "reply":
