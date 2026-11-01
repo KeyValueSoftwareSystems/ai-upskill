@@ -112,7 +112,7 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     if turn.kind == "poster" and turn.spec is not None:
         turn.spec = checked_spec(turn.spec, agent, session, req, ws, model, trace, result)
     result.spec = turn.spec
-    if turn.spec is not None and not trace.tool_calls("generate_image"):
+    if turn.spec is not None and not any(trace.tool_calls(name) for name in PICTURE_WORK):
         make_picture(turn.spec, catalogue, trace)
     result.reply = turn.reply or (poster_words(turn.spec) if turn.spec else "")
     result.seconds = time.perf_counter() - started
@@ -171,6 +171,10 @@ def loose(tools: list) -> list[Function]:
         f.strict = False
         out.append(f)
     return out
+
+
+# A turn that already made or reworked a picture keeps it: the harness makes one only for a poster with none.
+PICTURE_WORK = ("generate_image", "centre_crop", "crop", "expand_canvas", "scale", "describe_image")
 
 
 def make_picture(spec: PosterSpec, catalogue: Catalogue, trace: Trace):
