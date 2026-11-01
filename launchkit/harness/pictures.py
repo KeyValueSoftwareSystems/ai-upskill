@@ -9,7 +9,8 @@ from pathlib import Path
 
 from launchkit.settings import ROOT
 
-NO_PICTURE = "No poster in this conversation yet: attach one, or ask for a poster first."
+NO_PICTURE = ("No poster in this conversation yet. Stop here and tell the marketer: attach the poster to the chat, "
+              "or ask for a new poster first.")
 
 
 class NoPicture(Exception):
