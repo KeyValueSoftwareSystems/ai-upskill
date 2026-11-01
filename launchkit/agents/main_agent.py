@@ -104,7 +104,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
     )
 
 
-def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya") -> Catalogue:
+def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya", pictures: Pictures | None = None) -> Catalogue:
     ws = ws or load_workspace("harbor", settings, trace)
     desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None)
     entries: list[Entry] = [
@@ -130,8 +130,12 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     if isinstance(model, FakeModel):
         # The fakes are scripted against the saved pages and the local board, so a fake never reaches the live web or Notion.
         settings = replace(settings, search="saved", board="local")
-    catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id)
-    agent = build_main_agent(ws, ContextBuilder(settings.budgets), model, settings, trace, catalogue)
+    pictures = Pictures(settings, wid, req.user_id, req.session_id)
+    for picture in attach:
+        trace.note(f"attached {Path(picture).name} to this conversation")
+        pictures.attach(Path(picture))
+    catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures)
+    agent = build_main_agent(ws, ContextBuilder(settings.budgets), model, settings, trace, catalogue, pictures)
     started = time.perf_counter()
     session = f"{wid}:{req.user_id}:{req.session_id}:main"
     run = agent.run(req.text, session_id=session, user_id=req.user_id)
