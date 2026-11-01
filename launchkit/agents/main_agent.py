@@ -38,7 +38,8 @@ from launchkit.harness.workspace import Workspace, load_workspace
 from launchkit.settings import settings as default_settings
 
 MAIN_TASK = """You work for the marketer you are talking with. For any job beyond a greeting, call find_tool first, with the
-marketer's own words. If nothing fits, search again with other words before you answer.
+marketer's own words. It lists skills and tools, not answers: call it once for the whole job, not once per item.
+If nothing fits, search again with other words before you answer.
 When find_tool lists a skill for the job, load it once with run_skill before you call any tool, and do the job the way its steps say, not another way.
 Call tools only through run_tool, as run_tool(name, inputs) with every input inside inputs, e.g.
 run_tool("search_web", {"query": "..."}).
