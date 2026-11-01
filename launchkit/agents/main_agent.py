@@ -37,9 +37,11 @@ from launchkit.harness.web import search_entry
 from launchkit.harness.workspace import Workspace, load_workspace
 from launchkit.settings import settings as default_settings
 
-MAIN_TASK = """You work for the marketer you are talking with. For any job beyond a greeting, call find_tool first.
+MAIN_TASK = """You work for the marketer you are talking with. For any job beyond a greeting, call find_tool first, with the
+marketer's own words. If nothing fits, search again with other words before you answer.
 When find_tool lists a skill for the job, load it once with run_skill before you call any tool, and do the job the way its steps say, not another way.
-Call tools only through run_tool.
+Call tools only through run_tool, as run_tool(name, inputs) with every input inside inputs, e.g.
+run_tool("search_web", {"query": "..."}).
 Answer in plain words, in the brand's voice."""
 
 DIRECT_TASK = """You work for the marketer you are talking with. Decide what each request needs and use your tools for it.
