@@ -186,3 +186,13 @@ def test_the_chat_page_attaches_a_picture_to_the_conversation(settings, monkeypa
     assert kept["url"].endswith("/abc123/tidal-poster.jpg")
     assert Pictures(settings, "harbor", "maya", "abc123").newest().name == "tidal-poster.jpg"
     assert Pictures(settings, "harbor", "maya", "def456").newest() is None
+
+
+def test_a_checked_poster_gets_its_picture(settings, trace, request_for):
+    """Session 1's order holds: the words pass the check, then the picture is made from the image prompt, and it joins
+    the conversation."""
+    from launchkit.harness.pictures import Pictures
+
+    run_main(request_for(text="A Tidal poster, please."), settings=settings, model=BannedWordModel.make(fixed=True), trace=trace, approve=NO)
+    assert [e.detail["arguments"] for e in trace.tool_calls("generate_image")] == [{"image_prompt": "a bottle on a lakeshore"}]
+    assert Pictures(settings, "harbor", "maya", "t1").all()[-1]["by"] == "made"

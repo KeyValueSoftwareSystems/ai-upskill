@@ -112,6 +112,8 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     if turn.kind == "poster" and turn.spec is not None:
         turn.spec = checked_spec(turn.spec, agent, session, req, ws, model, trace, result)
     result.spec = turn.spec
+    if turn.spec is not None and not trace.tool_calls("generate_image"):
+        make_picture(turn.spec, catalogue, trace)
     result.reply = turn.reply or (poster_words(turn.spec) if turn.spec else "")
     result.seconds = time.perf_counter() - started
     result.view_tokens = tool_result_size(run)[0]
@@ -169,3 +171,11 @@ def loose(tools: list) -> list[Function]:
         f.strict = False
         out.append(f)
     return out
+
+
+def make_picture(spec: PosterSpec, catalogue: Catalogue, trace: Trace):
+    """Session 1's picture phase, kept: a checked poster gets its picture, made from the image prompt, never from the
+    words. It joins the conversation, so "now all the sizes" works on it."""
+    generate = catalogue.entries.get("generate_image")
+    if generate is not None:
+        trace.tool("generate_image", {"image_prompt": spec.image_prompt}, generate.fn(spec.image_prompt))
