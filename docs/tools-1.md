@@ -44,7 +44,9 @@ self.model) and record trace.note("detect_focal_point asked the vision model onc
 box ..."). Return {"box": self.box}. The docstring says it finds the main subject,
 here the bottle, and that it asks a vision model, so it costs money.
 crop(width, height, left, top, right, bottom): cut that window and resize it to
-(width, height). Return {"file", "size", "window"}.
+(width, height). Return {"file", "size", "window"}. If the window is left out (any
+side is -1), cut nothing and return {"status": "refused", "reason": "give the window
+to cut: left, top, right, bottom"}.
 expand_canvas(width, height, colour): fit the whole poster inside (width, height)
 without cutting, centred, and fill the new space with colour_of(colour, self.colours).
 scale(width, height): stretch the poster to (width, height).
