@@ -9,6 +9,7 @@ from dataclasses import dataclass, field, replace
 from datetime import date
 
 from agno.agent import Agent
+from agno.tools.function import Function
 
 from launchkit.adapters.images import make_images
 from launchkit.adapters.models import model_name, resolve_model
@@ -59,7 +60,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
         db=session_db(settings),
         add_history_to_context=True,
         num_history_runs=5,
-        tools=catalogue.agent_tools(),
+        tools=loose(catalogue.agent_tools()),
         tool_hooks=[make_leash(replace(settings.limits, step_cap=MAIN_STEP_CAP), trace)],
         telemetry=False,
     )
@@ -131,3 +132,14 @@ def checked_spec(spec: PosterSpec, agent, session: str, req, ws, model, trace: T
 
 def poster_words(spec: PosterSpec) -> str:
     return f"{spec.headline}\n{spec.subheadline}\n{spec.body}"
+
+
+def loose(tools: list) -> list[Function]:
+    """The Turn answer shape makes Agno ask OpenAI for strict tool schemas, and strict schemas refuse run_tool's free-form
+    inputs. The answer shape stays strict; the tools do not need to be."""
+    out = []
+    for fn in tools:
+        f = Function.from_callable(fn)
+        f.strict = False
+        out.append(f)
+    return out
