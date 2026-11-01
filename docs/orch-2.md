@@ -83,7 +83,7 @@ On the chat page, started with `LAUNCHKIT_SEARCH_DELAY=0.4` as in checkpoint 1: 
 
 The Context tab: 514 tokens of tool results, 0 of history carried in, 0.4 s.
 
-And Maya's next ask in the same conversation, "Write one headline for the hiker concept.": 0 tokens of tool results, 660 tokens of history carried in.
+And Maya's next ask in the same conversation, "Write one headline for the Tidal poster.": 0 tokens of tool results, 660 tokens of history carried in.
 
 | | Checkpoint 1 | Checkpoint 2 |
 | --- | --- | --- |

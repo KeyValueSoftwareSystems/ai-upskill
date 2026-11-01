@@ -29,7 +29,7 @@ def test_research_and_research_many_are_read_tools(settings, brief):
 
 def test_the_research_agent_sees_none_of_mayas_chat(settings, request_for, brief):
     """The research agent sees its brief and its pages, never Maya's chat."""
-    run_main(request_for(text="Morning! Concepts are due Friday, so keep it tight."), settings=settings, model=brief, approve=NO)
+    run_main(request_for(text="Morning! The sizes are due Friday, so keep it tight."), settings=settings, model=brief, approve=NO)
     run_main(request_for(text=ASK), settings=settings, model=brief, approve=NO)
     research_views = [view for role, view in brief.seen if role == "research"]
     assert len(research_views) >= 5
@@ -45,7 +45,7 @@ def test_the_main_agent_holds_the_reports_not_the_pages(settings, request_for, b
     assert any(PAGE_LINE in view for role, view in brief.seen if role == "research")
     assert all(name in result.reply for name in FIVE)
     assert result.view_tokens < 1000
-    nxt = run_main(request_for(text="Write one headline for the hiker concept."), settings=settings, model=brief, approve=NO)
+    nxt = run_main(request_for(text="Write one headline for the Tidal poster."), settings=settings, model=brief, approve=NO)
     assert nxt.history_tokens < 1000
 
 
