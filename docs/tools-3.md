@@ -51,7 +51,7 @@ uv run launchkit check tools3
 
 ## Run it again
 
-Send "Morning!" again on a new conversation: about 880 tokens, because the agent now holds three doors, not every tool. Then the photo ask, on the real model, on the chat page. Search, read, act, answer: `find_tool`, then `run_skill("ingest_image")`, then `describe_image`, `detect_focal_point` and `crop` through `run_tool`. The agent never sees the whole list.
+Send "Morning!" again on a new conversation: about 880 tokens, because the agent now holds three doors, not every tool. Then the photo ask, on the real model, on the chat page: in a new conversation, attach `samples/shoot/tidal-shoot.jpg` (📎) and send "Use our shoot photo for the story size." Search, read, act, answer: `find_tool`, then `run_skill("ingest_image")`, then `describe_image`, `detect_focal_point` and `crop` through `run_tool`. The agent never sees the whole list.
 
 ## Stuck?
 
