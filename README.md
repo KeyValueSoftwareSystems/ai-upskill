@@ -58,6 +58,8 @@ How each step runs:
 4. Run it again on the chat page. The **Trace** tab shows every tool call, the **Context** tab shows how many tokens the main agent holds, and a write asks **Allow** or **Deny** in the chat.
 5. Behind? Check out the step's answer branch and carry on.
 
+The pictures come from the conversation, never from a hidden file. Maya's approved poster is in the repo at `samples/approved/tidal-poster.jpg`, and her shoot photo (step 3) at `samples/shoot/tidal-shoot.jpg`: attach them with 📎 next to the message box, or with `--attach` in the terminal. Or ask for a new poster first, in the same conversation. The picture tools work on the newest picture in the conversation.
+
 In step 4, press **Connect Notion** on the chat page and log in to Notion. The page puts a private Tidal card in your Notion; press it again to set the card back.
 
 Offline, or without a key: `LAUNCHKIT_SEARCH=saved` uses the saved pages, `LAUNCHKIT_BOARD=local` uses the board server in this repo, and the fake models need no key. The checks always run offline.

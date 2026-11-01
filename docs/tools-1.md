@@ -1,6 +1,6 @@
 # Step 1 · Tools: one tool, then a toolbox
 
-Maya: "Love the poster. Now all the sizes, please." The main agent has two tools, `get_brand_details` and `generate_image`. Neither can resize.
+Maya attaches her approved poster and says: "Love the poster. Now all the sizes, please." The poster is in the repo, `samples/approved/tidal-poster.jpg`: on the chat page, attach it with 📎 next to the message box; in the terminal, add `--attach`. (She can also ask for a new poster first in the same conversation: the tools work on the newest picture in the conversation.) The main agent has two tools, `get_brand_details` and `generate_image`. Neither can resize.
 
 A tool is a function the model may ask for. The model sees only its name, its inputs and its description; Agno builds them from the Python function, its type hints and its docstring. The model replies with a call, the harness runs the function, and the result goes back to the model. So one tool use costs two model calls.
 
@@ -14,7 +14,7 @@ The harness binds the approved poster, the same way Session 1 bound the workspac
 ## Break it first
 
 ```
-uv run launchkit main harbor "Love the poster. Now all the sizes, please." --model fake:tools
+uv run launchkit main harbor "Love the poster. Now all the sizes, please." --attach samples/approved/tidal-poster.jpg --model fake:tools
 ```
 
 ```
@@ -66,7 +66,7 @@ uv run launchkit check tools1
 
 ## Run it again
 
-Ask for all the sizes again on the real model, with the four new tools, on the chat page. Start `uv run launchkit ui`, sign in as Maya at Harbor, press **New conversation** and send "Love the poster. Now all the sizes, please." Leave **Model** empty for the real model; type `fake:tools` there for the fake. The sizes show in the chat, and each tool call shows in the Trace tab. After each `git checkout`, restart `launchkit ui`: it does not reload code.
+Ask for all the sizes again on the real model, with the four new tools, on the chat page. Start `uv run launchkit ui`, sign in as Maya at Harbor, press **New conversation**, attach `samples/approved/tidal-poster.jpg` with 📎 and send "Love the poster. Now all the sizes, please." Leave **Model** empty for the real model; type `fake:tools` there for the fake. The sizes show in the chat, and each tool call shows in the Trace tab. After each `git checkout`, restart `launchkit ui`: it does not reload code.
 
 Watch the trace: the model drives them a different way on each run. It picks `scale` and squashes the bottle, crops before it finds the bottle, or adds bars where a crop was fine. Each tool did its job. Nobody told the model which one to use, in what order, or when the result is good enough.
 
