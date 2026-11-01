@@ -39,6 +39,8 @@ main{flex:1;display:grid;grid-template-columns:minmax(320px,1fr) minmax(360px,1.
 .media img{margin:0 0 4px}
 .compose{display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line);background:var(--surface)}
 .compose input{flex:1}
+.compose .attach{cursor:pointer;align-self:center;font-size:20px}
+.compose #attached:empty{display:none}
 .side{display:flex;flex-direction:column;min-width:0}
 .tabs{display:flex;gap:4px;padding:10px 18px 0;border-bottom:1px solid var(--line);background:var(--surface)}
 .tabs button{background:transparent;color:var(--muted);border:none;border-bottom:2px solid transparent;border-radius:0;padding:8px 10px}
@@ -128,6 +130,8 @@ header button.quiet.on{color:var(--accent);border-color:var(--accent);background
   <section class="chat">
     <div class="messages" id="messages"><div class="msg empty">Loading…</div></div>
     <form class="compose" id="form">
+      <label class="attach" title="Attach a picture">📎<input id="attachFile" type="file" accept="image/png,image/jpeg,image/webp" hidden></label>
+      <span id="attached" class="hint"></span>
       <input id="text" placeholder="Ask the agent, e.g. Love the poster. Now all the sizes, please." autocomplete="off">
       <button id="send">Run</button>
     </form>
@@ -155,7 +159,7 @@ function mediaHtml(files){
   return `<div class="media">${files.map(f => `<figure>${/\.(mp3|wav)$/i.test(f) ? `<audio controls src="${esc(f)}"></audio>` : `<a href="${esc(f)}" target="_blank"><img src="${esc(f)}" alt=""></a>`}${esc(f.split("/").pop())}</figure>`).join("")}</div>`;
 }
 function renderTurn(t){
-  if (t.role === "user") add("user", esc(t.text));
+  if (t.role === "user") add("user", esc(t.text) + mediaHtml(t.files));
   else if (t.role === "error") add("error", `<b>${esc(t.kind)}</b>\n${esc(t.message)}`);
   else if (t.reply || t.files) { add("", esc(t.reply || "") + mediaHtml(t.files)); if (t.files && t.files.length) $("poster").innerHTML = mediaHtml(t.files); }
   else if (t.spec) { const d = add("", specHtml(t.spec)); if (t.image) { d.innerHTML += `<img src="${t.image}" alt="poster picture">`; $("poster").innerHTML = `<img src="${t.image}" alt="poster picture">`; } }
@@ -289,11 +293,20 @@ function showAsk(ev){
     d.querySelector(".row").outerHTML = `<div>${allow ? "Allowed." : "Denied."}</div>`;
   });
 }
+let ATTACHED = [];
+$("attachFile").onchange = async () => {
+  const file = $("attachFile").files[0]; const w = who(); if (!file || !w.workspace_id || !w.user_id) return;
+  const fd = new FormData(); fd.append("workspace_id", w.workspace_id); fd.append("user_id", w.user_id); fd.append("session_id", session); fd.append("picture", file);
+  const res = await fetch("/attach", { method: "POST", body: fd });
+  if (!res.ok) { add("error", `<b>Not attached</b>\n${esc((await res.json()).detail || res.statusText)}`); return; }
+  ATTACHED.push(await res.json()); $("attached").textContent = "attached: " + ATTACHED.map(a => a.name).join(", "); $("attachFile").value = "";
+};
 $("form").onsubmit = async e => {
   e.preventDefault();
   const text = $("text").value.trim(); if (!text) return;
   const w = who(); if (!w.workspace_id || !w.user_id) return;
-  add("user", esc(text)); $("text").value = "";
+  const attached = ATTACHED.map(a => a.url);
+  add("user", esc(text) + mediaHtml(attached)); $("text").value = ""; ATTACHED = []; $("attached").textContent = "";
   $("trace").innerHTML = ""; $("send").disabled = true;
   const pending = add("pending", "Working… 0s");
   const t0 = Date.now(); let stage = "";
@@ -301,7 +314,7 @@ $("form").onsubmit = async e => {
   const tick = setInterval(show, 1000);
   let answered = false;
   const finish = () => { clearInterval(tick); pending.remove(); $("send").disabled = false; };
-  const body = { ...w, text, session_id: session, model: $("model").value.trim() || null };
+  const body = { ...w, text, session_id: session, model: $("model").value.trim() || null, attached };
   let run_id;
   try {
     ({ run_id } = await (await fetch("/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json());

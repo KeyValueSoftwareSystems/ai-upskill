@@ -16,6 +16,7 @@ from launchkit.harness.library import asset_path, read_library, workspace_root
 from launchkit.harness.onboard import onboard_workspace
 from launchkit.harness.request import Request, UnknownWorkspace, resolve_workspace_id
 from launchkit.harness.main import run_main
+from launchkit.harness.pictures import Pictures
 from launchkit.harness.spec import SpecError
 from launchkit.harness.trace import Trace
 from launchkit.harness.users import list_logins
@@ -36,6 +37,7 @@ class RunBody(BaseModel):
     text: str
     model: str | None = None
     session_id: str | None = None
+    attached: list[str] = []
 
 
 class Answer(BaseModel):
@@ -180,7 +182,7 @@ def _worker(body: RunBody, queue: Queue):
         return
     conversation = _load_conversation(body.workspace_id, body.user_id, body.session_id)
     req = Request(workspace_id=body.workspace_id, user_id=body.user_id, session_id=conversation["session_id"], text=body.text)
-    conversation["turns"].append({"role": "user", "text": body.text})
+    conversation["turns"].append({"role": "user", "text": body.text, "files": body.attached})
     started = time.time()
     try:
         result = run_main(req, settings=current, trace=trace, approve=ask_on_page(queue))
@@ -201,6 +203,23 @@ def _worker(body: RunBody, queue: Queue):
     finally:
         _save_conversation(body.workspace_id, body.user_id, conversation)
         queue.put(DONE)
+
+
+@app.post("/attach")
+async def attach_picture(workspace_id: str = Form(...), user_id: str = Form(...), session_id: str = Form(...), picture: UploadFile = File(...)):
+    """The marketer attached a picture to this conversation. The picture tools work on the newest one."""
+    try:
+        resolve_workspace_id(Request(workspace_id=workspace_id, user_id=user_id, session_id=session_id, text="attach"), settings)
+    except UnknownWorkspace as error:
+        raise HTTPException(404, str(error))
+    if not re.fullmatch(r"[0-9a-f]{6}", session_id) or Path(picture.filename or "").suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
+        raise HTTPException(400, "attach a .png, .jpg or .webp picture to a conversation")
+    uploads = settings.data_dir / "uploads"
+    uploads.mkdir(parents=True, exist_ok=True)
+    temp = uploads / Path(picture.filename).name
+    temp.write_bytes(await picture.read())
+    kept = Pictures(settings, workspace_id, user_id, session_id).attach(temp)
+    return {"name": kept.name, "url": f"/files/{kept.relative_to(settings.data_dir).as_posix()}"}
 
 
 @app.post("/onboard")

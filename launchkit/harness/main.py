@@ -6,6 +6,7 @@ leash, same sessions. It holds get_brand_details and generate_image, and every t
 
 import re
 import time
+from pathlib import Path
 from dataclasses import dataclass, field, replace
 from datetime import date
 from typing import Literal
@@ -21,6 +22,7 @@ from launchkit.harness.catalogue import Catalogue, Entry, ask_in_terminal
 from launchkit.harness.context import ContextBuilder
 from launchkit.harness.limits import make_leash
 from launchkit.harness.picture_tools import PictureDesk
+from launchkit.harness.pictures import Pictures
 from launchkit.harness.request import Request, resolve_workspace_id
 from pydantic import BaseModel, Field
 
@@ -61,9 +63,9 @@ def placements_text(ws) -> str:
     return "This brand's placements (every size): " + ", ".join(sizes) + "." if sizes else ""
 
 
-def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue) -> Agent:
+def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue, pictures: Pictures | None = None) -> Agent:
     ctx.set("rules", f"{ws.soul}\n\n{ws.agents}\n\n{placements_text(ws)}")
-    ctx.set("facts", f"Today is {date.today():%-d %B %Y}.")
+    ctx.set("facts", f"Today is {date.today():%-d %B %Y}. {pictures.describe() if pictures else ''}".strip())
     ctx.set("task", MAIN_TASK)
     return Agent(
         model=model,
@@ -78,24 +80,28 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
     )
 
 
-def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None) -> Catalogue:
+def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, pictures: Pictures | None = None) -> Catalogue:
     ws = ws or load_workspace("harbor", settings, trace)
     entries: list[Entry] = [
         Entry("get_brand_details", "look up this brand's guide and product facts", "read", make_get_brand_details(ws, trace, settings)),
-        Entry("generate_image", "make a new poster picture from a scene description", "read", make_generate_image(make_images(settings), ws.colours, trace)),
-        *PictureDesk(settings, ws.colours, trace, model).entries(),
+        Entry("generate_image", "make a new poster picture from a scene description", "read", make_generate_image(make_images(settings), ws.colours, trace, pictures.made if pictures else None)),
+        *PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None).entries(),
     ]
     return Catalogue(entries, trace, approve)
 
 
-def run_main(req: Request, *, settings=default_settings, model=None, trace: Trace | None = None, approve=ask_in_terminal, board=None) -> MainResult:
+def run_main(req: Request, *, settings=default_settings, model=None, trace: Trace | None = None, approve=ask_in_terminal, board=None, attach=()) -> MainResult:
     trace = trace if trace is not None else Trace()
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     wid = resolve_workspace_id(req, settings)
     ws = load_workspace(wid, settings, trace)
     model = model if model is not None else resolve_model(settings, trace)
-    catalogue = build_catalogue(settings, trace, approve, board, model, ws)
-    agent = build_main_agent(ws, ContextBuilder(settings.budgets), model, settings, trace, catalogue)
+    pictures = Pictures(settings, wid, req.user_id, req.session_id)
+    for picture in attach:
+        trace.note(f"attached {Path(picture).name} to this conversation")
+        pictures.attach(Path(picture))
+    catalogue = build_catalogue(settings, trace, approve, board, model, ws, pictures)
+    agent = build_main_agent(ws, ContextBuilder(settings.budgets), model, settings, trace, catalogue, pictures)
     started = time.perf_counter()
     session = f"{wid}:{req.user_id}:{req.session_id}:main"
     run = agent.run(req.text, session_id=session, user_id=req.user_id)

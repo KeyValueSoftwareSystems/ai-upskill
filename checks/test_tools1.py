@@ -1,7 +1,7 @@
 from PIL import Image
 
 from launchkit.harness.main import build_catalogue
-from launchkit.harness.picture_tools import PictureDesk
+from launchkit.harness.picture_tools import APPROVED, PictureDesk
 from launchkit.harness.trace import Trace
 
 BOTTLE = [492, 596, 660, 950]
@@ -10,7 +10,7 @@ COLOURS = {"navy": "#1F3A5F", "sea_glass": "#A8D5BA"}
 
 
 def desk(settings, trace=None):
-    return PictureDesk(settings, COLOURS, trace or Trace())
+    return PictureDesk(settings, COLOURS, trace or Trace(), source=APPROVED)
 
 
 def holds_bottle(window) -> bool:

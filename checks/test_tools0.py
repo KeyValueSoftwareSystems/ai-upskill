@@ -131,3 +131,58 @@ def test_a_repaired_poster_passes(settings, trace, request_for):
     result = run_main(request_for(text="A Tidal poster, please."), settings=settings, model=BannedWordModel.make(fixed=True), trace=trace, approve=NO)
     assert result.spec is not None and "unbreakable" not in result.spec.body
     assert "Cold for 24 hours" in result.reply
+
+
+def test_a_new_conversation_has_no_picture_until_one_is_attached(settings, request_for):
+    """The picture tools work on the newest picture in this conversation. A new conversation has none, and the tool
+    says so; nothing is read from a saved file."""
+    from launchkit.harness.picture_tools import PictureDesk, needs_picture
+    from launchkit.harness.pictures import NO_PICTURE, Pictures
+
+    pictures = Pictures(settings, "harbor", "maya", "t1")
+    desk = PictureDesk(settings, {}, Trace(), None, pictures.newest)
+    size_of = needs_picture(lambda: desk.open().size)
+    assert size_of() == {"status": "no picture", "reason": NO_PICTURE}
+    pictures.attach(APPROVED)
+    assert size_of() == (1200, 1200)
+    assert "tidal-poster.jpg (attached by the marketer)" in pictures.describe()
+
+
+def test_a_picture_the_agent_makes_joins_the_conversation(settings):
+    """generate_image's picture becomes the newest one, so "now all the sizes" works on the poster made in this chat."""
+    from launchkit.harness.pictures import Pictures
+
+    pictures = Pictures(settings, "harbor", "maya", "t1")
+    made = build_catalogue(settings, Trace(), NO, pictures=pictures).entries["generate_image"].fn("a bottle on a lakeshore")
+    assert str(pictures.newest()) == made["file"]
+    assert "(made by you)" in pictures.describe()
+
+
+def test_the_main_agent_is_told_what_pictures_the_conversation_holds(settings, request_for):
+    """--attach (and the page's attach button) put the picture in this conversation, and the prompt names it."""
+    from launchkit.adapters.fakes import ToolsModel
+
+    trace = Trace()
+    run_main(request_for(text="Morning!"), settings=settings, model=ToolsModel(), trace=trace, approve=NO, attach=[APPROVED])
+    assert any(e.kind == "note" and "attached tidal-poster.jpg" in e.detail["text"] for e in trace.events)
+    from launchkit.harness.pictures import Pictures
+
+    assert Pictures(settings, "harbor", "maya", "t1").newest().name == "tidal-poster.jpg"
+
+
+def test_the_chat_page_attaches_a_picture_to_the_conversation(settings, monkeypatch):
+    """The page's attach button sends the picture to /attach; it is kept with this conversation only."""
+    import asyncio
+    import io
+
+    from fastapi import UploadFile
+
+    import launchkit.web.app as web
+    from launchkit.harness.pictures import Pictures
+
+    monkeypatch.setattr(web, "settings", settings)
+    upload = UploadFile(file=io.BytesIO(APPROVED.read_bytes()), filename="tidal-poster.jpg")
+    kept = asyncio.run(web.attach_picture(workspace_id="harbor", user_id="maya", session_id="abc123", picture=upload))
+    assert kept["url"].endswith("/abc123/tidal-poster.jpg")
+    assert Pictures(settings, "harbor", "maya", "abc123").newest().name == "tidal-poster.jpg"
+    assert Pictures(settings, "harbor", "maya", "def456").newest() is None

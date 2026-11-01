@@ -1,19 +1,23 @@
-"""The picture tools for "every size". The harness binds the approved poster: the model never names a file.
+"""The picture tools for "every size". The harness binds the newest picture in this conversation, one the marketer
+attached or one the agent made: the model never names a file.
 
 Plain code cuts, pads or stretches the picture: free, and the same every time. One tool asks a vision model
 where the bottle is: it costs money, so the desk asks once per poster and keeps the box.
 """
 
 import base64
+import functools
 import json
 from pathlib import Path
 
 from PIL import Image, ImageColor
 
 from launchkit.harness.catalogue import Entry
+from launchkit.harness.pictures import NO_PICTURE, NoPicture, sidecar
 from launchkit.harness.trace import Trace
 from launchkit.settings import ROOT
 
+# Maya's approved Tidal poster, ready to attach in the chat. The tools never read it unless she attaches it.
 APPROVED = ROOT / "samples" / "approved" / "tidal-poster.jpg"
 
 
@@ -40,8 +44,10 @@ def colour_of(name: str, colours: dict) -> str:
 
 def find_subject(picture: Path, model) -> list[int]:
     """Ask a vision model for the main subject's box. With a fake model, read the box saved next to the picture."""
-    saved = picture.with_suffix(".bottle.json")
     if model is None or getattr(model, "provider", "") == "fake" or not hasattr(model, "id"):
+        saved = sidecar(picture, ".bottle.json")
+        if saved is None:
+            raise NoPicture("The fake model only knows the sample pictures in samples/; use the real model for this one.")
         return json.loads(saved.read_text())["box"]
     from launchkit.llm import client
 
@@ -60,14 +66,49 @@ def find_subject(picture: Path, model) -> list[int]:
     return json.loads(text[text.find("{"): text.rfind("}") + 1])["box"]
 
 
+def needs_picture(fn):
+    """No picture in this conversation: the tool says so, and the agent can tell the marketer."""
+
+    @functools.wraps(fn)
+    def call(*args, **kwargs):
+        try:
+            return fn(*args, **kwargs)
+        except NoPicture as missing:
+            return {"status": "no picture", "reason": str(missing)}
+
+    return call
+
+
 class PictureDesk:
-    def __init__(self, settings, colours: dict, trace: Trace, model=None, source: Path = APPROVED):
-        self.source = Path(source)
+    def __init__(self, settings, colours: dict, trace: Trace, model=None, source=None):
+        self._source = source
         self.colours = colours
         self.trace = trace
         self.model = model
         self.out = settings.data_dir / "sizes"
-        self.box: list[int] | None = None
+        self._box: list[int] | None = None
+        self._box_for: Path | None = None
+
+    @property
+    def source(self) -> Path:
+        """The picture to work on: the newest in this conversation, asked for at each call."""
+        picked = self._source() if callable(self._source) else self._source
+        if picked is None:
+            raise NoPicture(NO_PICTURE)
+        return Path(picked)
+
+    @source.setter
+    def source(self, picture):
+        self._source = picture
+
+    @property
+    def box(self) -> list[int] | None:
+        """The bottle's box, kept for the picture it was found in."""
+        return self._box if self._box_for == self.source else None
+
+    @box.setter
+    def box(self, value):
+        self._box, self._box_for = value, (self.source if value is not None else None)
 
     def open(self) -> Image.Image:
         return Image.open(self.source).convert("RGB")
@@ -105,9 +146,9 @@ class PictureDesk:
 
     def entries(self) -> list[Entry]:
         return [
-            Entry("centre_crop", "cut the approved poster to a new size from its centre", "read", self.centre_crop),
-            Entry("detect_focal_point", "find where the product sits in the approved poster", "read", self.detect_focal_point),
-            Entry("crop", "cut any window out of the approved poster at a new size", "read", self.crop),
-            Entry("expand_canvas", "fit the whole approved poster into a new size, with bars of a brand colour", "read", self.expand_canvas),
-            Entry("scale", "stretch the approved poster to a new size", "read", self.scale),
+            Entry("centre_crop", "cut the approved poster to a new size from its centre", "read", needs_picture(self.centre_crop)),
+            Entry("detect_focal_point", "find where the product sits in the approved poster", "read", needs_picture(self.detect_focal_point)),
+            Entry("crop", "cut any window out of the approved poster at a new size", "read", needs_picture(self.crop)),
+            Entry("expand_canvas", "fit the whole approved poster into a new size, with bars of a brand colour", "read", needs_picture(self.expand_canvas)),
+            Entry("scale", "stretch the approved poster to a new size", "read", needs_picture(self.scale)),
         ]

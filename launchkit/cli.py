@@ -54,7 +54,7 @@ def cmd_main(args):
     req = Request(workspace_id=args.workspace, user_id=args.user, session_id=args.session, text=args.text)
     trace = Trace()
     try:
-        result = run_main(req, settings=current, trace=trace)
+        result = run_main(req, settings=current, trace=trace, attach=args.attach)
     except UnknownWorkspace as error:
         print_trace(trace)
         console.print(f"\n[red]{type(error).__name__}[/red]  {error}")
@@ -256,6 +256,7 @@ def main(argv=None):
     main_agent.add_argument("--user", default="maya")
     main_agent.add_argument("--session", default="terminal")
     main_agent.add_argument("--model", help="override LAUNCHKIT_MODEL, e.g. fake:brief")
+    main_agent.add_argument("--attach", action="append", default=[], metavar="FILE", help="attach a picture to the conversation, e.g. samples/approved/tidal-poster.jpg")
     main_agent.set_defaults(func=cmd_main)
 
     lookup = sub.add_parser("lookup", help="call get_brand_details as the agent would and print what the model gets back")
