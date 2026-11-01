@@ -199,7 +199,12 @@ function loadLogins(select){
 loadLogins("harbor");
 $("brand").onchange = () => { fillPeople(); loadConversation(); if (!$("library").hidden) loadLibrary(); };
 $("person").onchange = loadConversation;
-$("new").onclick = async () => { const w = who(); const data = await (await fetch(`/conversations/${w.workspace_id}/${w.user_id}/new`, { method: "POST" })).json(); fillSessions(data); $("messages").innerHTML = ""; };
+let READY = Promise.resolve();
+$("new").onclick = async () => {
+  const w = who();
+  READY = fetch(`/conversations/${w.workspace_id}/${w.user_id}/new`, { method: "POST" }).then(r => r.json()).then(data => { fillSessions(data); $("messages").innerHTML = ""; ATTACHED = []; $("attached").textContent = ""; });
+  await READY;
+};
 $("session").onchange = () => loadConversation($("session").value);
 function showTop(id){
   ["onboard", "library"].forEach(x => { const open = x === id && $(x).hidden; $(x).hidden = !open; $(x + "Toggle").classList.toggle("on", open); });
@@ -295,6 +300,7 @@ function showAsk(ev){
 }
 let ATTACHED = [];
 $("attachFile").onchange = async () => {
+  await READY;
   const file = $("attachFile").files[0]; const w = who(); if (!file || !w.workspace_id || !w.user_id) return;
   const fd = new FormData(); fd.append("workspace_id", w.workspace_id); fd.append("user_id", w.user_id); fd.append("session_id", session); fd.append("picture", file);
   const res = await fetch("/attach", { method: "POST", body: fd });
