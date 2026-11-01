@@ -54,7 +54,7 @@ uv run launchkit check tools4
 
 ## Run it again
 
-The same ask, on the real model and your Notion, on the chat page: "Take the brief from our Notion board." `find_tool` now finds Notion's tools next to ours, and `run_tool` runs them. Then ask "Put these new sizes on the Tidal card: tidal-feed-1080x1350.png, tidal-web-1200x628.png. Then move it to Ready for review." and open the card in Notion. Check it: the agent can say "done" when Notion took the call but changed nothing. And Notion also offers `notion-delete-pages`: the agent can now change things Maya never asked it to touch.
+The same ask, on the real model and your Notion, on the chat page: "Take the brief from our Notion board." `find_tool` lists `post_to_board` first, its steps name Notion's tools, and `run_tool` runs them. Then ask "Put these new sizes on the Tidal card: tidal-feed-1080x1350.png, tidal-web-1200x628.png. Then move it to Ready for review." and open the card in Notion. Check it: the agent can say "done" when Notion took the call but changed nothing. And Notion also offers `notion-delete-pages`: the agent can now change things Maya never asked it to touch.
 
 ## Stuck?
 
