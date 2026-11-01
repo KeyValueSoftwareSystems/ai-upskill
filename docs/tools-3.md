@@ -17,15 +17,10 @@ The fix: the agent holds three doors instead of every tool. `find_tool` matches 
 ## The slot
 
 - `launchkit/harness/catalogue.py` · `Catalogue.make_run_tool`. Today it returns a slot marked todo, so the agent still holds every tool directly.
-- `launchkit/harness/main.py` · the note on `generate_image`. Today it clashes with `ingest_image`'s note: both sound like "the poster's picture".
 
 ## Break it first
 
-```
-uv run launchkit main harbor "Use our shoot photo for the story size." --model fake:tools
-```
-
-The agent holds every tool and skill at once. On the fake it picks a new paid picture over her photo, because two notes sound alike. On the real model it may pick right: then show the cost instead, with `launchkit explain harbor` before and after this step.
+On the chat page, leave **Model** empty, press **New conversation** and send "Morning!". Open the Trace. The model line says how many tokens it sent: about 1,500 for a greeting that needs no tool. Every tool's name, inputs and description, and every skill's line, ride along on every turn, used or not, and each new tool adds more.
 
 ## Prompt card, for your coding agent
 
@@ -39,9 +34,6 @@ and do not run it. Then run it through self.leash(name, entry.fn, inputs) when t
 a leash (the leash also writes the trace), else call it and record self.trace.tool(...).
 Return the result as text: a string as it is, anything else as JSON.
 Delete run_tool_todo.
-
-In launchkit/harness/main.py, change generate_image's note so it ends with
-", only when no photo is given".
 ```
 
 ## Prove it
@@ -53,13 +45,13 @@ uv run launchkit check tools3
 - `run_tool` runs a tool by name and traces it; an unknown tool or wrong inputs come back as a message.
 - `find_tool` gives back the best few with their notes, and hides the raw tools a skill prefers over.
 - The main agent holds three doors: `find_tool`, `run_skill`, `run_tool`.
-- With the note fixed, "use our shoot photo" loads `ingest_image` and pays for no picture.
+- "Use our shoot photo" loads `ingest_image` through the lookup and pays for no picture.
 - The picture budget still holds through `run_tool`.
 - Ready-made: trends with addresses; a voice-over file.
 
 ## Run it again
 
-The photo ask, on the real model, on the chat page. Search, read, act, answer: `find_tool`, then `run_skill("ingest_image")`, then `describe_image`, `detect_focal_point` and `crop` through `run_tool`. The agent never sees the whole list.
+Send "Morning!" again on a new conversation: about 880 tokens, because the agent now holds three doors, not every tool. Then the photo ask, on the real model, on the chat page. Search, read, act, answer: `find_tool`, then `run_skill("ingest_image")`, then `describe_image`, `detect_focal_point` and `crop` through `run_tool`. The agent never sees the whole list.
 
 ## Stuck?
 

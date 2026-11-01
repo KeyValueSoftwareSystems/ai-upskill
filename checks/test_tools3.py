@@ -56,8 +56,8 @@ def test_the_main_agent_holds_three_doors(settings):
     assert tools == ["find_tool", "run_skill", "run_tool"]
 
 
-def test_the_fixed_note_picks_the_photo_skill(settings, trace, request_for):
-    """"Use our shoot photo": with generate_image's note fixed, the main agent loads ingest_image and pays for no picture."""
+def test_the_photo_ask_loads_the_photo_skill(settings, trace, request_for):
+    """"Use our shoot photo": the main agent finds ingest_image through the lookup and pays for no picture."""
     from launchkit.adapters.fakes import ToolsModel
 
     run_main(request_for(text="Use our shoot photo for the story size."), settings=settings, model=ToolsModel(), trace=trace, approve=NO)
