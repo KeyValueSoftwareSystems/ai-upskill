@@ -1,6 +1,7 @@
 import json
 
 from launchkit.harness.main import build_catalogue, run_main
+from launchkit.harness.media import SHOOT_PHOTO
 from launchkit.harness.trace import Trace
 
 NO = lambda name, inputs: False
@@ -60,7 +61,7 @@ def test_the_photo_ask_loads_the_photo_skill(settings, trace, request_for):
     """"Use our shoot photo": the main agent finds ingest_image through the lookup and pays for no picture."""
     from launchkit.adapters.fakes import ToolsModel
 
-    run_main(request_for(text="Use our shoot photo for the story size."), settings=settings, model=ToolsModel(), trace=trace, approve=NO)
+    run_main(request_for(text="Use our shoot photo for the story size."), settings=settings, model=ToolsModel(), trace=trace, approve=NO, attach=[SHOOT_PHOTO])
     assert [e.detail["arguments"] for e in trace.tool_calls("run_skill")] == [{"name": "ingest_image"}]
     assert trace.tool_calls("generate_image") == []
     assert trace.tool_calls("describe_image") and trace.tool_calls("crop")

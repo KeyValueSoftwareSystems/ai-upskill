@@ -95,7 +95,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
 
 def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, pictures: Pictures | None = None) -> Catalogue:
     ws = ws or load_workspace("harbor", settings, trace)
-    desk = PictureDesk(settings, ws.colours, trace, model)
+    desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None)
     entries: list[Entry] = [
         Entry("get_brand_details", "look up this brand's guide and product facts", "read", make_get_brand_details(ws, trace, settings)),
         Entry("generate_image", "make a new poster picture from a scene description, only when no photo is given", "read", make_generate_image(make_images(settings), ws.colours, trace, pictures.made if pictures else None)),
@@ -118,8 +118,12 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     if isinstance(model, FakeModel):
         # The fakes are scripted against the saved pages, so a fake never searches the live web.
         settings = replace(settings, search="saved")
-    catalogue = build_catalogue(settings, trace, approve, board, model, ws)
-    agent = build_main_agent(ws, ContextBuilder(settings.budgets), model, settings, trace, catalogue)
+    pictures = Pictures(settings, wid, req.user_id, req.session_id)
+    for picture in attach:
+        trace.note(f"attached {Path(picture).name} to this conversation")
+        pictures.attach(Path(picture))
+    catalogue = build_catalogue(settings, trace, approve, board, model, ws, pictures)
+    agent = build_main_agent(ws, ContextBuilder(settings.budgets), model, settings, trace, catalogue, pictures)
     started = time.perf_counter()
     session = f"{wid}:{req.user_id}:{req.session_id}:main"
     run = agent.run(req.text, session_id=session, user_id=req.user_id)

@@ -1,8 +1,8 @@
 import json
 
-from launchkit.tools.catalogue import load_skills
-from launchkit.tools.resize_poster import APPROVED, PictureDesk, window_around
-from launchkit.trace import Trace
+from launchkit.harness.catalogue import load_skills
+from launchkit.harness.picture_tools import APPROVED, PictureDesk, window_around
+from launchkit.harness.trace import Trace
 
 BOTTLE = [492, 596, 660, 950]
 SIZES = [(1080, 1080), (1080, 1350), (1080, 1920), (1200, 628), (300, 250)]
@@ -46,7 +46,7 @@ def test_crop_without_a_window_cuts_around_the_bottle(settings):
 def test_the_main_agent_follows_the_skill(settings, trace, request_for):
     """Asked for all the sizes, the main agent loads resize_image, finds the bottle once, and every size keeps it whole."""
     from launchkit.adapters.fakes import ToolsModel
-    from launchkit.agents.main_agent import run_main
+    from launchkit.harness.main import run_main
 
     run_main(request_for(text="Love the poster. Now all the sizes, please."), settings=settings, model=ToolsModel(), trace=trace, approve=NO, attach=[APPROVED])
     assert [e.detail["arguments"] for e in trace.tool_calls("run_skill")] == [{"name": "resize_image"}]
@@ -58,7 +58,7 @@ def test_the_main_agent_follows_the_skill(settings, trace, request_for):
 
 def test_check_copy_catches_long_words_and_banned_claims(settings):
     """Ready-made: check_copy flags a headline over the limit and a banned claim, so the agent can fix them while it works."""
-    from launchkit.agents.main_agent import build_catalogue
+    from launchkit.harness.main import build_catalogue
 
     check_copy = build_catalogue(settings, Trace(), NO).entries["check_copy"].fn
     result = check_copy("The bottle that stays cold forever on trails", "Eco-friendly steel", "")

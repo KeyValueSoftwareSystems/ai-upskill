@@ -8,15 +8,11 @@ import wave
 from pathlib import Path
 
 from launchkit.harness.catalogue import Entry
+from launchkit.harness.pictures import NoPicture, sidecar
 from launchkit.settings import ROOT
 
-SHOOT_DIR = ROOT / "samples" / "shoot"
-
-
-def shoot_photo() -> Path | None:
-    """The photo the marketer gave. The harness binds it, so the model never names a file."""
-    photos = sorted(SHOOT_DIR.glob("*.jpg"))
-    return photos[-1] if photos else None
+# A shoot photo, ready to attach in the chat. The tools never read it unless the marketer attaches it.
+SHOOT_PHOTO = ROOT / "samples" / "shoot" / "tidal-shoot.jpg"
 
 
 def is_fake(settings, model) -> bool:
@@ -25,12 +21,21 @@ def is_fake(settings, model) -> bool:
 
 def make_describe_image(settings, model, desk=None):
     def describe_image() -> dict:
-        """Look at the photo the marketer gave: describe it, and say whether it shows any words or another brand's logo.
+        """Look at the photo the marketer attached, the newest picture in this conversation: describe it, and say whether it shows any words or another brand's logo.
         A clean photo becomes the picture the picture tools work on. Asks a vision model."""
-        photo = shoot_photo()
+        try:
+            photo = desk.source if desk is not None else None
+        except NoPicture:
+            photo = None
         if photo is None:
-            return {"status": "no photo given"}
-        seen = json.loads(photo.with_suffix(".describe.json").read_text()) if is_fake(settings, model) else look_at(photo, model)
+            return {"status": "no photo given", "reason": "Attach the photo to this conversation first."}
+        if is_fake(settings, model):
+            saved = sidecar(photo, ".describe.json")
+            if saved is None:
+                return {"status": "unknown photo", "reason": "The fake model only knows the sample photos in samples/."}
+            seen = json.loads(saved.read_text())
+        else:
+            seen = look_at(photo, model)
         if desk is not None and not seen.get("text") and not seen.get("other_brand"):
             desk.use_photo(photo)
             seen["now_working_on"] = "the marketer's photo"
