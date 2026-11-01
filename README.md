@@ -31,6 +31,37 @@ Keys go through KeyValue's LiteLLM proxy: `LITELLM_API_KEY` and `LITELLM_BASE_UR
 
 The opener's code is on this branch too (`approach_llm/`, `approach_graph/`, `launchkit/ui.py`, `launchkit/scoreboard.py`), but its LangGraph parts need the opener branches' dependencies; run them from `session-01-langgraph`.
 
+## Session 2: before you start
+
+Session 2 starts on the branch `session-02-tools`. Do this before the day; it takes about fifteen minutes.
+
+| You need | Why | How |
+| --- | --- | --- |
+| KeyValue's proxy key | the model and the pictures | the trainer gives you one; `LITELLM_API_KEY` in `.env` |
+| KeyValue's VPN | the proxy and our picture GPU are reached through it | connect before you start |
+| Your own Tavily key | from step 3, `search_web` reads the live web | free at https://app.tavily.com: 1,000 searches a month, no card; `TAVILY_API_KEY` in `.env` |
+| A Notion account | steps 4 and 5 read and write a card in your own Notion | a free personal account is enough; you connect it from the chat page in step 4 |
+
+```
+git checkout session-02-tools
+uv sync
+cp .env.example .env        # already have a .env? copy in the Session 2 lines: LAUNCHKIT_BOARD, LAUNCHKIT_SEARCH, TAVILY_API_KEY
+uv run launchkit index      # once on a fresh clone: puts the brand books in the vector database get_brand_details searches
+uv run launchkit ui         # the chat page on http://localhost:8000
+```
+
+How each step runs:
+
+1. Start on the step's branch (the step tables below). Restart `uv run launchkit ui` after each checkout.
+2. Break it first: on the chat page, sign in as Maya at Harbor, press **New conversation** and send the ask on the step's card in `docs/`. Leave **Model** empty for the real model. `fake:tools` (steps 1 to 5) or `fake:brief` (checkpoints 1 and 2) is a scripted model built into LaunchKit: it makes the same mistake every time.
+3. Build: hand the card's prompt to your coding agent, then prove it with the card's check, for example `uv run launchkit check tools1`.
+4. Run it again on the chat page. The **Trace** tab shows every tool call, the **Context** tab shows how many tokens the main agent holds, and a write asks **Allow** or **Deny** in the chat.
+5. Behind? Check out the step's answer branch and carry on.
+
+In step 4, press **Connect Notion** on the chat page and log in to Notion. The page puts a private Tidal card in your Notion; press it again to set the card back.
+
+Offline, or without a key: `LAUNCHKIT_SEARCH=saved` uses the saved pages, `LAUNCHKIT_BOARD=local` uses the board server in this repo, and the fake models need no key. The checks always run offline.
+
 ## Commands
 
 | Command | What it does |
@@ -58,13 +89,13 @@ Prompt cards for each step are in `docs/`.
 
 ## Tools, skills and MCP, five steps
 
-Talk to the main agent with `uv run launchkit main harbor "Love the poster. Now all the sizes, please."`. Each step fills one slot, has a check, a card in `docs/` and a branch with the answer.
+Run each step on the chat page, as in "Session 2: before you start". In the terminal, `uv run launchkit main harbor "Love the poster. Now all the sizes, please."` does the same. Each step fills one slot, has a check, a card in `docs/` and a branch with the answer.
 
 | Step | Slot | Check | Branch with the answer |
 | --- | --- | --- | --- |
 | 1 · Tools: one tool, then a toolbox | `picture_tools.py` `PictureDesk` | `check tools1` | `session-02-tools-step1` |
 | 2 · Skills: write the know-how down | `launchkit/skills/resize_image/skill.md`, `picture_tools.py` `window_around` | `check tools2` | `session-02-tools-step2` |
-| 3 · Lookup: find the right skill | `catalogue.py` `make_run_tool`, the note on `generate_image` in `main.py` | `check tools3` | `session-02-tools-step3` |
+| 3 · Lookup: find the right skill | `catalogue.py` `make_run_tool` | `check tools3` | `session-02-tools-step3` |
 | 4 · MCP: plug in Maya's board | `mcp_link.py` `connect` | `check tools4` | `session-02-tools-step4` |
 | 5 · Permissions: read freely, ask before you write | `catalogue.py` `run_tool` | `check tools5` | `session-02-tools-step5` |
 

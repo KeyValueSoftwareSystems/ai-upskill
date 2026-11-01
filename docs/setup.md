@@ -29,3 +29,13 @@ Without a key everything still runs. Live runs use a fake model and a fake pictu
 ## Read once
 
 - [glossary.md](glossary.md), the words we use. Five minutes.
+
+## Session 2
+
+Session 2 needs three more things. The README's "Session 2: before you start" has the details.
+
+- KeyValue's VPN, connected: the proxy and our picture GPU are reached through it.
+- Your own Tavily key, free at https://app.tavily.com (1,000 searches a month, no card). It goes in `.env` as `TAVILY_API_KEY`.
+- A Notion account. A free personal one is enough; you connect it from the chat page in step 4.
+
+On a fresh clone, run `uv run launchkit index` once before the first ask.
