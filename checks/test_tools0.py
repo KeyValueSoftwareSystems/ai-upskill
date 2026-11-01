@@ -92,3 +92,42 @@ def test_the_main_agent_knows_todays_date(settings):
     ws = load_workspace("harbor", settings, Trace())
     agent = build_main_agent(ws, ContextBuilder(settings.budgets), None, settings, Trace(), build_catalogue(settings, Trace(), NO))
     assert f"Today is {date.today():%-d %B %Y}." in agent.system_message
+
+
+class BannedWordModel:
+    """Writes a poster with a banned claim, and keeps it when asked to repair."""
+
+    @staticmethod
+    def make(fixed: bool):
+        from launchkit.adapters.fakes import FakeModel, poster_turn, text_response
+
+        class Model(FakeModel):
+            def __init__(self):
+                super().__init__("banned")
+                self.turns = 0
+
+            def answer(self, messages, tools):
+                self.turns += 1
+                body = "Keeps drinks cold all day." if fixed and self.turns > 1 else "The unbreakable bottle for every trail."
+                return text_response(poster_turn({"headline": "Cold for 24 hours", "subheadline": "Tidal, built for the shore",
+                                                  "body": body, "image_prompt": "a bottle on a lakeshore"}), messages)
+
+        return Model()
+
+
+def test_the_main_agent_checks_poster_words_repairs_once_then_stops(settings, trace, request_for):
+    """Session 1's check still holds: poster words are checked in code, repaired once, then refused with a typed error."""
+    import pytest
+    from launchkit.harness.spec import SpecError
+
+    with pytest.raises(SpecError) as raised:
+        run_main(request_for(text="A Tidal poster, please."), settings=settings, model=BannedWordModel.make(fixed=False), trace=trace, approve=NO)
+    assert [e.detail["attempt"] for e in trace.events if e.kind == "validation"] == [1, 2]
+    assert any("unbreakable" in e for e in raised.value.errors)
+
+
+def test_a_repaired_poster_passes(settings, trace, request_for):
+    """When the repair fixes the words, the poster goes out with its spec."""
+    result = run_main(request_for(text="A Tidal poster, please."), settings=settings, model=BannedWordModel.make(fixed=True), trace=trace, approve=NO)
+    assert result.spec is not None and "unbreakable" not in result.spec.body
+    assert "Cold for 24 hours" in result.reply

@@ -19,7 +19,8 @@ from launchkit.harness.context import ContextBuilder
 from launchkit.harness.limits import make_leash
 from launchkit.harness.picture_tools import PictureDesk
 from launchkit.harness.request import Request, resolve_workspace_id
-from launchkit.harness.run import history_size, raise_if_failed, tool_result_size
+from launchkit.harness.run import as_turn, history_size, looked_up, raise_if_failed, tool_result_size
+from launchkit.harness.spec import PosterSpec, SpecError, Turn, repair_message, validate_spec
 from launchkit.harness.tools import make_generate_image
 from launchkit.harness.trace import Trace
 from launchkit.harness.workspace import Workspace, load_workspace
@@ -34,6 +35,7 @@ MAIN_STEP_CAP = 12
 @dataclass
 class MainResult:
     reply: str = ""
+    spec: PosterSpec | None = None
     trace: Trace = field(default_factory=Trace)
     runs: list = field(default_factory=list)
     seconds: float = 0.0
@@ -53,6 +55,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
     return Agent(
         model=model,
         system_message=ctx.render(),
+        output_schema=Turn,
         db=session_db(settings),
         add_history_to_context=True,
         num_history_runs=5,
@@ -81,10 +84,50 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     catalogue = build_catalogue(settings, trace, approve, board, model, ws)
     agent = build_main_agent(ws, ContextBuilder(settings.budgets), model, settings, trace, catalogue)
     started = time.perf_counter()
-    run = agent.run(req.text, session_id=f"{wid}:{req.user_id}:{req.session_id}:main", user_id=req.user_id)
+    session = f"{wid}:{req.user_id}:{req.session_id}:main"
+    run = agent.run(req.text, session_id=session, user_id=req.user_id)
     raise_if_failed(run)
-    result = MainResult(reply=str(run.content or ""), trace=trace, runs=[run], seconds=time.perf_counter() - started)
     trace.model("main", model_name(model), run.metrics)
+    result = MainResult(trace=trace, runs=[run])
+    turn = main_turn(run.content)
+    if turn.kind == "poster" and turn.spec is not None:
+        turn.spec = checked_spec(turn.spec, agent, session, req, ws, model, trace, result)
+    result.spec = turn.spec
+    result.reply = turn.reply or (poster_words(turn.spec) if turn.spec else "")
+    result.seconds = time.perf_counter() - started
     result.view_tokens = tool_result_size(run)[0]
     result.history_tokens = history_size(run)[0]
     return result
+
+
+def main_turn(content) -> Turn:
+    """The main agent answers in Session 1's shape: a reply, or a poster spec. Plain text counts as a reply."""
+    if isinstance(content, str):
+        try:
+            return as_turn(content)
+        except Exception:
+            return Turn(kind="reply", reply=content)
+    return as_turn(content)
+
+
+def checked_spec(spec: PosterSpec, agent, session: str, req, ws, model, trace: Trace, result) -> PosterSpec:
+    """Session 1's check, unchanged: check the words in code, let the model repair once, then stop with a typed error."""
+    trace.draft(spec)
+    errors = validate_spec(spec, ws.rules, looked_up(trace))
+    if not errors:
+        return spec
+    trace.validation(errors, attempt=1)
+    run = agent.run(repair_message(errors), session_id=session, user_id=req.user_id)
+    result.runs.append(run)
+    raise_if_failed(run)
+    trace.model("repair", model_name(model), run.metrics)
+    repaired = main_turn(run.content).spec or spec
+    errors = validate_spec(repaired, ws.rules, looked_up(trace))
+    trace.validation(errors, attempt=2)
+    if errors:
+        raise SpecError(errors)
+    return repaired
+
+
+def poster_words(spec: PosterSpec) -> str:
+    return f"{spec.headline}\n{spec.subheadline}\n{spec.body}"
