@@ -1,6 +1,6 @@
 # Step 5 · Permissions: read freely, ask before you write
 
-Maya: "Put the new sizes on the Tidal card." The card already holds last week's approved files. The agent attaches the new sizes and, trying to keep the card clean, removes last week's approved files. She never asked for a delete. It usually behaves. Usually.
+Maya: "Put the new sizes on the Tidal launch brief in Notion." The card already holds last week's approved files. The agent attaches the new sizes and, trying to keep the card clean, removes last week's approved files. She never asked for a delete. It usually behaves. Usually.
 
 Every tool already says what it does: read (looks only) or write (changes something outside LaunchKit). The board's server says it for its own tools. The fix: `run_tool` lets reads run, and a write stops and asks Maya, with exactly what it is about to change. She says yes or no. The model cannot talk its way past this, because the rule lives in code.
 
@@ -15,7 +15,7 @@ This is Session 1's leash, grown up. The leash caps how much the agent can spend
 ## Break it first
 
 ```
-uv run launchkit main harbor "Put the new sizes on the Tidal card." --model fake:tools
+uv run launchkit main harbor "Put the new sizes on the Tidal launch brief in Notion." --model fake:tools
 ```
 
 ```
@@ -43,13 +43,13 @@ uv run launchkit check tools5
 
 - A write asks Maya first, with what it is about to change; a no means it never runs.
 - A yes lets the write through; a read never asks.
-- Putting the sizes on the Tidal card, last week's approved files survive.
+- Putting the sizes on the Tidal launch brief, last week's approved files survive.
 
 ## Run it again
 
 The same ask on the fake, on the chat page: type `fake:tools` in **Model**. The chat asks before each write. Allow `attach_files` and `update_status`, deny `remove_files`. The card ends up with both weeks' files, ready for review.
 
-Then on the real model and your Notion: empty **Model**, and make the sizes first in one conversation (attach `samples/approved/tidal-poster.jpg`, send "Love the poster. Now all the sizes, please."), then send "Put the new sizes on the Tidal card and move it to Ready for review." Notion's server marks its own tools, and the same rule asks before `notion-update-page` and `notion-create-comment`. Read what each one is about to change before you press Allow. To start again, edit the card back by hand.
+Then on the real model and your Notion: empty **Model**, and make the sizes first in one conversation (attach `samples/approved/tidal-poster.jpg`, send "Love the poster. Now all the sizes, please."), then send "Put the new sizes on the Tidal launch brief in Notion, and move it to Ready for review." Notion's server marks its own tools, and the same rule asks before `notion-update-page` and `notion-create-comment`. Read what each one is about to change before you press Allow. To start again, edit the card back by hand.
 
 ## Stuck?
 
