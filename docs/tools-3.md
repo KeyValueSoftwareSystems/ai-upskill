@@ -31,7 +31,7 @@ find the entry by name (drop a "functions." prefix models sometimes add); if the
 none, say so and point at find_tool. Check the inputs against the tool's schema with
 inspect.signature(entry.fn).bind(**inputs); on a TypeError, say which inputs were wrong
 and do not run it. Then run it through self.leash(name, entry.fn, inputs) when there is
-a leash (the leash also writes the trace), else call it and record self.trace.tool(...).
+a leash (the leash also writes the trace), else call it and record self.trace.tool(name, inputs, result).
 Return the result as text: a string as it is, anything else as JSON.
 Delete run_tool_todo.
 ```
