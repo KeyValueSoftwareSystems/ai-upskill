@@ -192,6 +192,11 @@ def make_picture(spec: PosterSpec, catalogue: Catalogue, trace: Trace, pictures:
     if generate is None:
         return None
     last = pictures.last_poster() if pictures is not None else None
+    given = [i for i in pictures.all() if i["by"] != "size"] if pictures is not None else []
+    if given and given[-1]["by"] == "attached":
+        trace.picture("kept", file=given[-1]["file"], reason="the marketer gave this photo, so the poster uses it")
+        pictures.mark_poster(Path(given[-1]["file"]), spec.image_prompt)
+        return Path(given[-1]["file"])
     if last is not None and last["image_prompt"] == spec.image_prompt:
         trace.picture("reused", file=last["file"], reason="the image prompt did not change")
         return Path(last["file"])
