@@ -174,5 +174,9 @@ def log_in(settings, user: str, server: NotionServer | None = None) -> str:
     callback; the chat page passes its own server."""
     from launchkit.mcp.client import McpLink
 
-    McpLink(server or NotionServer(settings, user, TERMINAL_CALLBACK, open_browser, wait_for_login)).list_tools()
+    link = McpLink(server or NotionServer(settings, user, TERMINAL_CALLBACK, open_browser, wait_for_login))
+    try:
+        link.list_tools()
+    finally:
+        link.close()
     return "Notion is connected."

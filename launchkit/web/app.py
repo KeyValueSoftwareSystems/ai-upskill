@@ -10,9 +10,10 @@ from urllib.parse import parse_qs, urlparse
 from queue import Queue
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Path as UrlPart
 from fastapi import Request as HttpRequest
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from launchkit.agents.main_agent import run_main
 from launchkit.brands.onboard import onboard_workspace
@@ -34,11 +35,12 @@ LOGINS_OPEN: dict[str, tuple[asyncio.AbstractEventLoop, asyncio.Future]] = {}
 CONNECTING: dict[str, str] = {}
 ASK_WAIT = 300
 MEDIA = {".png", ".jpg", ".jpeg", ".webp", ".mp3", ".wav"}
+USER_ID = r"^[a-z0-9-]{1,32}$"  # a login name; it becomes a folder name under data/, so nothing else is accepted
 
 
 class RunBody(BaseModel):
     workspace_id: str
-    user_id: str
+    user_id: str = Field(pattern=USER_ID)
     text: str
     model: str | None = None
     session_id: str | None = None
@@ -51,7 +53,7 @@ class Answer(BaseModel):
 
 class Person(BaseModel):
     workspace_id: str
-    user_id: str
+    user_id: str = Field(pattern=USER_ID)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -216,7 +218,7 @@ def _worker(body: RunBody, queue: Queue):
 
 
 @app.post("/attach")
-async def attach_picture(workspace_id: str = Form(...), user_id: str = Form(...), session_id: str = Form(...), picture: UploadFile = File(...)):
+async def attach_picture(workspace_id: str = Form(...), user_id: str = Form(..., pattern=USER_ID), session_id: str = Form(...), picture: UploadFile = File(...)):
     """The marketer attached a picture to this conversation. The picture tools work on the newest one."""
     try:
         resolve_workspace_id(Request(workspace_id=workspace_id, user_id=user_id, session_id=session_id, text="attach"), settings)
@@ -321,7 +323,7 @@ def data_file(name: str):
 
 
 @app.get("/connections/{workspace_id}/{user_id}")
-def connections(workspace_id: str, user_id: str):
+def connections(workspace_id: str, user_id: str = UrlPart(pattern=USER_ID)):
     """What this person has connected, for the header button."""
     return {"board": settings.board, "notion": connected(settings, user_id), "status": CONNECTING.get(user_id, "")}
 

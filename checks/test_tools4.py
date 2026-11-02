@@ -113,3 +113,16 @@ def test_each_person_keeps_their_own_notion_login(settings):
     page = notion.FileTokens(path, "http://localhost:8000/connect/notion/callback")
     terminal = notion.FileTokens(path, "http://localhost:8765/callback")
     assert asyncio.run(page.get_client_info()) is None and asyncio.run(terminal.get_client_info()).client_id == "c"
+
+
+def test_each_turn_closes_the_mcp_links_it_opened(settings, trace, request_for):
+    """A turn opens the board's MCP link and closes it at the end, so turns on the chat page leave no threads behind."""
+    import threading
+
+    from launchkit.adapters.fakes import ToolsModel
+    from launchkit.agents.main_agent import run_main
+
+    before = threading.active_count()
+    for _ in range(3):
+        run_main(request_for(text="Morning!"), settings=settings, model=ToolsModel(), trace=trace, approve=lambda n, i: False)
+    assert threading.active_count() <= before
