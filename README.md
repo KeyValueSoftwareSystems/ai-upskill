@@ -147,7 +147,13 @@ launchkit/
     search_web.py                        searches the web (Tavily), or the saved pages offline
     text_to_speech.py                    turns a script into a voice-over
   skills/                                how-tos: one folder per skill, with skill.md
-    ingest_image, market_research, on_brand_copy, resize_image, voice_over
+    ingest_image, market_research, on_brand_copy, post_to_board, resize_image, voice_over
+  mcp/                                   outside services over MCP: one common client, one file per server
+    client.py                            the common MCP adapter: connects a server, turns its tools into catalogue entries
+    servers/                             add a file here to connect a new MCP server
+      local_board.py                     the offline board, the same every run
+      local_board_server.py              the offline board's own MCP server
+      notion.py                          Maya's real board: Notion's MCP server
   guardrails/                            what the harness stops or checks
     limits.py                            step cap and image budget
     poster_check.py                      checks the poster and asks the model to repair it

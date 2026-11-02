@@ -32,7 +32,7 @@ class Board:
 
     def entries(self):
         """The board's tools, as catalogue entries, reached over MCP."""
-        from launchkit.harness.board_server import make_board_server
-        from launchkit.harness.mcp_link import connect
+        from launchkit.mcp.servers.local_board_server import make_board_server
+        from launchkit.mcp.client import connect
 
         return connect(make_board_server(self))

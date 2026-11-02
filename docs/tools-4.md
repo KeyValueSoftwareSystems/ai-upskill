@@ -6,13 +6,13 @@ MCP (Model Context Protocol) is a common plug between an agent and an outside se
 
 The board is your real Notion, through Notion's own MCP server. On the chat page, sign in as Maya and press **Connect Notion** once. Notion's login opens in a new tab; after it, the Tidal card goes into your Notion, with the brief and last week's approved files. Each person connects their own Notion. Press **Notion connected** any time to set the card back. `uv run launchkit notion` does the same from the terminal. Notion's server lists 68 tools and says which ones only read. The harness plugs in six board tools: `notion-search`, `notion-fetch`, `notion-update-page`, `notion-create-comment`, `notion-get-comments` and, on purpose, `notion-delete-pages`, which can do harm.
 
-Offline, and for the checks and the fakes, `LAUNCHKIT_BOARD=local` uses a small MCP server in the repo instead (`launchkit/harness/board_server.py`): the same card, with the tools `read_card`, `attach_files`, `update_status` and `remove_files`.
+Offline, and for the checks and the fakes, `LAUNCHKIT_BOARD=local` uses a small MCP server in the repo instead (`launchkit/mcp/servers/local_board_server.py`): the same card, with the tools `read_card`, `attach_files`, `update_status` and `remove_files`.
 
 Ready-made, with its moment: the `post_to_board` skill. It writes Harbor's routine down once: read the brief, add the sizes, move the card to "Ready for review".
 
 ## The slot
 
-- `launchkit/harness/mcp_link.py` · `connect(server)`. Today it returns no tools, so the board is not in the catalogue.
+- `launchkit/mcp/client.py` · `connect(server)`. Today it returns no tools, so the board is not in the catalogue.
 
 `McpLink` (ready-made) holds the client open for the run and turns the async MCP calls into plain ones. `tool_function` (ready-made) wraps one MCP tool as a Python function with its name, description and inputs.
 
@@ -30,7 +30,7 @@ I could not find a skill or tool for that.
 ## Prompt card, for your coding agent
 
 ```
-In launchkit/harness/mcp_link.py, build connect(server). Open link = McpLink(server).
+In launchkit/mcp/client.py, build connect(server). Open link = McpLink(server).
 For each tool in link.list_tools(), make Entry(tool.name, note, kind,
 tool_function(tool, link)), where note is the first line of tool.description and
 kind is "read" when tool.annotations.readOnlyHint is true and "write" otherwise.

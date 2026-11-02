@@ -1,9 +1,9 @@
-from launchkit.harness.board import Board
-from launchkit.harness.board_server import make_board_server
-from launchkit.harness.catalogue import load_skills
-from launchkit.harness.main import build_catalogue, run_main
-from launchkit.harness.mcp_link import McpLink
-from launchkit.harness.trace import Trace
+from launchkit.agents.main_agent import build_catalogue, run_main
+from launchkit.mcp.client import McpLink
+from launchkit.mcp.servers.local_board import Board
+from launchkit.mcp.servers.local_board_server import make_board_server
+from launchkit.tools.catalogue import load_skills
+from launchkit.trace import Trace
 
 NO = lambda name, inputs: False
 YES = lambda name, inputs: True
@@ -59,7 +59,7 @@ def test_a_person_without_a_notion_login_gets_no_board_tools_and_no_browser(sett
     """Ready-made: a run never starts a Notion login. Nobody connected: no board tools, a note in the trace, no wait."""
     from dataclasses import replace
 
-    import launchkit.harness.notion as notion
+    import launchkit.mcp.servers.notion as notion
 
     monkeypatch.setattr(notion.webbrowser, "open", lambda url: (_ for _ in ()).throw(AssertionError("opened a browser")))
     trace = Trace()
@@ -73,11 +73,11 @@ def test_an_ended_notion_login_asks_the_person_to_connect_again(settings, monkey
     import json
     from dataclasses import replace
 
-    import launchkit.harness.mcp_link as mcp_link
-    import launchkit.harness.notion as notion
-    from launchkit.harness.context import ContextBuilder
-    from launchkit.harness.main import build_main_agent
-    from launchkit.harness.workspace import load_workspace
+    import launchkit.mcp.client as mcp_link
+    import launchkit.mcp.servers.notion as notion
+    from launchkit.agents.prompt import ContextBuilder
+    from launchkit.agents.main_agent import build_main_agent
+    from launchkit.brands.workspace import load_workspace
 
     path = notion.auth_file(settings, "maya")
     path.parent.mkdir(parents=True)
@@ -101,7 +101,7 @@ def test_each_person_keeps_their_own_notion_login(settings):
     import asyncio
     import json
 
-    import launchkit.harness.notion as notion
+    import launchkit.mcp.servers.notion as notion
 
     path = notion.auth_file(settings, "maya")
     assert path == settings.data_dir / "users" / "maya" / "notion-auth.json"

@@ -1,10 +1,10 @@
 """The board's MCP server. It lists its own tools, each with a name, a description and a schema, and says which
-ones only read. Run it on its own with: uv run python -m launchkit.harness.board_server"""
+ones only read. Run it on its own with: uv run python -m launchkit.mcp.servers.local_board_server"""
 
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
-from launchkit.harness.board import Board
+from launchkit.mcp.servers.local_board import Board
 
 READS = ToolAnnotations(readOnlyHint=True)
 WRITES = ToolAnnotations(readOnlyHint=False, destructiveHint=False)

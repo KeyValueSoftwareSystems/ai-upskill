@@ -147,7 +147,7 @@ class NotionBoard:
 
     def entries(self):
         """This person's Notion board tools, as catalogue entries, reached over MCP. Not connected: no board tools."""
-        from launchkit.harness.mcp_link import connect
+        from launchkit.mcp.client import connect
 
         if not connected(self.settings, self.user):
             self.trace.note(f"Notion is not connected for {self.user}: press Connect Notion on the chat page, so there are no board tools this run")
@@ -163,7 +163,7 @@ class NotionBoard:
 
 
 def make_board(settings, trace, user: str):
-    from launchkit.harness.board import Board
+    from launchkit.mcp.servers.local_board import Board
 
     return NotionBoard(settings, trace, user) if settings.board == "notion" else Board()
 
@@ -171,8 +171,8 @@ def make_board(settings, trace, user: str):
 def set_up_card(settings, user: str, server: NotionServer | None = None) -> str:
     """Log in, then put the Tidal card in this person's Notion as a private page, or set it back to the brief if it is
     there. The terminal logs in through a browser tab and a local callback; the chat page passes its own server."""
-    from launchkit.harness.board import LAST_WEEK
-    from launchkit.harness.mcp_link import McpLink
+    from launchkit.mcp.servers.local_board import LAST_WEEK
+    from launchkit.mcp.client import McpLink
 
     link = McpLink(server or NotionServer(settings, user, TERMINAL_CALLBACK, open_browser, wait_for_login))
     title, _, body = CARD.read_text(encoding="utf-8").partition("\n")

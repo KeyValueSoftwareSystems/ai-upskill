@@ -169,7 +169,7 @@ def cmd_onboard(args):
 
 
 def cmd_notion(args):
-    from launchkit.harness.notion import set_up_card
+    from launchkit.mcp.servers.notion import set_up_card
 
     console.print(set_up_card(settings, args.user), highlight=False)
     console.print("\nThe Tidal card is in your Notion. With LAUNCHKIT_BOARD=notion the agent reaches it through Notion's MCP server.")

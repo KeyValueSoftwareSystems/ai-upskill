@@ -7,7 +7,7 @@ import threading
 
 from mcp.shared.memory import create_connected_server_and_client_session
 
-from launchkit.harness.catalogue import Entry
+from launchkit.tools.catalogue import Entry
 
 JSON_TYPES = {"string": str, "integer": int, "number": float, "boolean": bool, "array": list, "object": dict}
 
