@@ -160,7 +160,7 @@ launchkit/
     search_web.py                        searches the web (Tavily), or the saved pages offline
     text_to_speech.py                    turns a script into a voice-over
   skills/                                how-tos: one folder per skill, with skill.md
-    ingest_image, market_research, on_brand_copy, post_to_board, resize_image, voice_over
+    competitor_research, ingest_image, market_research, on_brand_copy, post_to_board, resize_image, voice_over
   mcp/                                   outside services over MCP: one common client, one file per server
     client.py                            the common MCP adapter: connects a server, turns its tools into catalogue entries
     servers/                             add a file here to connect a new MCP server
