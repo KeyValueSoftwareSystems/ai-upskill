@@ -202,6 +202,7 @@ docs/         setup, glossary, one card per step
 | --- | --- |
 | The agent needs a new ability | a new file in `tools/`, named after the tool, and one `Entry` line in `build_catalogue` (`agents/main_agent.py`) |
 | A how-to for a kind of job | a new folder in `skills/` with a `skill.md` |
+| A new outside service over MCP | a new file in `mcp/servers/` with `on()` and `entries()` |
 | Stop, cap or check something | `guardrails/` |
 | Change what the model sees | `agents/prompt.py`, and the task text in `agents/main_agent.py` |
 | A new brand | `uv run launchkit onboard` writes `workspaces/<brand>/` (`brands/onboard.py`) |
