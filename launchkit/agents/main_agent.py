@@ -42,7 +42,7 @@ MAIN_STEP_CAP = 12
 class MainTurn(BaseModel):
     """Session 1's answer shape, worded for an agent that does many jobs, not only posters."""
 
-    kind: Literal["poster", "reply"] = Field(description="poster only when this answer is a poster's words: a headline, subheadline and body. reply for everything else: a greeting, a question, research, sizes, board work, any other job.")
+    kind: Literal["poster", "reply"] = Field(description="poster only when the marketer asks for a whole poster or a change to one: then the answer is its headline, subheadline and body. reply for everything else: a headline, tagline or single line on its own, a greeting, a question, research, sizes, board work, any other job.")
     reply: str | None = Field(default=None, description="When kind is reply: your answer to the marketer, in the brand's voice. Otherwise null.")
     spec: PosterSpec | None = Field(default=None, description="When kind is poster: the filled poster form. Otherwise null.")
 
