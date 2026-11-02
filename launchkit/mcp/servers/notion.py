@@ -15,12 +15,10 @@ from mcp.client.auth import OAuthClientProvider, TokenStorage
 from mcp.client.streamable_http import streamablehttp_client
 from mcp.shared.auth import OAuthClientInformationFull, OAuthClientMetadata, OAuthToken
 
-from launchkit.settings import ROOT
 
 NOTION_MCP = "https://mcp.notion.com/mcp"
 CALLBACK_PORT = 8765
 BOARD_TOOLS = ("notion-search", "notion-fetch", "notion-update-page", "notion-create-comment", "notion-get-comments", "notion-delete-pages")
-CARD = ROOT / "samples" / "board" / "tidal.md"
 TERMINAL_CALLBACK = f"http://localhost:{CALLBACK_PORT}/callback"
 
 
@@ -170,20 +168,11 @@ def entries(settings, trace, user: str) -> list:
     return NotionBoard(settings, trace, user).entries()
 
 
-def set_up_card(settings, user: str, server: NotionServer | None = None) -> str:
-    """Log in, then put the Tidal card in this person's Notion as a private page, or set it back to the brief if it is
-    there. The terminal logs in through a browser tab and a local callback; the chat page passes its own server."""
-    from launchkit.mcp.servers.local_board import LAST_WEEK
+def log_in(settings, user: str, server: NotionServer | None = None) -> str:
+    """Log in to this person's Notion, and nothing else. The Tidal card is made by hand in Notion, as Maya would; the
+    agent reads and writes it only when an ask needs the board. The terminal logs in through a browser tab and a local
+    callback; the chat page passes its own server."""
     from launchkit.mcp.client import McpLink
 
-    link = McpLink(server or NotionServer(settings, user, TERMINAL_CALLBACK, open_browser, wait_for_login))
-    title, _, body = CARD.read_text(encoding="utf-8").partition("\n")
-    title = title.removeprefix("# ")
-    content = f"{body.strip()}\n\nStatus: Brief ready\n\nFiles: {', '.join(LAST_WEEK)}"
-    found = json.loads(link.call_tool("notion-search", {"query": title})).get("results", [])
-    page = next((r["id"] for r in found if r.get("title") == title), None)
-    if page is None:
-        link.call_tool("notion-create-pages", {"pages": [{"properties": {"title": title}, "content": content}]})
-        return f"Made the card: {title}"
-    link.call_tool("notion-update-page", {"page_id": page, "command": "replace_content", "new_str": content, "allow_deleting_content": True})
-    return f"Set the card back to the brief: {title}"
+    McpLink(server or NotionServer(settings, user, TERMINAL_CALLBACK, open_browser, wait_for_login)).list_tools()
+    return "Notion is connected."

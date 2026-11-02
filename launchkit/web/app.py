@@ -20,7 +20,7 @@ from launchkit.brands.request import Request, UnknownWorkspace, resolve_workspac
 from launchkit.brands.users import list_logins
 from launchkit.guardrails.poster_check import SpecError
 from launchkit.knowledge.brand_library import asset_path, read_library, workspace_root
-from launchkit.mcp.servers.notion import NotionServer, connected, set_up_card
+from launchkit.mcp.servers.notion import NotionServer, connected, log_in
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.settings import settings
 from launchkit.trace import Trace
@@ -329,7 +329,7 @@ def connections(workspace_id: str, user_id: str):
 @app.post("/connect/notion")
 def connect_notion(body: Person, request: HttpRequest):
     """Start this person's Notion login: the page opens the address this returns, Notion sends the browser back to
-    /connect/notion/callback, and then the Tidal card is put in their Notion."""
+    /connect/notion/callback, and the login is done. Connecting writes nothing to their Notion."""
     redirect_uri = f"{str(request.base_url).rstrip('/')}/connect/notion/callback"
     ready, box = threading.Event(), {}
 
@@ -343,18 +343,18 @@ def connect_notion(body: Person, request: HttpRequest):
         loop, future = LOGINS_OPEN[box["state"]]
         return await asyncio.wait_for(future, timeout=300), box["state"]
 
-    def log_in():
+    def run_login():
         CONNECTING[body.user_id] = "waiting for Notion"
         try:
             server = NotionServer(settings, body.user_id, redirect_uri, send_to_notion, back_from_notion)
-            CONNECTING[body.user_id] = set_up_card(settings, body.user_id, server)
+            CONNECTING[body.user_id] = log_in(settings, body.user_id, server)
         except Exception as error:
             CONNECTING[body.user_id] = f"Not connected: {error or type(error).__name__}"
         finally:
             LOGINS_OPEN.pop(box.get("state", ""), None)
             ready.set()
 
-    threading.Thread(target=log_in, daemon=True).start()
+    threading.Thread(target=run_login, daemon=True).start()
     ready.wait(60)
     if "url" in box:
         return {"url": box["url"]}

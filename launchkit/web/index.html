@@ -207,7 +207,7 @@ async function showNotion(){
   $("notion").hidden = c.board !== "notion";
   $("notion").classList.toggle("on", c.notion);
   $("notion").textContent = c.notion ? "Notion connected" : "Connect Notion";
-  $("notion").title = c.notion ? "Press to log in again and set the Tidal card back to the brief" : "Log in to your Notion; the Tidal card is put there";
+  $("notion").title = c.notion ? "Logged in to your Notion. Press to log in again" : "Log in to your Notion. It writes nothing there";
   return c;
 }
 $("notion").onclick = async () => {
