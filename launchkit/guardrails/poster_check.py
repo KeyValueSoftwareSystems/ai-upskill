@@ -8,7 +8,7 @@ class PosterSpec(BaseModel):
     headline: str = Field(description="The big line on the poster. Up to 6 words.")
     subheadline: str = Field(description="The line under the headline. Up to 12 words.")
     body: str = Field(description="One short paragraph. Up to 25 words.")
-    image_prompt: str = Field(description="What the picture shows: subject, setting, light, colours. No words to print. Keep it unchanged unless the ask is to change the picture.")
+    image_prompt: str = Field(description="What the picture shows: subject, setting, light, colours. No words to print. Describe each thing by what it looks like, not by a product or colour name. Keep it unchanged unless the ask is to change the picture.")
     format: str = Field(default="A3 portrait", description="Poster format, for example A3 portrait.")
     sources: list[str] = Field(default_factory=list, description="The id in brackets of every get_brand_details section a fact in the copy came from, for example harbor/brand-book.md#product-facts-flask-trail-750-tidal-colourway.")
 

@@ -224,3 +224,13 @@ def test_a_words_only_change_keeps_the_posters_picture(settings):
     assert len(trace.tool_calls("generate_image")) == 2
     assert [e.detail["status"] for e in trace.events if e.kind == "picture"] == ["reused", "rework"]
     assert pictures.last_poster()["image_prompt"] == "a bottle on a beach"
+
+
+def test_the_picture_request_names_colours_as_colours():
+    """Brand colours reach the image model as colours only, so a colour named sea glass is not drawn as glass."""
+    from launchkit.adapters.image_providers import picture_prompt
+
+    asked = picture_prompt("an insulated steel bottle on a misty lakeshore", {"navy": "#1F3A5F", "sea_glass": "#A8D5BA"})
+    assert "as colours only, not materials or objects: navy #1F3A5F, sea glass #A8D5BA" in asked
+    assert picture_prompt("a bottle", {}).startswith("a bottle. The product is plain")
+

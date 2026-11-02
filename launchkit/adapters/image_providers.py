@@ -73,8 +73,7 @@ class RealImages:
     def generate(self, prompt: str, colours: dict, reference: Path | None = None) -> Path:
         self.calls.append((prompt, colours))
         self.out_dir.mkdir(parents=True, exist_ok=True)
-        palette = ", ".join(f"{name} {value}" for name, value in colours.items())
-        full_prompt = f"{prompt}. Colour palette: {palette}. The product is plain and unbranded, with a smooth blank surface and no label." if palette else f"{prompt}. The product is plain and unbranded, with a smooth blank surface and no label."
+        full_prompt = picture_prompt(prompt, colours)
         if image_provider() == "gpu":
             data = gpu_image(full_prompt, self.settings.image_size, reference=str(reference) if reference else None)
         else:
@@ -82,6 +81,14 @@ class RealImages:
         path = self.out_dir / f"poster-{int(time() * 1000)}.png"
         path.write_bytes(data)
         return path
+
+
+def picture_prompt(prompt: str, colours: dict) -> str:
+    """The full request to the image model. Brand colours go in as colours only: an image model reads a name like
+    "sea glass" as the material and draws glass."""
+    palette = ", ".join(f"{name.replace('_', ' ')} {value}" for name, value in colours.items())
+    colour_line = f" Colour palette, as colours only, not materials or objects: {palette}." if palette else ""
+    return f"{prompt}.{colour_line} The product is plain and unbranded, with a smooth blank surface and no label."
 
 
 class FromPicture:
