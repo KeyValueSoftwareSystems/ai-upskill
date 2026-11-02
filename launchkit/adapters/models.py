@@ -43,7 +43,9 @@ class ProxyChat(OpenAIChat):
     def _get_retry_delay(self, attempt: int) -> float:
         """Agno asks for the delay only when it is about to try again, so this is where the trace hears of a retry."""
         if getattr(self, "on_retry", None):
-            self.on_retry(f"model call failed ({getattr(self, 'last_error', 'no answer')}), trying again: {attempt + 2} of {self.retries + 1}")
+            error = getattr(self, "last_error", "no answer")
+            why = f"the model did not answer in {self.timeout:g} s" if self.timeout and "timed out" in error.lower() else f"model call failed ({error})"
+            self.on_retry(f"{why}, trying again: {attempt + 2} of {self.retries + 1}")
         return super()._get_retry_delay(attempt)
 
 
@@ -65,7 +67,8 @@ def resolve_model(settings, trace: Trace):
     if provider == "openai" and proxy():
         key, url = proxy()
         model = ProxyChat(
-            id=model_id, api_key=key, base_url=url, timeout=settings.timeout, max_retries=1, retries=3, delay_between_retries=1,
+            # No retry inside the OpenAI client: it is silent. Agno's retries reach the trace and the Working line.
+            id=model_id, api_key=key, base_url=url, timeout=settings.timeout, max_retries=0, retries=3, delay_between_retries=1,
             extra_body={"cache": {"no-cache": True}},
         )
         model.on_retry = lambda text: trace.note(text)

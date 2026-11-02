@@ -111,7 +111,7 @@ def test_calls_give_up_after_90_seconds(settings, monkeypatch):
     monkeypatch.delenv("LITELLM_API_KEY")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
     assert pictures.client().timeout == 90
-    assert model.max_retries == 1 and pictures.client().max_retries == 1
+    assert model.max_retries == 0 and model.retries == 3 and pictures.client().max_retries == 1
 
 
 
@@ -176,3 +176,36 @@ def test_setup_check_writes_to_data_not_the_openers_out_folder():
 
     source = Path(check_setup.__file__).read_text(encoding="utf-8")
     assert check_setup.DATA.name == "data" and "launchkit.opener" not in source
+
+
+def test_a_hung_model_call_shows_each_retry(settings, monkeypatch):
+    """A proxy that never answers: every wait that runs out shows in the trace, which the chat page's Working line
+    shows, so a slow model service does not look like a stuck page."""
+    import threading
+    import time
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    from agno.models.message import Message
+
+    class NeverAnswers(BaseHTTPRequestHandler):
+        def do_POST(self):
+            time.sleep(3)
+
+        def log_message(self, *args):
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), NeverAnswers)
+    server.daemon_threads = True
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        monkeypatch.setenv("LITELLM_API_KEY", "test-key")
+        monkeypatch.setenv("LITELLM_BASE_URL", f"http://127.0.0.1:{server.server_port}/v1")
+        trace = Trace()
+        model = resolve_model(replace(settings, model="gpt-4.1-mini", timeout=1), trace)
+        model.retries = 1
+        with pytest.raises(ModelProviderError):
+            model.response(messages=[Message(role="user", content="hi")])
+        notes = [line for line in trace.lines() if line.startswith("note")]
+        assert notes == ["note      the model did not answer in 1 s, trying again: 2 of 2"]
+    finally:
+        server.shutdown()
