@@ -153,6 +153,7 @@ let LOGINS = [], session = "";
 const who = () => ({ workspace_id: $("brand").value, user_id: $("person").value });
 function esc(s){ return String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 function add(cls, html){ const d = document.createElement("div"); d.className = "msg " + cls; d.innerHTML = html; $("messages").appendChild(d); $("messages").scrollTop = 1e9; return d; }
+function sendAgain(box){ if (!LAST) return box; const b = document.createElement("button"); b.className = "quiet"; b.textContent = "Send again"; b.title = "Send the same message again, with its attachments"; b.style.marginTop = "8px"; b.onclick = () => { b.remove(); $("text").value = LAST.text; AGAIN = LAST.attached; $("form").requestSubmit(); }; box.appendChild(document.createElement("br")); box.appendChild(b); return box; }
 function specHtml(s){ return `<span class="k">headline</span>${esc(s.headline)}\n<span class="k">subheadline</span>${esc(s.subheadline)}\n<span class="k">body</span>${esc(s.body)}\n<span class="k">image prompt</span>${esc(s.image_prompt)}\n<span class="k">format</span>${esc(s.format)}${s.sources && s.sources.length ? `\n<span class="k">sources</span>${esc(s.sources.join(", "))}` : ""}`; }
 function mediaHtml(files){
   if (!files || !files.length) return "";
@@ -299,6 +300,7 @@ function showAsk(ev){
   });
 }
 let ATTACHED = [];
+let LAST = null, AGAIN = null;
 $("attachFile").onchange = async () => {
   await READY;
   const file = $("attachFile").files[0]; const w = who(); if (!file || !w.workspace_id || !w.user_id) return;
@@ -311,7 +313,7 @@ $("form").onsubmit = async e => {
   e.preventDefault();
   const text = $("text").value.trim(); if (!text) return;
   const w = who(); if (!w.workspace_id || !w.user_id) return;
-  const attached = ATTACHED.map(a => a.url);
+  const attached = AGAIN || ATTACHED.map(a => a.url); AGAIN = null; LAST = { text, attached };
   add("user", esc(text) + mediaHtml(attached)); $("text").value = ""; ATTACHED = []; $("attached").textContent = "";
   $("trace").innerHTML = ""; $("send").disabled = true;
   const pending = add("pending", "Working… 0s");
@@ -325,7 +327,7 @@ $("form").onsubmit = async e => {
   try {
     ({ run_id } = await (await fetch("/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json());
   } catch (err) {
-    finish(); add("error", `<b>No answer</b>\nThe page could not reach its server. Is <code>uv run launchkit ui</code> still running?`); return;
+    finish(); sendAgain(add("error", `<b>No answer</b>\nThe page could not reach its server. Is <code>uv run launchkit ui</code> still running?`)); return;
   }
   const es = new EventSource(`/events/${run_id}`);
   es.onmessage = m => {
@@ -334,12 +336,12 @@ $("form").onsubmit = async e => {
     if (ev.type === "result" || ev.type === "error") answered = true;
     if (ev.type === "ask") showAsk(ev);
     if (ev.type === "result") { renderTurn({ role: "assistant", reply: ev.reply, files: ev.files }); showView(ev.view); }
-    if (ev.type === "error") add("error", `<b>${esc(ev.kind)}</b>\n${esc(ev.message)}`);
+    if (ev.type === "error") sendAgain(add("error", `<b>${esc(ev.kind)}</b>\n${esc(ev.message)}`));
   };
   es.addEventListener("done", () => { es.close(); finish(); refreshSessions(); });
   es.onerror = () => {
     es.close(); finish();
-    if (!answered) add("error", `<b>No answer</b>\nThe page lost the connection to its server before the run finished. Check the page server and the proxy, then send again.`);
+    if (!answered) sendAgain(add("error", `<b>No answer</b>\nThe page lost the connection to its server before the run finished. Check the page server and the proxy, then send again.`));
   };
 };
 </script>
