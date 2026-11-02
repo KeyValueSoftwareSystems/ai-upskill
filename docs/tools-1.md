@@ -68,6 +68,8 @@ uv run launchkit check tools1
 
 Ask for all the sizes again on the real model, with the four new tools, on the chat page. Start `uv run launchkit ui`, sign in as Maya at Harbor, press **New conversation**, attach `samples/approved/tidal-poster.jpg` with 📎 and send "Love the poster. Now all the sizes, please." Leave **Model** empty for the real model; type `fake:tools` there for the fake. The sizes show in the chat, and each tool call shows in the Trace tab. After each `git checkout`, restart `launchkit ui`: it does not reload code.
 
+Five pictures come back, though Session 1 set an image budget of 3. The budget counts only `generate_image` calls: each one asks the paid image model for a new picture. A size cuts the poster you already have, in plain code. It makes no new picture, so it costs nothing and does not count.
+
 Watch the trace: the model drives them a different way on each run. It picks `scale` and squashes the bottle, crops before it finds the bottle, or adds bars where a crop was fine. Each tool did its job. Nobody told the model which one to use, in what order, or when the result is good enough.
 
 ## Stuck?
