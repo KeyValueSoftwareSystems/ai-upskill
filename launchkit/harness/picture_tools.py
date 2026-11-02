@@ -8,6 +8,7 @@ where the bottle is: it costs money, so the desk asks once per poster and keeps 
 import base64
 import functools
 import json
+import uuid
 from pathlib import Path
 
 from PIL import Image, ImageColor
@@ -115,7 +116,8 @@ class PictureDesk:
 
     def save(self, img: Image.Image, kind: str) -> str:
         self.out.mkdir(parents=True, exist_ok=True)
-        path = self.out / f"{self.source.stem}-{kind}-{img.width}x{img.height}.png"
+        # A new name each time: a later run never overwrites, and the page never shows an older picture by the same name.
+        path = self.out / f"{self.source.stem}-{kind}-{img.width}x{img.height}-{uuid.uuid4().hex[:4]}.png"
         img.save(path)
         return str(path)
 
