@@ -62,6 +62,8 @@ The same ask after the build, on the chat page, with the pages as slow as a real
   ...three more, one after another...
 ```
 
+On the fake model, the reply only names the sites it read; the real model writes the paragraphs.
+
 The Context tab: 9,915 tokens of tool results, 0 of history carried in, 2.1 s.
 
 Then Maya's next ask, in the same conversation: "Write one headline for the Tidal poster." The Context tab: 0 tokens of tool results, 10,008 tokens of history carried in.

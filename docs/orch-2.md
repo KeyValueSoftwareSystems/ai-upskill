@@ -81,6 +81,8 @@ On the chat page, started with `LAUNCHKIT_SEARCH_DELAY=0.4` as in step 1: press 
   tool      research_many(['How is Hydro Flask launching bottles this season? Message…) → ['Hydro Flask: read variety.com and prnewswire.com.', 'Stan… · 67 tokens back
 ```
 
+On the fake model, the reply only names the sites it read; the real model writes the paragraphs.
+
 The Context tab: 540 tokens of tool results, 0 of history carried in, 0.4 s.
 
 And Maya's next ask in the same conversation, "Write one headline for the Tidal poster.": 0 tokens of tool results, 632 tokens of history carried in.
