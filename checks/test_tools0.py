@@ -353,3 +353,23 @@ def test_a_fake_run_that_worked_prints_no_parse_warnings(settings, trace, reques
         result = run_main(request_for(text="Morning!"), settings=settings, model=ToolsModel(), trace=trace, approve=NO)
     assert result.reply == "Morning, Maya. What do you need today?"
     assert not [r for r in caplog.records if "pars" in r.getMessage().lower() or "output_schema" in r.getMessage()]
+
+
+def test_the_chat_page_accepts_only_plain_user_names(settings, monkeypatch):
+    """A user name becomes a folder under data/, so the page refuses one with ../ in it and writes nothing."""
+    import io
+
+    from fastapi.testclient import TestClient
+    from PIL import Image
+
+    import launchkit.web.app as web
+
+    monkeypatch.setattr(web, "settings", settings)
+    page = TestClient(web.app)
+    picture = io.BytesIO()
+    Image.new("RGB", (8, 8)).save(picture, "PNG")
+    sent = {"workspace_id": "harbor", "user_id": "../../../escaped", "session_id": "abc123"}
+    assert page.post("/attach", data=sent, files={"picture": ("p.png", picture.getvalue())}).status_code == 422
+    assert page.post("/run", json={"workspace_id": "harbor", "user_id": "../x", "text": "hi"}).status_code == 422
+    assert not list(settings.data_dir.parent.glob("**/escaped"))
+    assert page.post("/attach", data={**sent, "user_id": "maya"}, files={"picture": ("p.png", picture.getvalue())}).status_code == 200
