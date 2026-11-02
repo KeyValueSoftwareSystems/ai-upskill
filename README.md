@@ -103,7 +103,7 @@ uv run launchkit ui         # the chat page on http://localhost:8000
 How each step runs:
 
 1. Start on the step's branch (the step tables below). Restart `uv run launchkit ui` after each checkout.
-2. Break it first: on the chat page, sign in as Maya at Harbor, press **New conversation** and send the ask on the step's card in `docs/`. Leave **Model** empty for the real model. `fake:tools` (steps 1 to 5) or `fake:brief` (checkpoints 1 and 2) is a scripted model built into LaunchKit: it makes the same mistake every time.
+2. Break it first: on the chat page, sign in as Maya at Harbor, press **New conversation** and send the ask on the step's card in `docs/`. Leave **Model** empty for the real model. `fake:tools` (steps 1 to 5) or `fake:brief` (orchestration steps 1 and 2) is a scripted model built into LaunchKit: it makes the same mistake every time.
 3. Build: hand the card's prompt to your coding agent, then prove it with the card's check, for example `uv run launchkit check tools1`.
 4. Run it again on the chat page. The **Trace** tab shows every tool call, the **Context** tab shows how many tokens the main agent holds, and a write asks **Allow** or **Deny** in the chat.
 5. Behind? Check out the step's answer branch and carry on.
