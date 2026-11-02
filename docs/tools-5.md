@@ -49,7 +49,7 @@ uv run launchkit check tools5
 
 The same ask on the fake, on the chat page: type `fake:tools` in **Model**. The chat asks before each write. Allow `attach_files` and `update_status`, deny `remove_files`. The card ends up with both weeks' files, ready for review.
 
-Then on the real model and your Notion: empty **Model**, and send "Put these new sizes on the Tidal card: tidal-feed-1080x1350.png, tidal-web-1200x628.png. Then move it to Ready for review." Notion's server marks its own tools, and the same rule asks before `notion-update-page` and `notion-create-comment`. Read what each one is about to change before you press Allow. **Notion connected** sets the card back.
+Then on the real model and your Notion: empty **Model**, and make the sizes first in one conversation (attach `samples/approved/tidal-poster.jpg`, send "Love the poster. Now all the sizes, please."), then send "Put the new sizes on the Tidal card and move it to Ready for review." Notion's server marks its own tools, and the same rule asks before `notion-update-page` and `notion-create-comment`. Read what each one is about to change before you press Allow. To start again, edit the card back by hand.
 
 ## Stuck?
 
