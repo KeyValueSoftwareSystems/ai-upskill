@@ -22,6 +22,7 @@ from launchkit.adapters.models import check_reachable, model_name, resolve_model
 from launchkit.agents.prompt import ContextBuilder
 from launchkit.brands.request import Request, resolve_workspace_id
 from launchkit.guardrails.limits import make_leash
+from launchkit.mcp.client import closes_its_mcp_links
 from launchkit.mcp.servers import server_entries
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.chat_history import session_db
@@ -126,6 +127,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
     return catalogue
 
 
+@closes_its_mcp_links
 def run_main(req: Request, *, settings=default_settings, model=None, trace: Trace | None = None, approve=ask_in_terminal, board=None, attach=()) -> MainResult:
     trace = trace if trace is not None else Trace()
     settings.data_dir.mkdir(parents=True, exist_ok=True)
