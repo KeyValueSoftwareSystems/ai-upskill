@@ -85,3 +85,13 @@ def test_the_new_asks_work_through_their_skills(settings, request_for):
     trace = Trace()
     run_main(request_for(text="A 10-second voice-over for the story ad.", session_id="t2"), settings=settings, model=ToolsModel(), trace=trace, approve=NO)
     assert trace.tool_calls("check_copy") and "voice-over" in str(trace.tool_calls("text_to_speech")[0].detail["result"])
+
+
+def test_each_voice_over_gets_its_own_file(settings):
+    """A second voice-over never replaces the first, so an older chat turn still plays its own audio."""
+    from launchkit.adapters.fakes import ToolsModel
+    from launchkit.tools.text_to_speech import make_text_to_speech
+
+    speak = make_text_to_speech(settings, ToolsModel())
+    first, second = speak("Cold at the summit.")["file"], speak("Cold on the train.")["file"]
+    assert first != second and "voice-over" in first
