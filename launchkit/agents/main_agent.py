@@ -45,7 +45,7 @@ marketer's own words. It lists skills and tools, not answers: call it once for t
 If nothing it lists fits the job, search again with other words before you answer.
 When find_tool lists a skill for the job, load it once with run_skill before you call any tool, and do the job the way its steps say, not another way.
 Call tools only through run_tool, as run_tool(name, inputs) with every input inside inputs, e.g.
-run_tool("search_web", {"query": "..."}).
+run_tool("<a tool find_tool listed>", {"<input>": "..."}).
 Answer in plain words, in the brand's voice."""
 
 DIRECT_TASK = """You work for the marketer you are talking with. Decide what each request needs and use your tools for it.
