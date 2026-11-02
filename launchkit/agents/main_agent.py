@@ -14,25 +14,25 @@ from typing import Literal
 from agno.agent import Agent
 from agno.tools.function import Function
 
-from launchkit.adapters.images import make_images
+from launchkit.adapters.image_providers import make_images
 from launchkit.adapters.models import model_name, resolve_model
-from launchkit.harness.agent import session_db
-from launchkit.harness.brand import make_get_brand_details
-from launchkit.harness.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
-from launchkit.harness.copy_check import make_check_copy
-from launchkit.harness.context import ContextBuilder
-from launchkit.harness.limits import make_leash
-from launchkit.harness.picture_tools import PictureDesk
-from launchkit.harness.pictures import Pictures
-from launchkit.harness.request import Request, resolve_workspace_id
+from launchkit.agents.prompt import ContextBuilder
+from launchkit.brands.request import Request, resolve_workspace_id
+from launchkit.guardrails.limits import make_leash
+from launchkit.memory.attached_pictures import Pictures
+from launchkit.memory.chat_history import session_db
+from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
+from launchkit.tools.check_copy import make_check_copy
+from launchkit.tools.get_brand_details import make_get_brand_details
+from launchkit.tools.resize_poster import PictureDesk
 from pydantic import BaseModel, Field
 
-from launchkit.harness.run import history_size, looked_up, raise_if_failed, tool_result_size
-from launchkit.harness.spec import PosterSpec, SpecError, repair_message, validate_spec
-from launchkit.harness.tools import make_generate_image
-from launchkit.harness.trace import Trace
-from launchkit.harness.workspace import Workspace, load_workspace
+from launchkit.agents.poster_flow import history_size, looked_up, raise_if_failed, tool_result_size
+from launchkit.brands.workspace import Workspace, load_workspace
+from launchkit.guardrails.poster_check import PosterSpec, SpecError, repair_message, validate_spec
 from launchkit.settings import settings as default_settings
+from launchkit.tools.generate_image import make_generate_image
+from launchkit.trace import Trace
 
 MAIN_TASK = """You work for the marketer you are talking with. Decide what each request needs and use your tools for it.
 When a skill below fits the job, load it once with run_skill before you call any other tool, and do the job the way its steps say, not another way.

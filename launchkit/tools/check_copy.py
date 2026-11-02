@@ -3,8 +3,8 @@ harness check at the end, which stays: a rule in code is still the guarantee."""
 
 import re
 
-from launchkit.harness.spec import WORD_LIMITS
-from launchkit.harness.workspace import Workspace
+from launchkit.brands.workspace import Workspace
+from launchkit.guardrails.poster_check import WORD_LIMITS
 
 
 def make_check_copy(ws: Workspace):

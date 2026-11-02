@@ -9,7 +9,7 @@ Ready-made, with its moment: `check_copy`, a tool the agent can call while it wo
 ## The slot
 
 - `launchkit/skills/resize_image/skill.md`. It does not exist yet.
-- `launchkit/harness/picture_tools.py` · `window_around`, the bottle-box fit rule. Today it is marked `@todo` and returns None, so `crop` still needs a window.
+- `launchkit/tools/resize_poster.py` · `window_around`, the bottle-box fit rule. Today it is marked `@todo` and returns None, so `crop` still needs a window.
 
 ## Break it first
 
@@ -38,7 +38,7 @@ cuts around the product; if crop says the product does not fit, call expand_canv
 with that size and the brand's main colour; check every result says the product is
 whole. Never call scale to change the shape.
 
-In launchkit/harness/picture_tools.py, build window_around(box, size, target, margin)
+In launchkit/tools/resize_poster.py, build window_around(box, size, target, margin)
 and remove its @todo. Take the biggest window of the target's shape that fits in the
 picture, centre it on the box, and push it back inside the picture. Return it as
 (left, top, right, bottom) if it holds the whole box plus the margin on every side,

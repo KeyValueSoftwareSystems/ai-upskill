@@ -204,8 +204,8 @@ def test_from_step_2_the_model_cannot_choose_the_crop_window(settings, monkeypat
     the bottle's box (or any window). In step 1 the window is still the model's to give."""
     import inspect
 
-    import launchkit.harness.picture_tools as pt
-    from launchkit.harness.picture_tools import APPROVED, PictureDesk
+    import launchkit.tools.resize_poster as pt
+    from launchkit.tools.resize_poster import APPROVED, PictureDesk
 
     desk = PictureDesk(settings, {"navy": "#1F3A5F"}, Trace(), source=APPROVED)
     monkeypatch.setattr(pt.window_around, "todo", True, raising=False)

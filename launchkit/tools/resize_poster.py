@@ -13,10 +13,10 @@ from pathlib import Path
 
 from PIL import Image, ImageColor
 
-from launchkit.harness.catalogue import Entry, built
-from launchkit.harness.pictures import NO_PICTURE, NoPicture, sidecar
-from launchkit.harness.trace import Trace
+from launchkit.memory.attached_pictures import NO_PICTURE, NoPicture, sidecar
 from launchkit.settings import ROOT
+from launchkit.tools.catalogue import Entry, built
+from launchkit.trace import Trace
 
 # Maya's approved Tidal poster, ready to attach in the chat. The tools never read it unless she attaches it.
 APPROVED = ROOT / "samples" / "approved" / "tidal-poster.jpg"
@@ -56,7 +56,7 @@ def find_subject(picture: Path, model) -> list[int]:
         if saved is None:
             raise NoPicture("The fake model only knows the sample pictures in samples/; use the real model for this one.")
         return json.loads(saved.read_text())["box"]
-    from launchkit.llm import client
+    from launchkit.adapters.llm import client
 
     image = base64.b64encode(picture.read_bytes()).decode()
     w, h = Image.open(picture).size

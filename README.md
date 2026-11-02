@@ -139,9 +139,12 @@ launchkit/
     prompt.py                            what the model sees: rules, task, facts
   tools/                                 what the agent can do: one file per tool, named after the tool
     catalogue.py                         the catalogue and the three doors: find_tool, run_skill, run_tool
+    check_copy.py                        checks a poster's words against the brand's limits
     generate_image.py                    draws a new picture with the paid image model
     get_brand_details.py                 looks up the brand's guide and product facts
     resize_poster.py                     cuts the poster you already have: detect_focal_point, crop, expand_canvas, scale
+  skills/                                how-tos: one folder per skill, with skill.md
+    on_brand_copy
   guardrails/                            what the harness stops or checks
     limits.py                            step cap and image budget
     poster_check.py                      checks the poster and asks the model to repair it
