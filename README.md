@@ -31,6 +31,56 @@ Keys go through KeyValue's LiteLLM proxy: `LITELLM_API_KEY` and `LITELLM_BASE_UR
 
 The opener's code is on this branch too (`approach_llm/`, `approach_graph/`, `launchkit/ui.py`, `launchkit/scoreboard.py`), but its LangGraph parts need the opener branches' dependencies; run them from `session-01-langgraph`.
 
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `uv run launchkit run harbor "Poster for the Tidal bottle on a misty lakeshore at dawn."` | One request in the terminal: trace, spec, picture path |
+| `uv run launchkit ui` | The chat page: sign in as a person, chat with the main agent, live trace, context view, the files it made, Allow and Deny before a write |
+| `uv run launchkit explain` | What the model saw on the last run, in what order, at what cost |
+| `uv run launchkit check 1` | Prove step 1 with fake models. `check all` is the CP1.1 gate |
+| `uv run launchkit run harbor "..." --model fake:echo` | Force a fake model for one run |
+| `uv run launchkit run harbor "..." --facts workspaces/harbor/brand-book.md` | Load a file into the facts section |
+| `uv run launchkit onboard samples/moss-and-fern-brand-pack.pdf` | Draft a new brand's workspace from its brand pack PDF. See `docs/onboarding.md` |
+
+## Session 1 · The harness, in four steps
+
+Each step fills one TODO slot in `launchkit/harness/`. Each step has a check. The answer to each step is on its own branch, and each branch contains the previous one's answer.
+
+| Step | Slot | Check | Branch with the answer |
+| --- | --- | --- | --- |
+| 1 · The agent reads its rules from files | `workspace.py` `load_workspace`, `agent.py` rules section | `check 1` | `session-01-harness-step1` |
+| 2 · Check the form, fix it once, then stop | `spec.py` `validate_spec`, `run.py` repair | `check 2` | `session-01-harness-step2` |
+| 3 · A tool and a leash | `tools.py`, `limits.py`, `agent.py` picture agent | `check 3` | `session-01-harness-step3` |
+| 4 · The request says who you are | `request.py` `resolve_workspace_id` | `check 4` | `session-01-harness-step4` |
+
+Prompt cards for each step are in `docs/`.
+
+## Session 1 · Hand-over to retrieval (CP1.2)
+
+Branch from `session-01-harness-step4`. It is the full CP1.1 harness: `uv run launchkit check all` passes every check.
+
+Where retrieval plugs in:
+
+- `launchkit/harness/agent.py` · `build_copy_agent`: add your `get_brand_details` tool to `tools=[...]` on the copy agent. The copy agent already carries the leash hook, so every tool call goes through the trace with its result size in tokens and counts against the step cap.
+- `launchkit/harness/context.py` · `ContextBuilder`: `ctx.set("facts", text)` fills the facts section. Budgets live in `launchkit/settings.py` (`budgets`). A trimmed section says so inside the prompt.
+- `uv run launchkit explain` prints what the model saw on the last run, section by section, with tool results as a row.
+- `workspaces/harbor/brand-book.md` and `facts.md` hold Harbor's text with clear headings; Ember's are in `workspaces/ember/`.
+- `launchkit/harness/request.py`: the workspace id is already resolved from the trusted request. Your tool takes no workspace argument.
+
+## Session 1 · Retrieval (CP1.2), in four steps
+
+One tool, `get_brand_details`, rebuilt each time it fails. Each step has a check and a page in `docs/`.
+
+| Step | Version | Check | Branch with the answer |
+| --- | --- | --- | --- |
+| 1 · A tool to fetch brand details | `get_brand_details()`: the whole brand file | `check rag1` | `session-01-rag-step1` |
+| 2 · Return only what matches | `get_brand_details(query)`: top 5 chunks by keywords (BM25) | `check rag2` | `session-01-rag-step2` |
+| 3 · Match what the words mean | `get_brand_details(query)`: top 5 by meaning, local `bge-small-en-v1.5`, LanceDB vector database | `check rag3` | `session-01-rag-step3` |
+| 4 · Keep each brand to its own chunks | `get_brand_details(query)`: the same search, filtered to the request's workspace inside the query | `check rag4` | `session-01-rag-step4` |
+
+From step 3 on, brand documents live in a vector database under `data/brand-store/`. Uploading a brand file indexes it; for the brands in this repo run `uv run launchkit index` once. `uv run launchkit check rag` runs every retrieval check on the branch.
+
 ## Session 2: before you start
 
 Session 2 starts on the branch `session-02-tools`. Do this before the day; it takes about fifteen minutes.
@@ -64,32 +114,7 @@ In step 4, press **Connect Notion** on the chat page and log in to Notion. The p
 
 Offline, or without a key: `LAUNCHKIT_SEARCH=saved` uses the saved pages, `LAUNCHKIT_BOARD=local` uses the board server in this repo, and the fake models need no key. The checks always run offline.
 
-## Commands
-
-| Command | What it does |
-| --- | --- |
-| `uv run launchkit run harbor "Poster for the Tidal bottle on a misty lakeshore at dawn."` | One request in the terminal: trace, spec, picture path |
-| `uv run launchkit ui` | The chat page: sign in as a person, chat with the main agent, live trace, context view, the files it made, Allow and Deny before a write |
-| `uv run launchkit explain` | What the model saw on the last run, in what order, at what cost |
-| `uv run launchkit check 1` | Prove step 1 with fake models. `check all` is the CP1.1 gate |
-| `uv run launchkit run harbor "..." --model fake:echo` | Force a fake model for one run |
-| `uv run launchkit run harbor "..." --facts workspaces/harbor/brand-book.md` | Load a file into the facts section |
-| `uv run launchkit onboard samples/moss-and-fern-brand-pack.pdf` | Draft a new brand's workspace from its brand pack PDF. See `docs/onboarding.md` |
-
-## The build, in four steps
-
-Each step fills one TODO slot in `launchkit/harness/`. Each step has a check. The answer to each step is on its own branch, and each branch contains the previous one's answer.
-
-| Step | Slot | Check | Branch with the answer |
-| --- | --- | --- | --- |
-| 1 · The agent reads its rules from files | `workspace.py` `load_workspace`, `agent.py` rules section | `check 1` | `session-01-harness-step1` |
-| 2 · Check the form, fix it once, then stop | `spec.py` `validate_spec`, `run.py` repair | `check 2` | `session-01-harness-step2` |
-| 3 · A tool and a leash | `tools.py`, `limits.py`, `agent.py` picture agent | `check 3` | `session-01-harness-step3` |
-| 4 · The request says who you are | `request.py` `resolve_workspace_id` | `check 4` | `session-01-harness-step4` |
-
-Prompt cards for each step are in `docs/`.
-
-## Tools, skills and MCP, five steps
+## Session 2 · Tools, skills and MCP, five steps
 
 Run each step on the chat page, as in "Session 2: before you start". In the terminal, `uv run launchkit main harbor "Love the poster. Now all the sizes, please."` does the same. Each step fills one slot, has a check, a card in `docs/` and a branch with the answer.
 
@@ -119,28 +144,3 @@ samples/            a brand pack PDF to try onboarding with
 checks/             one pytest file per step; `launchkit check` wraps them
 docs/               setup, glossary, one page per step
 ```
-
-## Hand-over to retrieval (CP1.2)
-
-Branch from `session-01-harness-step4`. It is the full CP1.1 harness: `uv run launchkit check all` passes every check.
-
-Where retrieval plugs in:
-
-- `launchkit/harness/agent.py` · `build_copy_agent`: add your `get_brand_details` tool to `tools=[...]` on the copy agent. The copy agent already carries the leash hook, so every tool call goes through the trace with its result size in tokens and counts against the step cap.
-- `launchkit/harness/context.py` · `ContextBuilder`: `ctx.set("facts", text)` fills the facts section. Budgets live in `launchkit/settings.py` (`budgets`). A trimmed section says so inside the prompt.
-- `uv run launchkit explain` prints what the model saw on the last run, section by section, with tool results as a row.
-- `workspaces/harbor/brand-book.md` and `facts.md` hold Harbor's text with clear headings; Ember's are in `workspaces/ember/`.
-- `launchkit/harness/request.py`: the workspace id is already resolved from the trusted request. Your tool takes no workspace argument.
-
-## Retrieval (CP1.2), in four steps
-
-One tool, `get_brand_details`, rebuilt each time it fails. Each step has a check and a page in `docs/`.
-
-| Step | Version | Check | Branch with the answer |
-| --- | --- | --- | --- |
-| 1 · A tool to fetch brand details | `get_brand_details()`: the whole brand file | `check rag1` | `session-01-rag-step1` |
-| 2 · Return only what matches | `get_brand_details(query)`: top 5 chunks by keywords (BM25) | `check rag2` | `session-01-rag-step2` |
-| 3 · Match what the words mean | `get_brand_details(query)`: top 5 by meaning, local `bge-small-en-v1.5`, LanceDB vector database | `check rag3` | `session-01-rag-step3` |
-| 4 · Keep each brand to its own chunks | `get_brand_details(query)`: the same search, filtered to the request's workspace inside the query | `check rag4` | `session-01-rag-step4` |
-
-From step 3 on, brand documents live in a vector database under `data/brand-store/`. Uploading a brand file indexes it; for the brands in this repo run `uv run launchkit index` once. `uv run launchkit check rag` runs every retrieval check on the branch.
