@@ -1,7 +1,7 @@
 """A small web page for trying requests: paste a request, see the model calls, the poster and the images.
 
-    uv run python -m launchkit.ui                  # opens http://localhost:8000
-    uv run python -m launchkit.ui --port 8001 --no-open
+    uv run python -m launchkit.opener.ui                  # opens http://localhost:8000
+    uv run python -m launchkit.opener.ui --port 8001 --no-open
 
 It runs your approach_llm/app.py, the same code `ask` and the scoreboard run. Save a change to
 app.py and your next request uses it; there's no need to restart.
@@ -89,7 +89,7 @@ def main():
         server = HTTPServer(("127.0.0.1", args.port), Handler)
     except OSError:
         sys.exit(f"Port {args.port} is busy (another program, or the UI is already running). "
-                 f"Try: uv run python -m launchkit.ui --port {args.port + 1}")
+                 f"Try: uv run python -m launchkit.opener.ui --port {args.port + 1}")
     url = f"http://localhost:{args.port}"
     print(f"LaunchKit UI running at {url}  (Ctrl+C to stop)", flush=True)
     if not args.no_open:
@@ -253,7 +253,7 @@ $("form").onsubmit = async e => {
                             no_image: $("noimage").checked, attach_photo: $("photo").checked})});
     render(await res.json(), text);
   } catch (err) {
-    render({request: text, error: "Couldn't reach the UI server. Is `uv run python -m launchkit.ui` still running?"}, text);
+    render({request: text, error: "Couldn't reach the UI server. Is `uv run python -m launchkit.opener.ui` still running?"}, text);
   } finally {
     $("go").disabled = false; $("go").textContent = "Make poster";
   }

@@ -3,14 +3,14 @@ import re
 
 import pytest
 
-from launchkit.harness.brand import make_get_brand_details
-from launchkit.harness.request import UnknownWorkspace
-from launchkit.harness.run import run_request
-from launchkit.harness.search import TOP_K, embed
-from launchkit.harness.spec import PosterSpec, validate_spec
-from launchkit.harness.store import brand_store, scope
-from launchkit.harness.trace import Trace
-from launchkit.harness.workspace import load_workspace
+from launchkit.agents.poster_flow import run_request
+from launchkit.brands.request import UnknownWorkspace
+from launchkit.brands.workspace import load_workspace
+from launchkit.guardrails.poster_check import PosterSpec, validate_spec
+from launchkit.knowledge.brand_index import brand_store, scope
+from launchkit.knowledge.brand_search import TOP_K, embed
+from launchkit.tools.get_brand_details import make_get_brand_details
+from launchkit.trace import Trace
 
 DISHWASHER = "Poster for the Tidal bottle. Mention it's dishwasher-safe."
 EMBER_ASKS = [

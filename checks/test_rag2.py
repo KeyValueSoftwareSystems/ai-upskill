@@ -1,12 +1,12 @@
 import inspect
 import re
 
-from launchkit.harness.brand import make_get_brand_details
-from launchkit.harness.context import approx_tokens
-from launchkit.harness.run import run_request
-from launchkit.harness.search import TOP_K, split_by_heading
-from launchkit.harness.trace import Trace
-from launchkit.harness.workspace import load_workspace
+from launchkit.agents.poster_flow import run_request
+from launchkit.agents.prompt import approx_tokens
+from launchkit.brands.workspace import load_workspace
+from launchkit.knowledge.brand_search import TOP_K, split_by_heading
+from launchkit.tools.get_brand_details import make_get_brand_details
+from launchkit.trace import Trace
 
 DISHWASHER = "Poster for the Tidal bottle. Mention it's dishwasher-safe."
 

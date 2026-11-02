@@ -3,7 +3,7 @@ from pathlib import Path
 
 import yaml
 
-from launchkit.harness.trace import Trace
+from launchkit.trace import Trace
 
 
 @dataclass

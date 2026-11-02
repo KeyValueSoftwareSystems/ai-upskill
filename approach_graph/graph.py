@@ -9,7 +9,7 @@ Each box is a node: a plain Python function that reads the state and returns the
 The arrows are edges. The graph, not the model, decides what runs next.
 
 You fill in four TODOs (HANDS_ON.md has the code). After each one, score it:
-    uv run python -m launchkit.scoreboard --approach graph
+    uv run python -m launchkit.opener.scoreboard --approach graph
 """
 import json  # noqa: F401  (TODO 1)
 import os
@@ -22,9 +22,9 @@ from langgraph.graph import END, START, StateGraph
 from typing_extensions import TypedDict
 
 from approach_llm.app import build_prompt  # last session's prompt, reused as is
-from launchkit.images import generate_image, resize_image
-from launchkit.llm import complete
-from launchkit.poster import Picture, PosterSpec, Result, SpecError, load_brand, parse_spec, validate_spec
+from launchkit.opener.images import generate_image, resize_image
+from launchkit.adapters.llm import complete
+from launchkit.opener.poster import Picture, PosterSpec, Result, SpecError, load_brand, parse_spec, validate_spec
 
 MAX_ATTEMPTS = 2  # the first try, then one fix
 

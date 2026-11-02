@@ -1,19 +1,19 @@
 """Send one request through an approach and see everything that happened.
 
-    uv run python -m launchkit.ask R1                       # one of Harbor's four requests
-    uv run python -m launchkit.ask "Poster for the Tidal bottle on a beach"
-    uv run python -m launchkit.ask R1 --no-image            # skip the paid image call
-    uv run python -m launchkit.ask --approach graph R1
+    uv run python -m launchkit.opener.ask R1                       # one of Harbor's four requests
+    uv run python -m launchkit.opener.ask "Poster for the Tidal bottle on a beach"
+    uv run python -m launchkit.opener.ask R1 --no-image            # skip the paid image call
+    uv run python -m launchkit.opener.ask --approach graph R1
 
 It prints every model call (what was sent, what came back), the poster spec checked
-against Harbor's rules, and the images that were made. `uv run python -m launchkit.ui`
+against Harbor's rules, and the images that were made. `uv run python -m launchkit.opener.ui`
 shows the same thing in your browser.
 """
 import argparse
 import os
 import textwrap
 
-from . import llm
+from launchkit.adapters import llm
 from .poster import FIELDS, ROOT, load_brand, validate_spec, word_count
 from .scoreboard import APPROACHES, REQUESTS, load_handle
 

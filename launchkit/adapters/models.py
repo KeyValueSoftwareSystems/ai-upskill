@@ -3,7 +3,7 @@ import os
 from agno.models.openai import OpenAIChat
 
 from launchkit.adapters.fakes import EchoModel, EndlessModel, GoodModel, LookupModel, MalformedModel, ProfileModel
-from launchkit.harness.trace import Trace
+from launchkit.trace import Trace
 
 PROVIDER_KEYS = {
     "openai": "OPENAI_API_KEY",

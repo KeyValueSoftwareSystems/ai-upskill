@@ -23,18 +23,18 @@ documents grow, change, or belong to different customers.
 
 ## The slot
 
-- `launchkit/harness/store.py` · `BrandStore.search(workspace_id, query)`: one line, `.where(scope(workspace_id), prefilter=True)`.
-- `launchkit/harness/brand.py` · the tool passes `ws.id`, which came from the request.
-- `launchkit/harness/spec.py` · `PosterSpec.sources`, and `validate_spec` checks them against what the tool returned.
+- `launchkit/knowledge/brand_index.py` · `BrandStore.search(workspace_id, query)`: one line, `.where(scope(workspace_id), prefilter=True)`.
+- `launchkit/tools/get_brand_details.py` · the tool passes `ws.id`, which came from the request.
+- `launchkit/guardrails/poster_check.py` · `PosterSpec.sources`, and `validate_spec` checks them against what the tool returned.
 
 ## Prompt card, for your coding agent
 
 ```
-In launchkit/harness/store.py, BrandStore.search takes workspace_id first and adds
+In launchkit/knowledge/brand_index.py, BrandStore.search takes workspace_id first and adds
 .where(scope(workspace_id), prefilter=True) to the vector query, so the filter runs inside the
 search. scope() checks the id against WORKSPACE_ID before writing workspace = '<id>'.
 
-In launchkit/harness/brand.py, get_brand_details(query) calls store.search(ws.id, query, TOP_K).
+In launchkit/tools/get_brand_details.py, get_brand_details(query) calls store.search(ws.id, query, TOP_K).
 ws comes from the request; there is still no workspace parameter. Trace the filter.
 
 Add sources: list[str] to PosterSpec, and make validate_spec refuse a source that

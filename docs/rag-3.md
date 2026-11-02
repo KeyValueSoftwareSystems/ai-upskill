@@ -34,15 +34,15 @@ The first use downloads the embedding model (about 130 MB) into the Hugging Face
 
 ## The slot
 
-- `launchkit/harness/search.py` · `embed()`. Supplied.
-- `launchkit/harness/store.py` · `BrandStore`: `index(workspace, root)` writes a brand's rows; `search(query)` runs the vector query.
-- `launchkit/harness/brand.py` · the tool searches the store by meaning instead of BM25.
-- `launchkit/harness/onboard.py` and `launchkit index`: index the brand when its document is processed.
+- `launchkit/knowledge/brand_search.py` · `embed()`. Supplied.
+- `launchkit/knowledge/brand_index.py` · `BrandStore`: `index(workspace, root)` writes a brand's rows; `search(query)` runs the vector query.
+- `launchkit/tools/get_brand_details.py` · the tool searches the store by meaning instead of BM25.
+- `launchkit/brands/onboard.py` and `launchkit index`: index the brand when its document is processed.
 
 ## Prompt card, for your coding agent
 
 ```
-In launchkit/harness/store.py, write BrandStore(path) over a LanceDB table with columns
+In launchkit/knowledge/brand_index.py, write BrandStore(path) over a LanceDB table with columns
 ref, workspace, heading, text, hash, vector (384 floats). index(workspace_id, root) chunks the
 brand's files with load_chunks, reuses stored vectors whose text hash matches, embeds only the
 rest with embed(), and replaces that brand's rows. search(query, k) embeds the question and runs
@@ -51,7 +51,7 @@ table.search(vector).metric("cosine").limit(k); the score is 1 - distance.
 Call index_brand(workspace_id, settings, trace) at the end of onboard_workspace, and add a
 `launchkit index [brand...]` command for brands written by hand.
 
-In launchkit/harness/brand.py, get_brand_details(query) says so when the brand has no rows,
+In launchkit/tools/get_brand_details.py, get_brand_details(query) says so when the brand has no rows,
 otherwise returns render_results(query, top) from store.search(query, TOP_K), tracing each chunk
 with its cosine score. It never reads brand files or embeds chunks.
 ```

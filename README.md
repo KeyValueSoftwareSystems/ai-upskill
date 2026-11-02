@@ -29,7 +29,7 @@ uv run launchkit ui         # the harness chat page on http://localhost:8000
 
 Keys go through KeyValue's LiteLLM proxy: `LITELLM_API_KEY` and `LITELLM_BASE_URL`. Everyone runs the real model and real pictures. `LAUNCHKIT_IMAGE_PROVIDER` picks who makes the pictures: `gpu` (our GPU, a few seconds each, the default), `litellm` (the image model through the proxy, 30 to 60 seconds each; only when the trainer says the GPU is down) or `placeholder` (a stand-in picture drawn by code).
 
-The opener's code is on this branch too (`approach_llm/`, `approach_graph/`, `launchkit/ui.py`, `launchkit/scoreboard.py`), but its LangGraph parts need the opener branches' dependencies; run them from `session-01-langgraph`.
+The opener's code is on this branch too (`approach_llm/`, `approach_graph/`, `launchkit/opener/ui.py`, `launchkit/opener/scoreboard.py`), but its LangGraph parts need the opener branches' dependencies; run them from `session-01-langgraph`.
 
 ## Commands
 
@@ -45,14 +45,14 @@ The opener's code is on this branch too (`approach_llm/`, `approach_graph/`, `la
 
 ## Session 1 · The harness, in four steps
 
-Each step fills one TODO slot in `launchkit/harness/`. Each step has a check. The answer to each step is on its own branch, and each branch contains the previous one's answer.
+Each step fills one TODO slot. That code now sits in the folders under `launchkit/`: see Layout. Each step has a check. The answer to each step is on its own branch, and each branch contains the previous one's answer.
 
 | Step | Slot | Check | Branch with the answer |
 | --- | --- | --- | --- |
-| 1 · The agent reads its rules from files | `workspace.py` `load_workspace`, `agent.py` rules section | `check 1` | `session-01-harness-step1` |
-| 2 · Check the form, fix it once, then stop | `spec.py` `validate_spec`, `run.py` repair | `check 2` | `session-01-harness-step2` |
-| 3 · A tool and a leash | `tools.py`, `limits.py`, `agent.py` picture agent | `check 3` | `session-01-harness-step3` |
-| 4 · The request says who you are | `request.py` `resolve_workspace_id` | `check 4` | `session-01-harness-step4` |
+| 1 · The agent reads its rules from files | `brands/workspace.py` `load_workspace`, `agents/copy_and_picture_agents.py` rules section | `check 1` | `session-01-harness-step1` |
+| 2 · Check the form, fix it once, then stop | `guardrails/poster_check.py` `validate_spec`, `agents/poster_flow.py` repair | `check 2` | `session-01-harness-step2` |
+| 3 · A tool and a leash | `tools/generate_image.py`, `guardrails/limits.py`, `agents/copy_and_picture_agents.py` picture agent | `check 3` | `session-01-harness-step3` |
+| 4 · The request says who you are | `brands/request.py` `resolve_workspace_id` | `check 4` | `session-01-harness-step4` |
 
 Prompt cards for each step are in `docs/`.
 
@@ -62,11 +62,11 @@ Branch from `session-01-harness-step4`. It is the full CP1.1 harness: `uv run la
 
 Where retrieval plugs in:
 
-- `launchkit/harness/agent.py` · `build_copy_agent`: add your `get_brand_details` tool to `tools=[...]` on the copy agent. The copy agent already carries the leash hook, so every tool call goes through the trace with its result size in tokens and counts against the step cap.
-- `launchkit/harness/context.py` · `ContextBuilder`: `ctx.set("facts", text)` fills the facts section. Budgets live in `launchkit/settings.py` (`budgets`). A trimmed section says so inside the prompt.
+- `launchkit/agents/copy_and_picture_agents.py` · `build_copy_agent`: add your `get_brand_details` tool to `tools=[...]` on the copy agent. The copy agent already carries the leash hook, so every tool call goes through the trace with its result size in tokens and counts against the step cap.
+- `launchkit/agents/prompt.py` · `ContextBuilder`: `ctx.set("facts", text)` fills the facts section. Budgets live in `launchkit/settings.py` (`budgets`). A trimmed section says so inside the prompt.
 - `uv run launchkit explain` prints what the model saw on the last run, section by section, with tool results as a row.
 - `workspaces/harbor/brand-book.md` and `facts.md` hold Harbor's text with clear headings; Ember's are in `workspaces/ember/`.
-- `launchkit/harness/request.py`: the workspace id is already resolved from the trusted request. Your tool takes no workspace argument.
+- `launchkit/brands/request.py`: the workspace id is already resolved from the trusted request. Your tool takes no workspace argument.
 
 ## Session 1 · Retrieval (CP1.2), in four steps
 
@@ -120,11 +120,11 @@ Run each step on the chat page, as in "Session 2: before you start". In the term
 
 | Step | Slot | Check | Branch with the answer |
 | --- | --- | --- | --- |
-| 1 · Tools: one tool, then a toolbox | `picture_tools.py` `PictureDesk` | `check tools1` | `session-02-tools-step1` |
-| 2 · Skills: write the know-how down | `launchkit/skills/resize_image/skill.md`, `picture_tools.py` `window_around` | `check tools2` | `session-02-tools-step2` |
-| 3 · Lookup: find the right skill | `catalogue.py` `make_run_tool` | `check tools3` | `session-02-tools-step3` |
-| 4 · MCP: plug in Maya's board | `mcp_link.py` `connect` | `check tools4` | `session-02-tools-step4` |
-| 5 · Permissions: read freely, ask before you write | `catalogue.py` `run_tool` | `check tools5` | `session-02-tools-step5` |
+| 1 · Tools: one tool, then a toolbox | `tools/resize_poster.py` `PictureDesk` | `check tools1` | `session-02-tools-step1` |
+| 2 · Skills: write the know-how down | `launchkit/skills/resize_image/skill.md`, `tools/resize_poster.py` `window_around` | `check tools2` | `session-02-tools-step2` |
+| 3 · Lookup: find the right skill | `tools/catalogue.py` `make_run_tool` | `check tools3` | `session-02-tools-step3` |
+| 4 · MCP: plug in Maya's board | `mcp/client.py` `connect` | `check tools4` | `session-02-tools-step4` |
+| 5 · Permissions: read freely, ask before you write | `tools/catalogue.py` `run_tool` | `check tools5` | `session-02-tools-step5` |
 
 Cards: `docs/tools-1.md` … `docs/tools-5.md`.
 
@@ -132,15 +132,54 @@ Cards: `docs/tools-1.md` … `docs/tools-5.md`.
 
 ```
 launchkit/
-  cli.py            run · ui · explain · check · onboard   (the harness)
-  llm.py, images.py, poster.py, scoreboard.py, ui.py, check_setup.py, ask.py   (the opener's shared code)
+  agents/                                who thinks: the agent Maya talks to, and what it sees
+    copy_and_picture_agents.py           Session 1's copy and picture agents
+    main_agent.py                        the agent Maya talks to; build_catalogue lists its tools
+    poster_flow.py                       Session 1's fixed order: copy, then picture
+    prompt.py                            what the model sees: rules, task, facts
+  tools/                                 what the agent can do: one file per tool, named after the tool
+    catalogue.py                         the catalogue and the three doors: find_tool, run_skill, run_tool
+    generate_image.py                    draws a new picture with the paid image model
+    get_brand_details.py                 looks up the brand's guide and product facts
+    resize_poster.py                     cuts the poster you already have: detect_focal_point, crop, expand_canvas, scale
+  guardrails/                            what the harness stops or checks
+    limits.py                            step cap and image budget
+    poster_check.py                      checks the poster and asks the model to repair it
+  memory/                                what one conversation keeps
+    attached_pictures.py                 pictures attached or made in this conversation
+    chat_history.py                      past turns of this conversation
+  knowledge/                             brand facts the agent looks up (RAG)
+    brand_index.py                       puts the brand books in the vector database (launchkit index)
+    brand_library.py                     reads a brand's files
+    brand_search.py                      finds the brand lines that match a question
+  brands/                                a brand's workspace: rules, users, onboarding
+    onboard.py                           makes a workspace from a brand pack
+    request.py                           works out which brand a request is for
+    users.py                             who can sign in
+    workspace.py                         loads a brand's SOUL, AGENTS and rules
+  adapters/                              plumbing: models, fakes, image providers, prices
+    fakes.py                             scripted models for the checks and offline runs
+    gpu_images.py                        our GPU picture service
+    image_providers.py                   picks who makes the pictures
+    llm.py                               one plain model call, used for vision
+    models.py                            which model a run uses
+    pricing.py                           token prices
+  web/                                   the chat page
+    app.py                               the chat page's server
+    index.html                           the chat page
+  opener/                                the opener's demo: one LLM call vs LangGraph
+    ask.py
+    images.py
+    poster.py
+    scoreboard.py
+    ui.py
+  check_setup.py                         checks your machine before the session
+  cli.py                                 the launchkit command
+  settings.py                            .env, paths, limits
+  trace.py                               what the Trace tab shows
 approach_llm/, approach_graph/   the opener's two approaches
-  settings.py       env, paths, limits, section budgets
-  harness/          request → workspace → context → copy agent → validate → picture agent → result
-  adapters/         model resolver, fake models, image adapters, prices
-  web/              FastAPI app and one HTML page
-workspaces/         one folder per brand: SOUL.md, AGENTS.md, rules.yaml, facts.md, users.yaml, assets/
-samples/            a brand pack PDF to try onboarding with
-checks/             one pytest file per step; `launchkit check` wraps them
-docs/               setup, glossary, one page per step
+workspaces/   one folder per brand: SOUL.md, AGENTS.md, rules.yaml, facts.md, users.yaml, assets/
+samples/      pictures, photos and brand packs to try
+checks/       one pytest file per step; `launchkit check` wraps them
+docs/         setup, glossary, one card per step
 ```

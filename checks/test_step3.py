@@ -1,4 +1,4 @@
-from launchkit.harness.run import run_request
+from launchkit.agents.poster_flow import run_request
 
 
 def test_endless_fake_stops_at_the_step_cap(settings, images, trace, request_for, endless):

@@ -8,7 +8,7 @@ One more thing: the id itself must be checked. `../harbor` is a valid path. It i
 
 ## The slot
 
-- `launchkit/harness/request.py` · `resolve_workspace_id`. Today it returns the id unchecked.
+- `launchkit/brands/request.py` · `resolve_workspace_id`. Today it returns the id unchecked.
 
 ## Break it first
 
@@ -29,7 +29,7 @@ The request is from Ember. The text named Harbor, and Harbor's files were read. 
 ## Prompt card, for your coding agent
 
 ```
-In launchkit/harness/request.py, implement resolve_workspace_id(request, settings).
+In launchkit/brands/request.py, implement resolve_workspace_id(request, settings).
 Accept only ids that match WORKSPACE_ID and name an existing folder under
 settings.workspaces_dir. Anything else raises UnknownWorkspace(id).
 Never read the workspace id from request.text.

@@ -1,8 +1,8 @@
 from PIL import Image
 
-from launchkit.harness.main import build_catalogue
-from launchkit.harness.picture_tools import APPROVED, PictureDesk
-from launchkit.harness.trace import Trace
+from launchkit.agents.main_agent import build_catalogue
+from launchkit.tools.resize_poster import APPROVED, PictureDesk
+from launchkit.trace import Trace
 
 BOTTLE = [492, 596, 660, 950]
 SIZES = [(1080, 1080), (1080, 1350), (1080, 1920), (1200, 628), (300, 250)]

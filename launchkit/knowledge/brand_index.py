@@ -6,8 +6,8 @@ from pathlib import Path
 import lancedb
 import pyarrow as pa
 
-from launchkit.harness.request import WORKSPACE_ID, UnknownWorkspace
-from launchkit.harness.search import TOP_K, Chunk, chunk_text, embed, load_chunks
+from launchkit.brands.request import WORKSPACE_ID, UnknownWorkspace
+from launchkit.knowledge.brand_search import TOP_K, Chunk, chunk_text, embed, load_chunks
 
 TABLE = "chunks"
 DIMENSIONS = 384

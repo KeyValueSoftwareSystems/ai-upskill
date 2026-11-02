@@ -1,4 +1,4 @@
-from launchkit.harness.trace import Trace
+from launchkit.trace import Trace
 
 
 def make_generate_image(images, colours: dict, trace: Trace, on_made=None):

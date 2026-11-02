@@ -6,7 +6,7 @@ from agno.models.base import Model
 from agno.models.message import MessageMetrics
 from agno.models.response import ModelResponse
 
-from launchkit.harness.context import approx_tokens
+from launchkit.agents.prompt import approx_tokens
 
 HARBOR_SPEC = {
     "headline": "Cold for 24 hours",

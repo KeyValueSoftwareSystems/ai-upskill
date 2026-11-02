@@ -1,7 +1,7 @@
 import pytest
 
-from launchkit.harness.run import run_request
-from launchkit.harness.spec import PosterSpec, SpecError, validate_spec
+from launchkit.agents.poster_flow import run_request
+from launchkit.guardrails.poster_check import PosterSpec, SpecError, validate_spec
 
 RULES = {"banned_claims": ["eco-friendly"]}
 

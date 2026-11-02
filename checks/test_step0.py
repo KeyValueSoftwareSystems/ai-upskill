@@ -1,6 +1,6 @@
-from launchkit.harness.run import run_request
-from launchkit.harness.trace import Trace
-from launchkit.harness.spec import PosterSpec
+from launchkit.agents.poster_flow import run_request
+from launchkit.guardrails.poster_check import PosterSpec
+from launchkit.trace import Trace
 
 
 def test_skeleton_returns_a_spec(settings, images, trace, request_for, good):
@@ -38,7 +38,7 @@ def test_a_greeting_gets_a_reply_not_a_poster(settings, images, trace, request_f
 
 def test_logins_come_from_each_workspace(settings):
     """The sign-in list is built from every workspace's users.yaml, people not ids."""
-    from launchkit.harness.users import list_logins
+    from launchkit.brands.users import list_logins
 
     logins = list_logins(settings)
     labels = {login["label"] for login in logins}
@@ -80,9 +80,9 @@ def test_an_unchanged_image_prompt_reuses_the_picture(settings, images, trace, r
 
 def test_the_copy_agent_carries_the_leash(settings, trace, good):
     """The copy agent runs its tools through the same hook as the picture agent, so a retrieval tool added later is traced and capped too."""
-    from launchkit.harness.agent import build_copy_agent
-    from launchkit.harness.context import ContextBuilder
-    from launchkit.harness.workspace import load_workspace
+    from launchkit.agents.copy_and_picture_agents import build_copy_agent
+    from launchkit.agents.prompt import ContextBuilder
+    from launchkit.brands.workspace import load_workspace
 
     ws = load_workspace("harbor", settings, trace)
     agent = build_copy_agent(ws, ContextBuilder(settings.budgets), good, settings, trace)

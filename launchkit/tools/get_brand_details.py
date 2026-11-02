@@ -1,7 +1,7 @@
-from launchkit.harness.search import TOP_K, render_results
-from launchkit.harness.store import brand_store
-from launchkit.harness.trace import Trace
-from launchkit.harness.workspace import Workspace
+from launchkit.brands.workspace import Workspace
+from launchkit.knowledge.brand_index import brand_store
+from launchkit.knowledge.brand_search import TOP_K, render_results
+from launchkit.trace import Trace
 
 
 def make_get_brand_details(ws: Workspace, trace: Trace, settings):

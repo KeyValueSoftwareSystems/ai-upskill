@@ -9,19 +9,19 @@ The agent decides when to call it; the harness runs it. The harness, not the mod
 
 ## The slot
 
-- `launchkit/harness/brand.py` · `make_get_brand_details(ws, trace)`. It returns the tool.
-- `launchkit/harness/agent.py` · `build_copy_agent`: add the tool to `tools=[...]`. One line in `SPEC_TASK` tells the model to look facts up before it states one.
+- `launchkit/tools/get_brand_details.py` · `make_get_brand_details(ws, trace)`. It returns the tool.
+- `launchkit/agents/copy_and_picture_agents.py` · `build_copy_agent`: add the tool to `tools=[...]`. One line in `SPEC_TASK` tells the model to look facts up before it states one.
 
 ## Prompt card, for your coding agent
 
 ```
-In launchkit/harness/brand.py, write make_get_brand_details(ws, trace). It returns a
+In launchkit/tools/get_brand_details.py, write make_get_brand_details(ws, trace). It returns a
 function get_brand_details() -> str with no parameters. It reads ws.root / "brand-book.md"
 (or facts.md when there is no brand book), records trace.file(path) and returns the text.
 The docstring is what the model reads: look the brand up before stating any product fact,
 and claim only what it returns.
 
-In launchkit/harness/agent.py, build_copy_agent adds tools=[make_get_brand_details(ws, trace)]
+In launchkit/agents/copy_and_picture_agents.py, build_copy_agent adds tools=[make_get_brand_details(ws, trace)]
 next to the leash hook, and SPEC_TASK gets one line: brand facts are not in this prompt;
 call get_brand_details before stating one.
 ```

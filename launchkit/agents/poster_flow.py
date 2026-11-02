@@ -3,19 +3,19 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from launchkit.adapters.images import FromPicture, make_images
+from launchkit.adapters.image_providers import FromPicture, make_images
 from launchkit.adapters.models import model_name, resolve_model
 from launchkit.adapters.pricing import cost_usd
 from agno.exceptions import ModelProviderError
 from agno.run.base import RunStatus
 
-from launchkit.harness.agent import build_copy_agent, build_picture_agent
-from launchkit.harness.context import ContextBuilder, approx_tokens
-from launchkit.harness.request import Request, resolve_workspace_id
-from launchkit.harness.spec import PosterSpec, SpecError, Turn, repair_message, validate_spec
-from launchkit.harness.trace import Trace
-from launchkit.harness.workspace import load_workspace
+from launchkit.agents.copy_and_picture_agents import build_copy_agent, build_picture_agent
+from launchkit.agents.prompt import ContextBuilder, approx_tokens
+from launchkit.brands.request import Request, resolve_workspace_id
+from launchkit.brands.workspace import load_workspace
+from launchkit.guardrails.poster_check import PosterSpec, SpecError, Turn, repair_message, validate_spec
 from launchkit.settings import settings as default_settings
+from launchkit.trace import Trace
 
 
 @dataclass

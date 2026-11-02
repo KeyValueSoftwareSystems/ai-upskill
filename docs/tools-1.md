@@ -8,7 +8,7 @@ The harness binds the approved poster, the same way Session 1 bound the workspac
 
 ## The slot
 
-- `launchkit/harness/picture_tools.py` · `PictureDesk.centre_crop`. Today it is marked `@todo`, so it stays out of the catalogue.
+- `launchkit/tools/resize_poster.py` · `PictureDesk.centre_crop`. Today it is marked `@todo`, so it stays out of the catalogue.
 - Move 2: `detect_focal_point`, `crop`, `expand_canvas` and `scale`, in the same class. Also marked `@todo`.
 
 ## Break it first
@@ -25,7 +25,7 @@ I cannot resize the approved poster. I only have get_brand_details and generate_
 ## Prompt card 1, for your coding agent
 
 ```
-In launchkit/harness/picture_tools.py, build PictureDesk.centre_crop(width, height).
+In launchkit/tools/resize_poster.py, build PictureDesk.centre_crop(width, height).
 Remove its @todo. Open the approved poster with self.open(), take
 centre_window(img.size, (width, height)), crop to it, resize to (width, height) and
 save with self.save(img, "centre"). Return {"file": path, "size": "WxH",

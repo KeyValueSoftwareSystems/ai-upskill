@@ -1,7 +1,7 @@
 import pytest
 
-from launchkit.harness.request import UnknownWorkspace
-from launchkit.harness.run import run_request
+from launchkit.agents.poster_flow import run_request
+from launchkit.brands.request import UnknownWorkspace
 
 
 def test_text_cannot_name_another_workspace(settings, images, trace, request_for, echo):

@@ -12,11 +12,11 @@ from rich.table import Table
 from launchkit.adapters.pricing import PRICES_AS_OF
 from agno.exceptions import ModelProviderError
 
-from launchkit.harness.request import Request, UnknownWorkspace
-from launchkit.harness.run import run_request
-from launchkit.harness.spec import SpecError
-from launchkit.harness.trace import Trace
+from launchkit.agents.poster_flow import run_request
+from launchkit.brands.request import Request, UnknownWorkspace
+from launchkit.guardrails.poster_check import SpecError
 from launchkit.settings import ROOT, settings
+from launchkit.trace import Trace
 
 console = Console(soft_wrap=True)
 
@@ -48,7 +48,7 @@ def cmd_run(args):
 
 
 def cmd_main(args):
-    from launchkit.harness.main import run_main
+    from launchkit.agents.main_agent import run_main
 
     current = replace(settings, model=args.model) if args.model else settings
     req = Request(workspace_id=args.workspace, user_id=args.user, session_id=args.session, text=args.text)
@@ -83,10 +83,10 @@ def cmd_lookup(args):
     """Call get_brand_details the way the agent would, and print exactly what the model gets back."""
     import inspect
 
-    from launchkit.harness.brand import make_get_brand_details
-    from launchkit.harness.context import approx_tokens
-    from launchkit.harness.request import resolve_workspace_id
-    from launchkit.harness.workspace import load_workspace
+    from launchkit.tools.get_brand_details import make_get_brand_details
+    from launchkit.agents.prompt import approx_tokens
+    from launchkit.brands.request import resolve_workspace_id
+    from launchkit.brands.workspace import load_workspace
 
     trace = Trace()
     try:
@@ -112,9 +112,9 @@ def cmd_lookup(args):
 
 def cmd_chunks(args):
     """How a brand's guide is split before anything is searched: one row per chunk."""
-    from launchkit.harness.context import approx_tokens
-    from launchkit.harness.request import resolve_workspace_id
-    from launchkit.harness.search import load_chunks
+    from launchkit.agents.prompt import approx_tokens
+    from launchkit.brands.request import resolve_workspace_id
+    from launchkit.knowledge.brand_search import load_chunks
 
     try:
         wid = resolve_workspace_id(Request(workspace_id=args.workspace, text="chunks"), settings)
@@ -138,7 +138,7 @@ def cmd_chunks(args):
 
 def cmd_index(args):
     """Document processing for brands whose files were written by hand: chunk, embed and store them once."""
-    from launchkit.harness.store import index_brand
+    from launchkit.knowledge.brand_index import index_brand
 
     names = args.workspaces or sorted(p.name for p in settings.workspaces_dir.iterdir() if p.is_dir())
     trace = Trace()
@@ -153,7 +153,7 @@ def cmd_index(args):
 
 
 def cmd_onboard(args):
-    from launchkit.harness.onboard import onboard_workspace
+    from launchkit.brands.onboard import onboard_workspace
 
     current = replace(settings, model=args.model) if args.model else settings
     trace = Trace()

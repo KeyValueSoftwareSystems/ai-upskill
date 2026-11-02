@@ -4,11 +4,11 @@
 
 Solved: this is where the LLM-call session ends. The LangGraph pipeline in
 approach_graph/graph.py starts from it.
-    uv run python -m launchkit.ask --approach llm R1
+    uv run python -m launchkit.opener.ask --approach llm R1
 """
-from launchkit.images import generate_image, resize_image
-from launchkit.llm import complete
-from launchkit.poster import Result, SpecError, brand_rules_text, load_brand, parse_spec
+from launchkit.opener.images import generate_image, resize_image
+from launchkit.adapters.llm import complete
+from launchkit.opener.poster import Result, SpecError, brand_rules_text, load_brand, parse_spec
 
 
 def build_prompt(text: str, brand: dict) -> list[dict]:

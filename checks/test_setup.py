@@ -9,9 +9,9 @@ import openai
 from agno.exceptions import ModelProviderError
 from agno.models.openai import OpenAIChat
 
-from launchkit.adapters.images import FakeImages, RealImages, make_images
+from launchkit.adapters.image_providers import FakeImages, RealImages, make_images
 from launchkit.adapters.models import resolve_model
-from launchkit.harness.trace import Trace
+from launchkit.trace import Trace
 
 
 def test_proxy_key_and_bare_model_id(settings, monkeypatch):
@@ -119,7 +119,7 @@ def test_a_clear_error_is_not_retried(settings, images, trace, request_for):
     """A 4xx the provider means (a spent budget, a bad key) ends the run after one call, with the provider's words; nothing retries it."""
     from agno.exceptions import ModelProviderError
     from launchkit.adapters.fakes import GoodModel
-    from launchkit.harness.run import run_request
+    from launchkit.agents.poster_flow import run_request
 
     class BrokenModel(GoodModel):
         calls = 0

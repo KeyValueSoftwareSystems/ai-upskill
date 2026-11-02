@@ -3,7 +3,7 @@ from pathlib import Path
 
 import yaml
 
-from launchkit.harness.request import WORKSPACE_ID, UnknownWorkspace
+from launchkit.brands.request import WORKSPACE_ID, UnknownWorkspace
 
 BOILERPLATE = re.compile(r"^You are .+'s poster copywriter\.$")
 

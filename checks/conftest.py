@@ -5,10 +5,10 @@ from pathlib import Path
 import pytest
 
 from launchkit.adapters.fakes import EchoModel, EndlessModel, GoodModel, LookupModel, MalformedModel
-from launchkit.adapters.images import FakeImages
-from launchkit.harness.request import Request
-from launchkit.harness.trace import Trace
+from launchkit.adapters.image_providers import FakeImages
+from launchkit.brands.request import Request
 from launchkit.settings import ROOT, settings as base_settings
+from launchkit.trace import Trace
 
 BRIEF = "Poster for the Tidal bottle on a misty lakeshore at dawn. Headline idea: cold for 24 hours."
 
@@ -16,7 +16,7 @@ BRIEF = "Poster for the Tidal bottle on a misty lakeshore at dawn. Headline idea
 @pytest.fixture(scope="session")
 def indexed_store(tmp_path_factory):
     """The brands' documents processed once per test session: chunked, embedded and stored, as `launchkit index` does."""
-    from launchkit.harness.store import BrandStore
+    from launchkit.knowledge.brand_index import BrandStore
 
     path = tmp_path_factory.mktemp("index") / "brand-store"
     store = BrandStore(path)

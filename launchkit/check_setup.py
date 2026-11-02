@@ -17,7 +17,7 @@ import os
 import sys
 import tempfile
 
-from .poster import OUT, ROOT
+from launchkit.opener.poster import OUT, ROOT
 
 NEXT_BRANCH = "session-01-llm-call"
 WIDTH = 38          # label + dots, so every status lines up in one column

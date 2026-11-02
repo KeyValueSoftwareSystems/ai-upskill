@@ -1,7 +1,7 @@
 """Harbor's four requests, and a scoreboard that runs them through an approach.
 
-    uv run python -m launchkit.scoreboard --approach llm
-    uv run python -m launchkit.scoreboard --approach graph
+    uv run python -m launchkit.opener.scoreboard --approach llm
+    uv run python -m launchkit.opener.scoreboard --approach graph
 
 Each request comes straight from the problem statement. Order matters: R2 follows R1 in
 conversation A, and R4 follows R3 in conversation B.

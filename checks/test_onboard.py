@@ -1,9 +1,9 @@
 import yaml
 
 from launchkit.adapters.fakes import ProfileModel
-from launchkit.harness.library import read_library
-from launchkit.harness.onboard import BrandProfile, Colour, render_files, onboard_workspace
-from launchkit.harness.request import UnknownWorkspace
+from launchkit.brands.onboard import BrandProfile, Colour, render_files, onboard_workspace
+from launchkit.brands.request import UnknownWorkspace
+from launchkit.knowledge.brand_library import read_library
 import pytest
 
 from checks.conftest import minimal_pdf

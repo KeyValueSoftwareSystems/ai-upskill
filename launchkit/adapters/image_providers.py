@@ -6,7 +6,7 @@ from time import time
 
 from PIL import Image, ImageDraw, ImageFont
 
-from launchkit.gpu_images import gpu_image, image_provider
+from launchkit.adapters.gpu_images import gpu_image, image_provider
 
 
 class FakeImages:

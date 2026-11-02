@@ -1,13 +1,13 @@
 """The plain-code side of a poster: the brand's rules, the poster data, and the checks.
 
-Nothing here calls a model. The models are in llm.py (text) and images.py (pictures).
+Nothing here calls a model. The models are in adapters/llm.py (text) and opener/images.py (pictures).
 """
 import json
 import re
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]  # the repo folder
+ROOT = Path(__file__).resolve().parents[2]  # the repo folder
 OUT = ROOT / "out"                          # everything we make goes here
 FIELDS = ("headline", "subheadline", "body", "visual_concept")
 

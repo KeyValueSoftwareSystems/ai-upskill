@@ -11,8 +11,8 @@ The list in `rules.yaml` is for the code: a guarantee.
 
 ## The slot
 
-- `launchkit/harness/spec.py` · `validate_spec`. Today it returns no errors.
-- `launchkit/harness/run.py` · after the copy agent returns. Today errors are ignored.
+- `launchkit/guardrails/poster_check.py` · `validate_spec`. Today it returns no errors.
+- `launchkit/agents/poster_flow.py` · after the copy agent returns. Today errors are ignored.
 
 ## Break it first
 
@@ -33,12 +33,12 @@ Ten words against a limit of six, a banned claim, and the headline inside the pi
 ## Prompt card, for your coding agent
 
 ```
-In launchkit/harness/spec.py, implement validate_spec(spec, rules) -> list[str].
+In launchkit/guardrails/poster_check.py, implement validate_spec(spec, rules) -> list[str].
 Return one readable error per problem: headline over 6 words, subheadline over 12,
 body over 25, any banned claim from rules["banned_claims"] appearing as a whole word in the copy,
 and the headline or subheadline text appearing inside image_prompt.
 
-In launchkit/harness/run.py, after the copy agent returns a spec: validate it.
+In launchkit/agents/poster_flow.py, after the copy agent returns a spec: validate it.
 If there are errors, record them on the trace with trace.validation(errors, attempt=1),
 run the agent once more with repair_message(errors) as the message, and validate again.
 Record attempt 2. If errors remain, raise SpecError(errors).

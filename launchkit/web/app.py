@@ -12,15 +12,15 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from launchkit.harness.library import asset_path, read_library, workspace_root
-from launchkit.harness.onboard import onboard_workspace
-from launchkit.harness.request import Request, UnknownWorkspace, resolve_workspace_id
-from launchkit.harness.main import run_main
-from launchkit.harness.pictures import Pictures
-from launchkit.harness.spec import SpecError
-from launchkit.harness.trace import Trace
-from launchkit.harness.users import list_logins
+from launchkit.agents.main_agent import run_main
+from launchkit.brands.onboard import onboard_workspace
+from launchkit.brands.request import Request, UnknownWorkspace, resolve_workspace_id
+from launchkit.brands.users import list_logins
+from launchkit.guardrails.poster_check import SpecError
+from launchkit.knowledge.brand_library import asset_path, read_library, workspace_root
+from launchkit.memory.attached_pictures import Pictures
 from launchkit.settings import settings
+from launchkit.trace import Trace
 
 app = FastAPI(title="LaunchKit")
 HERE = Path(__file__).parent

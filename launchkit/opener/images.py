@@ -10,7 +10,7 @@ import os
 from dotenv import load_dotenv
 from PIL import Image, ImageColor, ImageDraw, ImageFont
 
-from .gpu_images import gpu_image, image_provider
+from launchkit.adapters.gpu_images import gpu_image, image_provider
 from .poster import OUT, Picture
 
 load_dotenv()  # the GPU address and key live in .env

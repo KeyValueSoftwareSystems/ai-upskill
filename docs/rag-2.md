@@ -12,13 +12,13 @@ The tool should return only the parts that match the question.
 
 ## The slot
 
-- `launchkit/harness/search.py` · `split_by_heading`, `bm25`, `render_results`. Supplied.
-- `launchkit/harness/brand.py` · the tool now takes a `query`.
+- `launchkit/knowledge/brand_search.py` · `split_by_heading`, `bm25`, `render_results`. Supplied.
+- `launchkit/tools/get_brand_details.py` · the tool now takes a `query`.
 
 ## Prompt card, for your coding agent
 
 ```
-In launchkit/harness/brand.py, change get_brand_details to take query: str. It loads the
+In launchkit/tools/get_brand_details.py, change get_brand_details to take query: str. It loads the
 workspace's chunks with load_chunks(ws.root), ranks them with bm25(query, chunks), keeps
 the top TOP_K (5), records a trace note with how many it scored and returned, and returns
 render_results(query, top). Each chunk is rendered with its id, for example

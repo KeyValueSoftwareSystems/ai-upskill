@@ -2,12 +2,12 @@ import re
 
 import pytest
 
-import launchkit.harness.store as store_module
-from launchkit.harness.brand import make_get_brand_details
-from launchkit.harness.search import TOP_K, cosine, embed
-from launchkit.harness.store import BrandStore
-from launchkit.harness.trace import Trace
-from launchkit.harness.workspace import load_workspace
+import launchkit.knowledge.brand_index as store_module
+from launchkit.brands.workspace import load_workspace
+from launchkit.knowledge.brand_index import BrandStore
+from launchkit.knowledge.brand_search import TOP_K, cosine, embed
+from launchkit.tools.get_brand_details import make_get_brand_details
+from launchkit.trace import Trace
 
 
 def refs(result: str) -> list[str]:
@@ -94,7 +94,7 @@ def test_an_edited_file_embeds_only_what_changed(settings):
 def test_onboarding_indexes_the_brand(settings, trace, brand_pdf):
     """Uploading a brand pack is the document processing step: the new brand is in the store straight away."""
     from launchkit.adapters.fakes import ProfileModel
-    from launchkit.harness.onboard import onboard_workspace
+    from launchkit.brands.onboard import onboard_workspace
 
     onboard_workspace(brand_pdf, settings=settings, model=ProfileModel(), trace=trace)
     assert any(line.startswith("note      indexed moss-and-fern:") for line in trace.lines())

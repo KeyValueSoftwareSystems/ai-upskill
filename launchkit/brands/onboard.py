@@ -8,11 +8,11 @@ from pydantic import BaseModel, Field
 from pypdf import PdfReader
 
 from launchkit.adapters.models import model_name, resolve_model
-from launchkit.harness.context import approx_tokens
-from launchkit.harness.request import WORKSPACE_ID, UnknownWorkspace
-from launchkit.harness.store import index_brand
-from launchkit.harness.trace import Trace
+from launchkit.agents.prompt import approx_tokens
+from launchkit.brands.request import WORKSPACE_ID, UnknownWorkspace
+from launchkit.knowledge.brand_index import index_brand
 from launchkit.settings import settings as default_settings
+from launchkit.trace import Trace
 
 
 class Colour(BaseModel):

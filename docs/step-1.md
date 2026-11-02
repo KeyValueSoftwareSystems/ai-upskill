@@ -6,8 +6,8 @@ The harness reads them when a request arrives, the way an app reads a config fil
 
 ## The slot
 
-- `launchkit/harness/workspace.py` · `load_workspace`. Today it returns an empty workspace and the trace says "no workspace files read yet".
-- `launchkit/harness/agent.py` · `build_copy_agent`. Today the rules section of the prompt is empty.
+- `launchkit/brands/workspace.py` · `load_workspace`. Today it returns an empty workspace and the trace says "no workspace files read yet".
+- `launchkit/agents/copy_and_picture_agents.py` · `build_copy_agent`. Today the rules section of the prompt is empty.
 
 ## Break it first
 
@@ -28,12 +28,12 @@ The model was asked for Harbor's poster and was told nothing about Harbor.
 ## Prompt card, for your coding agent
 
 ```
-In launchkit/harness/workspace.py, implement load_workspace(workspace_id, settings, trace).
+In launchkit/brands/workspace.py, implement load_workspace(workspace_id, settings, trace).
 Read SOUL.md, AGENTS.md and rules.yaml from settings.workspaces_dir / workspace_id using
 read_text, which records every file on the trace. Return a Workspace with soul, agents and
 rules filled.
 
-In launchkit/harness/agent.py, build_copy_agent already creates the Agno Agent. Make the
+In launchkit/agents/copy_and_picture_agents.py, build_copy_agent already creates the Agno Agent. Make the
 context "rules" section the SOUL.md text followed by the AGENTS.md text, using
 ctx.set("rules", ...). Keep output_schema=Turn.
 ```

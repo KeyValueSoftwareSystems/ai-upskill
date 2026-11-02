@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from launchkit.harness.trace import Trace
+from launchkit.trace import Trace
 
 SKILLS_DIR = Path(__file__).resolve().parent.parent / "skills"
 

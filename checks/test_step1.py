@@ -1,4 +1,4 @@
-from launchkit.harness.run import run_request
+from launchkit.agents.poster_flow import run_request
 
 
 def test_harbor_and_ember_differ(settings, images, request_for, echo):

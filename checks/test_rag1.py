@@ -1,11 +1,11 @@
 import inspect
 
-from launchkit.harness.agent import build_copy_agent
-from launchkit.harness.brand import make_get_brand_details
-from launchkit.harness.context import ContextBuilder
-from launchkit.harness.run import run_request
-from launchkit.harness.trace import Trace
-from launchkit.harness.workspace import load_workspace
+from launchkit.agents.copy_and_picture_agents import build_copy_agent
+from launchkit.agents.poster_flow import run_request
+from launchkit.agents.prompt import ContextBuilder
+from launchkit.brands.workspace import load_workspace
+from launchkit.tools.get_brand_details import make_get_brand_details
+from launchkit.trace import Trace
 
 DISHWASHER = "Poster for the Tidal bottle. Mention it's dishwasher-safe."
 
@@ -44,8 +44,8 @@ def test_the_dishwasher_copy_is_now_correct(settings, images, trace, request_for
 
 def test_without_the_tool_the_copy_is_plausible_not_true(settings, images, trace, request_for, lookup, monkeypatch):
     """The failure the tool fixes: with no way to look the brand up, the same model writes the banned claim."""
-    import launchkit.harness.agent as agent
-    from launchkit.harness.spec import SpecError
+    import launchkit.agents.copy_and_picture_agents as agent
+    from launchkit.guardrails.poster_check import SpecError
     import pytest
 
     monkeypatch.setattr(agent, "make_get_brand_details", lambda ws, trace, settings: (lambda query="": "Nothing in the brand guide matches."))
@@ -84,7 +84,7 @@ def test_the_page_shows_the_tool_results_and_the_terminal_prints_the_trace(setti
 
     page = (ROOT / "launchkit" / "web" / "index.html").read_text(encoding="utf-8")
     assert "<td>tool results</td>" in page and "x.tool_tokens" in page
-    from launchkit.harness.main import MainResult
+    from launchkit.agents.main_agent import MainResult
 
     def one_lookup(req, *, settings, trace, approve):
         trace.tool("get_brand_details", {"query": "dishwasher"}, "The lid is hand-wash only.")
