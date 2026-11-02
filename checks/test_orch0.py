@@ -1,7 +1,7 @@
 from launchkit.adapters.fakes import COMPETITORS
-from launchkit.agents.copy_and_picture_agents import RESEARCH_TASK
 from launchkit.agents.main_agent import build_catalogue, run_main
 from launchkit.mcp.servers.local_board import Board
+from launchkit.orchestration.research_team import RESEARCH_TASK
 from launchkit.tools.search_web import PAGES_DIR, make_search_web
 from launchkit.trace import Trace
 

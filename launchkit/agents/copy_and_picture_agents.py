@@ -19,10 +19,6 @@ Otherwise, for a greeting, a question or small talk: kind is "reply", with a sho
 PICTURE_TASK = """Make the poster picture. Call generate_image once with the scene description you were given.
 When the tool returns a file, reply with that file path and nothing else."""
 
-RESEARCH_TASK = """You research one question for a marketing team. Call search_web with a short query and read the pages that come back.
-Reply with a short report and nothing else: one paragraph of at most 60 words on the message, the channels and what to avoid copying,
-then the addresses of the pages you used."""
-
 
 def build_copy_agent(ws: Workspace, ctx: ContextBuilder, model, settings, trace: Trace) -> Agent:
     ctx.set("rules", f"{ws.soul}\n\n{ws.agents}")
@@ -48,8 +44,3 @@ def build_picture_agent(spec: PosterSpec, model, images, colours: dict, trace: T
         tool_hooks=[make_leash(settings.limits, trace)],
         telemetry=False,
     )
-
-
-def build_research_agent(model, settings, trace: Trace) -> Agent | None:
-    """Orchestration step 2: the research subagent. RESEARCH_TASK, search_web only, no session store and no chat history."""
-    return None

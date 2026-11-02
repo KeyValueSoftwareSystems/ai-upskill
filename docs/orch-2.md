@@ -8,7 +8,7 @@ The five competitors do not depend on each other, so five research agents can ru
 
 ## The slot
 
-- `launchkit/agents/copy_and_picture_agents.py` · `build_research_agent`. Today it returns None.
+- `launchkit/orchestration/research_team.py` · `build_research_agent`. Today it returns None.
 - `launchkit/orchestration/research_team.py` · `make_research_entries`. Today it returns no tools.
 - `launchkit/skills/competitor_research/skill.md`. Today it tells the main agent to search itself.
 
@@ -29,7 +29,7 @@ main agent's view  9858 tokens of tool results this turn · 0 tokens of history 
 Two parts, one after the other: the subagent first, then side by side. Run the check after both.
 
 ```
-Part 1, the subagent. In launchkit/agents/copy_and_picture_agents.py, build_research_agent(model, settings, trace)
+Part 1, the subagent. In launchkit/orchestration/research_team.py, build_research_agent(model, settings, trace)
 returns an Agno Agent with system_message=RESEARCH_TASK (already written), tools=[make_search_web(settings)]
 from launchkit/tools/search_web.py, the same leash hook as build_picture_agent, and telemetry=False.
 No db and no history: it sees only its brief.

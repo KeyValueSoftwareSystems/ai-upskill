@@ -1,5 +1,5 @@
-from launchkit.agents.copy_and_picture_agents import build_research_agent
 from launchkit.agents.main_agent import run_main
+from launchkit.orchestration.research_team import build_research_agent
 from launchkit.orchestration.research_team import make_research_entries
 from launchkit.trace import Trace
 
