@@ -2,10 +2,10 @@ import json
 
 from PIL import Image
 
-from launchkit.harness.limits import Limits, make_leash
-from launchkit.harness.main import build_catalogue, run_main
-from launchkit.harness.picture_tools import APPROVED
-from launchkit.harness.trace import Trace
+from launchkit.agents.main_agent import build_catalogue, run_main
+from launchkit.guardrails.limits import Limits, make_leash
+from launchkit.tools.resize_poster import APPROVED
+from launchkit.trace import Trace
 
 NO = lambda name, inputs: False
 
@@ -86,9 +86,9 @@ def test_the_main_agent_knows_todays_date(settings):
     """A model has no clock: the prompt tells it the date, so "this season" searches look for this year."""
     from datetime import date
 
-    from launchkit.harness.context import ContextBuilder
-    from launchkit.harness.main import build_main_agent
-    from launchkit.harness.workspace import load_workspace
+    from launchkit.agents.prompt import ContextBuilder
+    from launchkit.agents.main_agent import build_main_agent
+    from launchkit.brands.workspace import load_workspace
 
     ws = load_workspace("harbor", settings, Trace())
     agent = build_main_agent(ws, ContextBuilder(settings.budgets), None, settings, Trace(), build_catalogue(settings, Trace(), NO))
@@ -119,7 +119,7 @@ class BannedWordModel:
 def test_the_main_agent_checks_poster_words_repairs_once_then_stops(settings, trace, request_for):
     """Session 1's check still holds: poster words are checked in code, repaired once, then refused with a typed error."""
     import pytest
-    from launchkit.harness.spec import SpecError
+    from launchkit.guardrails.poster_check import SpecError
 
     with pytest.raises(SpecError) as raised:
         run_main(request_for(text="A Tidal poster, please."), settings=settings, model=BannedWordModel.make(fixed=False), trace=trace, approve=NO)
@@ -137,8 +137,8 @@ def test_a_repaired_poster_passes(settings, trace, request_for):
 def test_a_new_conversation_has_no_picture_until_one_is_attached(settings, request_for):
     """The picture tools work on the newest picture in this conversation. A new conversation has none, and the tool
     says so; nothing is read from a saved file."""
-    from launchkit.harness.picture_tools import PictureDesk, needs_picture
-    from launchkit.harness.pictures import NO_PICTURE, Pictures
+    from launchkit.tools.resize_poster import PictureDesk, needs_picture
+    from launchkit.memory.attached_pictures import NO_PICTURE, Pictures
 
     pictures = Pictures(settings, "harbor", "maya", "t1")
     desk = PictureDesk(settings, {}, Trace(), None, pictures.newest)
@@ -151,7 +151,7 @@ def test_a_new_conversation_has_no_picture_until_one_is_attached(settings, reque
 
 def test_a_picture_the_agent_makes_joins_the_conversation(settings):
     """generate_image's picture becomes the newest one, so "now all the sizes" works on the poster made in this chat."""
-    from launchkit.harness.pictures import Pictures
+    from launchkit.memory.attached_pictures import Pictures
 
     pictures = Pictures(settings, "harbor", "maya", "t1")
     made = build_catalogue(settings, Trace(), NO, pictures=pictures).entries["generate_image"].fn("a bottle on a lakeshore")
@@ -166,7 +166,7 @@ def test_the_main_agent_is_told_what_pictures_the_conversation_holds(settings, r
     trace = Trace()
     run_main(request_for(text="Morning!"), settings=settings, model=ToolsModel(), trace=trace, approve=NO, attach=[APPROVED])
     assert any(e.kind == "note" and "attached tidal-poster.jpg" in e.detail["text"] for e in trace.events)
-    from launchkit.harness.pictures import Pictures
+    from launchkit.memory.attached_pictures import Pictures
 
     assert Pictures(settings, "harbor", "maya", "t1").newest().name == "tidal-poster.jpg"
 
@@ -179,7 +179,7 @@ def test_the_chat_page_attaches_a_picture_to_the_conversation(settings, monkeypa
     from fastapi import UploadFile
 
     import launchkit.web.app as web
-    from launchkit.harness.pictures import Pictures
+    from launchkit.memory.attached_pictures import Pictures
 
     monkeypatch.setattr(web, "settings", settings)
     upload = UploadFile(file=io.BytesIO(APPROVED.read_bytes()), filename="tidal-poster.jpg")
@@ -192,7 +192,7 @@ def test_the_chat_page_attaches_a_picture_to_the_conversation(settings, monkeypa
 def test_a_checked_poster_gets_its_picture(settings, trace, request_for):
     """Session 1's order holds: the words pass the check, then the picture is made from the image prompt, and it joins
     the conversation."""
-    from launchkit.harness.pictures import Pictures
+    from launchkit.memory.attached_pictures import Pictures
 
     run_main(request_for(text="A Tidal poster, please."), settings=settings, model=BannedWordModel.make(fixed=True), trace=trace, approve=NO)
     assert [e.detail["arguments"] for e in trace.tool_calls("generate_image")] == [{"image_prompt": "a bottle on a lakeshore"}]
@@ -205,8 +205,8 @@ def test_from_step_2_the_model_cannot_choose_the_crop_window(settings, monkeypat
     the bottle's box (or any window). In step 1 the window is still the model's to give."""
     import inspect
 
-    import launchkit.harness.picture_tools as pt
-    from launchkit.harness.picture_tools import APPROVED, PictureDesk
+    import launchkit.tools.resize_poster as pt
+    from launchkit.tools.resize_poster import APPROVED, PictureDesk
 
     desk = PictureDesk(settings, {"navy": "#1F3A5F"}, Trace(), source=APPROVED)
     monkeypatch.setattr(pt.window_around, "todo", True, raising=False)
@@ -238,8 +238,8 @@ def test_a_flat_run_tool_call_still_runs_and_a_nameless_one_shows_on_the_trace()
     and a call with no name gets a plain answer that the Trace tab shows."""
     from agno.tools.function import FunctionCall
 
-    from launchkit.harness.catalogue import forgiving
-    from launchkit.harness.main import loose
+    from launchkit.tools.catalogue import forgiving
+    from launchkit.agents.main_agent import loose
 
     trace, calls = Trace(), []
 
@@ -262,10 +262,10 @@ def test_the_agent_with_the_doors_makes_one_tool_call_at_a_time(settings, monkey
     one at a time. The model the caller passed in is left as it was."""
     from agno.models.openai import OpenAIChat
 
-    from launchkit.harness.catalogue import Catalogue
-    from launchkit.harness.context import ContextBuilder
-    from launchkit.harness.main import build_main_agent
-    from launchkit.harness.workspace import load_workspace
+    from launchkit.tools.catalogue import Catalogue
+    from launchkit.agents.prompt import ContextBuilder
+    from launchkit.agents.main_agent import build_main_agent
+    from launchkit.brands.workspace import load_workspace
 
     trace = Trace()
     monkeypatch.setattr(Catalogue, "lookup", property(lambda self: True))

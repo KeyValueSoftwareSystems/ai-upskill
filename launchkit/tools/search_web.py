@@ -8,8 +8,8 @@ import time
 
 import httpx
 
-from launchkit.harness.catalogue import Entry
 from launchkit.settings import ROOT
+from launchkit.tools.catalogue import Entry
 
 PAGES_DIR = ROOT / "samples" / "pages"
 TRENDS_DIR = ROOT / "samples" / "trends"

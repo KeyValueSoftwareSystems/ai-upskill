@@ -16,7 +16,7 @@ The fix: the agent holds three doors instead of every tool. `find_tool` matches 
 
 ## The slot
 
-- `launchkit/harness/catalogue.py` · `Catalogue.make_run_tool`. Today it returns a slot marked todo, so the agent still holds every tool directly.
+- `launchkit/tools/catalogue.py` · `Catalogue.make_run_tool`. Today it returns a slot marked todo, so the agent still holds every tool directly.
 
 ## Break it first
 
@@ -25,7 +25,7 @@ On the chat page, leave **Model** empty, press **New conversation** and send "Mo
 ## Prompt card, for your coding agent
 
 ```
-In launchkit/harness/catalogue.py, replace make_run_tool's slot with a real
+In launchkit/tools/catalogue.py, replace make_run_tool's slot with a real
 run_tool(name: str, inputs: dict) -> str, about 20 lines:
 find the entry by name (drop a "functions." prefix models sometimes add); if there is
 none, say so and point at find_tool. Check the inputs against the tool's schema with

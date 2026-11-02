@@ -1,8 +1,8 @@
 import json
 
-from launchkit.harness.main import build_catalogue, run_main
-from launchkit.harness.media import SHOOT_PHOTO
-from launchkit.harness.trace import Trace
+from launchkit.agents.main_agent import build_catalogue, run_main
+from launchkit.tools.describe_image import SHOOT_PHOTO
+from launchkit.trace import Trace
 
 NO = lambda name, inputs: False
 

@@ -140,11 +140,14 @@ launchkit/
   tools/                                 what the agent can do: one file per tool, named after the tool
     catalogue.py                         the catalogue and the three doors: find_tool, run_skill, run_tool
     check_copy.py                        checks a poster's words against the brand's limits
+    describe_image.py                    looks at a photo the marketer gave
     generate_image.py                    draws a new picture with the paid image model
     get_brand_details.py                 looks up the brand's guide and product facts
     resize_poster.py                     cuts the poster you already have: detect_focal_point, crop, expand_canvas, scale
+    search_web.py                        searches the web (Tavily), or the saved pages offline
+    text_to_speech.py                    turns a script into a voice-over
   skills/                                how-tos: one folder per skill, with skill.md
-    on_brand_copy
+    ingest_image, market_research, on_brand_copy, resize_image, voice_over
   guardrails/                            what the harness stops or checks
     limits.py                            step cap and image budget
     poster_check.py                      checks the poster and asks the model to repair it
