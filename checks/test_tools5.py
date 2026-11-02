@@ -1,6 +1,6 @@
-from launchkit.harness.board import LAST_WEEK, Board
-from launchkit.harness.main import build_catalogue, run_main
-from launchkit.harness.trace import Trace
+from launchkit.agents.main_agent import build_catalogue, run_main
+from launchkit.mcp.servers.local_board import LAST_WEEK, Board
+from launchkit.trace import Trace
 
 
 def test_a_write_asks_maya_and_a_no_stops_it(settings):

@@ -10,7 +10,7 @@ This is Session 1's leash, grown up. The leash caps how much the agent can spend
 
 ## The slot
 
-- `launchkit/harness/catalogue.py` · `run_tool`. Today it runs a write without asking.
+- `launchkit/tools/catalogue.py` · `run_tool`. Today it runs a write without asking.
 
 ## Break it first
 
@@ -27,7 +27,7 @@ The fake runs on the local board and shows the cleanup every time. On the real m
 ## Prompt card, for your coding agent
 
 ```
-In launchkit/harness/catalogue.py, in run_tool, after the inputs check and before
+In launchkit/tools/catalogue.py, in run_tool, after the inputs check and before
 the tool runs: if entry.kind == "write" and not self.approve(name, inputs), record
 self.trace.refused(name, "Maya said no") and return "Maya did not allow {name}. Do
 not try it again; tell her what you wanted to do." Reads never ask.
