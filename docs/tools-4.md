@@ -16,6 +16,8 @@ Ready-made, with its moment: the `post_to_board` skill. It writes Harbor's routi
 
 `McpLink` (ready-made) holds the client open for the run and turns the async MCP calls into plain ones. `tool_function` (ready-made) wraps one MCP tool as a Python function with its name, description and inputs.
 
+Each file in `launchkit/mcp/servers/` is one MCP server. `notion.py` and `local_board.py` each say when they are on (`on(settings)`, from `LAUNCHKIT_BOARD`) and give their tools (`entries(...)`), both through your `connect`. To plug in another MCP server later, add one file there; nothing else changes.
+
 ## Break it first
 
 ```
