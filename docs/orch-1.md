@@ -66,7 +66,7 @@ On the fake model, the reply only names the sites it read; the real model writes
 
 The Context tab: 9,915 tokens of tool results, 0 of history carried in, 2.1 s.
 
-Then Maya's next ask, in the same conversation: "Write one headline for the Tidal poster." The Context tab: 0 tokens of tool results, 10,008 tokens of history carried in.
+Then Maya's next ask, in the same conversation: "Write one headline for the Tidal poster." The Context tab: 0 tokens of tool results, 10,020 tokens of history carried in.
 
 In the terminal, `uv run launchkit main harbor "..." --model fake:brief --session cp1` does the same; `--session` keeps the conversation.
 

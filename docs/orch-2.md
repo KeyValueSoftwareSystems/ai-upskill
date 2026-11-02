@@ -76,7 +76,7 @@ Then the gate for the whole part: `uv run launchkit check orch`.
 On the chat page, started with `LAUNCHKIT_SEARCH_DELAY=0.4` as in step 1: press **New conversation**, keep `fake:brief` in **Model** and send the same ask. The Trace tab shows:
 
 ```
-  tool      run_skill("competitor_research") → # competitor_research Pick me when: the job is to find out … · 247 tokens back
+  tool      run_skill("competitor_research") → # competitor_research Pick me when: the job is to find out … · 271 tokens back
   tool      search_web("How is Hydro Flask launching bottles this season? Message,…) → # Role Model and Hydro Flask Launch Limited Edition Drinkwa… · 1977 tokens back
   model     research phase · fake:brief · sent 2179 tokens, got back 12
   ...four more research agents, at the same time...
@@ -85,14 +85,14 @@ On the chat page, started with `LAUNCHKIT_SEARCH_DELAY=0.4` as in step 1: press 
 
 On the fake model, the reply only names the sites it read; the real model writes the paragraphs.
 
-The Context tab: 540 tokens of tool results, 0 of history carried in, 0.4 s.
+The Context tab: 564 tokens of tool results, 0 of history carried in, 0.4 s.
 
-And Maya's next ask in the same conversation, "Write one headline for the Tidal poster.": 0 tokens of tool results, 632 tokens of history carried in.
+And Maya's next ask in the same conversation, "Write one headline for the Tidal poster.": 0 tokens of tool results, 668 tokens of history carried in.
 
 | | Step 1 | Step 2 |
 | --- | --- | --- |
 | Pages in the main agent's view | about 9,900 tokens | none; five reports |
-| Carried into the next turn | 10,008 tokens | 632 tokens |
+| Carried into the next turn | 10,020 tokens | 668 tokens |
 | Five searches | one after another, 2.1 s | at the same time, 0.5 s |
 
 ## Why it matters
