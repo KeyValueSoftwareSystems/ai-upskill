@@ -1,10 +1,10 @@
 from concurrent.futures import ThreadPoolExecutor
 
 from launchkit.adapters.models import model_name
-from launchkit.harness.agent import build_research_agent
-from launchkit.harness.catalogue import Entry
-from launchkit.harness.run import raise_if_failed
-from launchkit.harness.trace import Trace
+from launchkit.agents.copy_and_picture_agents import build_research_agent
+from launchkit.agents.poster_flow import raise_if_failed
+from launchkit.tools.catalogue import Entry
+from launchkit.trace import Trace
 
 
 def make_research_entries(model, settings, trace: Trace) -> list[Entry]:

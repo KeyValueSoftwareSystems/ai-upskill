@@ -1,14 +1,14 @@
 from agno.agent import Agent
-from agno.db.sqlite import SqliteDb
 
-from launchkit.harness.brand import make_get_brand_details
-from launchkit.harness.context import ContextBuilder
-from launchkit.harness.limits import make_leash
-from launchkit.harness.spec import PosterSpec, Turn
-from launchkit.harness.tools import make_generate_image
-from launchkit.harness.trace import Trace
-from launchkit.harness.web import make_search_web
-from launchkit.harness.workspace import Workspace
+from launchkit.agents.prompt import ContextBuilder
+from launchkit.brands.workspace import Workspace
+from launchkit.guardrails.limits import make_leash
+from launchkit.guardrails.poster_check import PosterSpec, Turn
+from launchkit.memory.chat_history import session_db
+from launchkit.tools.generate_image import make_generate_image
+from launchkit.tools.get_brand_details import make_get_brand_details
+from launchkit.tools.search_web import make_search_web
+from launchkit.trace import Trace
 
 SPEC_TASK = """You are talking with a marketer. Decide what kind of turn this is.
 If they ask for a poster, or to change, improve or redo any part of a poster from earlier in this conversation (its words, its picture, its sky, its mood): kind is "poster", and the spec is the whole poster with that change made. Never describe what you would change; make the change.
@@ -23,11 +23,6 @@ When the tool returns a file, reply with that file path and nothing else."""
 RESEARCH_TASK = """You research one question for a marketing team. Call search_web with a short query and read the pages that come back.
 Reply with a short report and nothing else: one paragraph of at most 60 words on the message, the channels and what to avoid copying,
 then the addresses of the pages you used."""
-
-
-def session_db(settings) -> SqliteDb:
-    settings.data_dir.mkdir(parents=True, exist_ok=True)
-    return SqliteDb(db_file=str(settings.data_dir / "sessions.db"))
 
 
 def build_copy_agent(ws: Workspace, ctx: ContextBuilder, model, settings, trace: Trace) -> Agent:
