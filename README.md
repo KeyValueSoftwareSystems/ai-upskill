@@ -220,5 +220,6 @@ docs/         setup, glossary, one card per step
 | A new outside service over MCP | a new file in `mcp/servers/` with `on()` and `entries()` |
 | Stop, cap or check something | `guardrails/` |
 | Change what the model sees | `agents/prompt.py`, and the task text in `agents/main_agent.py` |
+| Hand work to a helper agent | `orchestration/` |
 | A new brand | `uv run launchkit onboard` writes `workspaces/<brand>/` (`brands/onboard.py`) |
 | New brand facts to look up | `workspaces/<brand>/facts.md`, then `uv run launchkit index` (`knowledge/`) |
