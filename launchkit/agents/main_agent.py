@@ -102,7 +102,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
 
 def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, pictures: Pictures | None = None) -> Catalogue:
     ws = ws or load_workspace("harbor", settings, trace)
-    desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None)
+    desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None)
     entries: list[Entry] = [
         Entry("get_brand_details", "look up this brand's guide and product facts", "read", make_get_brand_details(ws, trace, settings)),
         Entry("generate_image", "make a new poster picture from a scene description, only when no photo is given", "read", make_generate_image(make_images(settings), ws.colours, trace, pictures.made if pictures else None)),
