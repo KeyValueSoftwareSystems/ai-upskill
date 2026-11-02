@@ -26,7 +26,8 @@ I cannot resize the approved poster. I only have get_brand_details and generate_
 
 ```
 In launchkit/tools/resize_poster.py, build PictureDesk.centre_crop(width, height).
-Remove its @todo. Open the approved poster with self.open(), take
+Remove its @todo. Open the picture with self.open() (the newest picture in the
+conversation: Maya's approved poster), take
 centre_window(img.size, (width, height)), crop to it, resize to (width, height) and
 save with self.save(img, "centre"). Return {"file": path, "size": "WxH",
 "window": [left, top, right, bottom]}. Its docstring is what the model reads: say it
@@ -44,12 +45,15 @@ self.model) and record trace.note("detect_focal_point asked the vision model onc
 box ..."). Return {"box": self.box}. The docstring says it finds the main subject,
 here the bottle, and that it asks a vision model, so it costs money.
 crop(width, height, left, top, right, bottom): cut that window and resize it to
-(width, height). Return {"file", "size", "window"}. If the window is left out (any
+(width, height). Its docstring starts "Make one size of the approved poster as a file". Return {"file", "size", "window"}. If the window is left out (any
 side is -1), cut nothing and return {"status": "refused", "reason": "give the window
 to cut: left, top, right, bottom"}.
 expand_canvas(width, height, colour): fit the whole poster inside (width, height)
 without cutting, centred, and fill the new space with colour_of(colour, self.colours).
 scale(width, height): stretch the poster to (width, height).
+Each of crop, expand_canvas and scale saves with self.save(img, kind) (kind "crop",
+"expand" or "scale") and returns {"file": path, "size": "WxH"}; crop also returns
+"window". Give each a one-line docstring: it is what the model reads.
 In entries(), drop the centre_crop line: the one tool is now split into these four.
 ```
 
