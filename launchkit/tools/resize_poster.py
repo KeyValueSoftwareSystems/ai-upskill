@@ -160,7 +160,7 @@ class PictureDesk:
         return {"box": self.box}
 
     def crop(self, width: int, height: int, left: int = -1, top: int = -1, right: int = -1, bottom: int = -1) -> dict:
-        """Cut a window [left, top, right, bottom] out of the approved poster and scale it to width x height. The window
+        """Make one size of the approved poster as a file: cut a window [left, top, right, bottom] out of it and scale it to width x height. The window
         should already have the new size's shape. Leave the window out to cut around the product. Plain code."""
         img = self.open()
         if min(left, top, right, bottom) < 0:
