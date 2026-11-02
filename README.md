@@ -12,7 +12,7 @@ A marketing assistant built in steps across the session. A marketer asks for a p
 | `session-01-rag-step1` … `step4` | retrieval (CP1.2): one `get_brand_details` tool, rebuilt four times |
 | `session-02-tools` | tools, skills, lookup, MCP and permissions (Session 2, part 1): the main agent and Maya's "every size" |
 | `session-02-tools-step1` … `step5` | each step's answer |
-| **`session-02-orchestration`** (you are here) | agents and orchestration (Session 2, part 2): the main agent, the Tidal card, saved competitor pages |
+| **`session-02-orchestration`** (you are here) | agents and orchestration (Session 2, part 2): the main agent, the Tidal launch brief, saved competitor pages |
 | `session-02-orchestration-step1`, `step2` | each step's answer |
 
 Each branch contains the previous branch's solution. Fall behind, check out the next one.

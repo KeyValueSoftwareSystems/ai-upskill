@@ -1,6 +1,6 @@
 # Orchestration step 1 · One agent and a skill
 
-Task 2 on the Tidal card: "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season? One paragraph each: message, channels, what to avoid copying."
+Task 2 on the Tidal launch brief: "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season? One paragraph each: message, channels, what to avoid copying."
 
 We start the way the opening ended: one agent plus a skill. A skill is a plain-words file. It tells the main agent how to do a job: which tool to call, in what order, and what to hand back. The main agent finds it with `find_tool`, loads it with `run_skill`, and calls tools through `run_tool`.
 
