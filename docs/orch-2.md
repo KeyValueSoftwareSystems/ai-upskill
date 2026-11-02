@@ -1,4 +1,4 @@
-# Checkpoint 2 · Hand the digging to subagents (CP2.2b)
+# Orchestration step 2 · Hand the digging to subagents
 
 Same task, same pages. This time the main agent does not read them. A subagent does.
 
@@ -14,7 +14,7 @@ The five competitors do not depend on each other, so five research agents can ru
 
 ## Break it first
 
-Run checkpoint 1's command and keep the last line:
+Run step 1's command and keep the last line:
 
 ```
 LAUNCHKIT_SEARCH_DELAY=0.4 uv run launchkit main harbor "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season? One paragraph each." --model fake:brief --session cp2
@@ -71,7 +71,7 @@ Then the gate for the whole part: `uv run launchkit check orch`.
 
 ## Run it again
 
-On the chat page, started with `LAUNCHKIT_SEARCH_DELAY=0.4` as in checkpoint 1: press **New conversation**, keep `fake:brief` in **Model** and send the same ask. The Trace tab shows:
+On the chat page, started with `LAUNCHKIT_SEARCH_DELAY=0.4` as in step 1: press **New conversation**, keep `fake:brief` in **Model** and send the same ask. The Trace tab shows:
 
 ```
   tool      run_skill("competitor_research") → # competitor_research Pick me when: the job is to find out … · 223 tokens back
@@ -85,7 +85,7 @@ The Context tab: 514 tokens of tool results, 0 of history carried in, 0.4 s.
 
 And Maya's next ask in the same conversation, "Write one headline for the Tidal poster.": 0 tokens of tool results, 660 tokens of history carried in.
 
-| | Checkpoint 1 | Checkpoint 2 |
+| | Step 1 | Step 2 |
 | --- | --- | --- |
 | Pages in the main agent's view | about 9,900 tokens | none; five reports |
 | Carried into the next turn | 10,005 tokens | 660 tokens |

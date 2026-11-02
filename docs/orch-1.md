@@ -1,4 +1,4 @@
-# Checkpoint 1 · One agent and a skill (CP2.2a)
+# Orchestration step 1 · One agent and a skill
 
 Task 2 on the Tidal card: "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season? One paragraph each: message, channels, what to avoid copying."
 

@@ -51,5 +51,5 @@ def build_picture_agent(spec: PosterSpec, model, images, colours: dict, trace: T
 
 
 def build_research_agent(model, settings, trace: Trace) -> Agent | None:
-    """CP2.2b: the research subagent. RESEARCH_TASK, search_web only, no session store and no chat history."""
+    """Orchestration step 2: the research subagent. RESEARCH_TASK, search_web only, no session store and no chat history."""
     return None
