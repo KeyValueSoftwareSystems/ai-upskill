@@ -37,8 +37,9 @@ No db and no history: it sees only its brief.
 In launchkit/orchestration/research_team.py, make_research_entries(model, settings, trace) returns one Entry:
 "research", kind "read", note "hand one research question to a research agent; get back a short
 report, not the pages". Its function research(brief: str) -> str builds the research agent, runs it
-on the brief, calls raise_if_failed(run), records trace.model("research", model_name(model), run.metrics)
-and returns the report text.
+on the brief, calls raise_if_failed(run) (from launchkit/agents/poster_flow.py), records
+trace.model("research", model_name(model), run.metrics) (model_name from launchkit/adapters/models.py)
+and returns the report text, run.content.
 ```
 
 ```
@@ -52,6 +53,7 @@ In launchkit/skills/competitor_research/skill.md, change step 2: call run_tool o
 competitor, each a plain sentence, not an object. Each brief stands alone,
 because the research agent sees nothing else: name this month and year from today's date (it has no
 clock), ask for the message, the channels and what to avoid copying, and list our never-say claims in it.
+Change step 3 to: write each paragraph from its report, with the addresses it used.
 ```
 
 ## Prove it
