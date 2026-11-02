@@ -183,3 +183,13 @@ samples/      pictures, photos and brand packs to try
 checks/       one pytest file per step; `launchkit check` wraps them
 docs/         setup, glossary, one card per step
 ```
+
+### Where a change goes
+
+| The ask | Where |
+| --- | --- |
+| The agent needs a new ability | a new file in `tools/`, named after the tool, and one `Entry` line in `build_catalogue` (`agents/main_agent.py`) |
+| Stop, cap or check something | `guardrails/` |
+| Change what the model sees | `agents/prompt.py`, and the task text in `agents/main_agent.py` |
+| A new brand | `uv run launchkit onboard` writes `workspaces/<brand>/` (`brands/onboard.py`) |
+| New brand facts to look up | `workspaces/<brand>/facts.md`, then `uv run launchkit index` (`knowledge/`) |
