@@ -162,10 +162,12 @@ class NotionBoard:
             return []
 
 
-def make_board(settings, trace, user: str):
-    from launchkit.mcp.servers.local_board import Board
+def on(settings) -> bool:
+    return settings.board == "notion"
 
-    return NotionBoard(settings, trace, user) if settings.board == "notion" else Board()
+
+def entries(settings, trace, user: str) -> list:
+    return NotionBoard(settings, trace, user).entries()
 
 
 def set_up_card(settings, user: str, server: NotionServer | None = None) -> str:

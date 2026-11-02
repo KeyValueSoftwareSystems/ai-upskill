@@ -36,3 +36,11 @@ class Board:
         from launchkit.mcp.client import connect
 
         return connect(make_board_server(self))
+
+
+def on(settings) -> bool:
+    return settings.board == "local"
+
+
+def entries(settings, trace, user: str) -> list:
+    return Board().entries()

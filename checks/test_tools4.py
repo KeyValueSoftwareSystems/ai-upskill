@@ -63,7 +63,7 @@ def test_a_person_without_a_notion_login_gets_no_board_tools_and_no_browser(sett
 
     monkeypatch.setattr(notion.webbrowser, "open", lambda url: (_ for _ in ()).throw(AssertionError("opened a browser")))
     trace = Trace()
-    assert notion.make_board(replace(settings, board="notion"), trace, "sam").entries() == []
+    assert notion.entries(replace(settings, board="notion"), trace, "sam") == []
     assert any("Notion is not connected for sam" in line for line in trace.lines())
 
 

@@ -22,7 +22,7 @@ from launchkit.adapters.models import model_name, resolve_model
 from launchkit.agents.prompt import ContextBuilder
 from launchkit.brands.request import Request, resolve_workspace_id
 from launchkit.guardrails.limits import make_leash
-from launchkit.mcp.servers.notion import make_board
+from launchkit.mcp.servers import server_entries
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.chat_history import session_db
 from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
@@ -116,7 +116,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
         search_entry(settings),
         describe_image_entry(settings, model, desk),
         text_to_speech_entry(settings, model),
-        *(board or make_board(settings, trace, user)).entries(),
+        *(board.entries() if board else server_entries(settings, trace, user)),
     ]
     catalogue = Catalogue(entries, load_skills(), trace, approve)
     catalogue.leash = make_leash(replace(settings.limits, step_cap=10_000), trace)
