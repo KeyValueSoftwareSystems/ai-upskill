@@ -95,22 +95,22 @@ def test_real_pictures_send_the_quality_and_try_a_proxy_401_again(settings, tmp_
     assert calls[0]["quality"] == "medium"
 
 
-def test_calls_give_up_after_two_minutes(settings, monkeypatch):
-    """A tunnel restart leaves a call waiting on a dead line. Both clients give up after two minutes by default, so the retry can start fresh. A trainee's own .env may say otherwise."""
+def test_calls_give_up_after_90_seconds(settings, monkeypatch):
+    """A tunnel restart leaves a call waiting on a dead line. Both clients give up after 90 seconds by default, so the retry can start fresh. A trainee's own .env may say otherwise."""
     from launchkit.settings import Settings
 
     monkeypatch.delenv("LAUNCHKIT_TIMEOUT", raising=False)
-    assert Settings().timeout == 120
+    assert Settings().timeout == 90
     monkeypatch.setenv("LITELLM_API_KEY", "test-key")
     monkeypatch.setenv("LITELLM_BASE_URL", "https://proxy.example/v1")
-    two_minutes = replace(settings, timeout=120)
-    model = resolve_model(replace(two_minutes, model="gpt-4.1-mini"), Trace())
-    assert model.timeout == 120
-    pictures = RealImages(replace(two_minutes, image_mode="real"), two_minutes.data_dir / "outputs")
-    assert pictures.client().timeout == 120
+    ninety_seconds = replace(settings, timeout=90)
+    model = resolve_model(replace(ninety_seconds, model="gpt-4.1-mini"), Trace())
+    assert model.timeout == 90
+    pictures = RealImages(replace(ninety_seconds, image_mode="real"), ninety_seconds.data_dir / "outputs")
+    assert pictures.client().timeout == 90
     monkeypatch.delenv("LITELLM_API_KEY")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
-    assert pictures.client().timeout == 120
+    assert pictures.client().timeout == 90
     assert model.max_retries == 1 and pictures.client().max_retries == 1
 
 

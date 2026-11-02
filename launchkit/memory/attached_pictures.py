@@ -67,13 +67,19 @@ class Pictures:
         posters = [item for item in self.all() if "image_prompt" in item and Path(item["file"]).exists()]
         return posters[-1] if posters else None
 
+    def size_made(self, path):
+        """A size the picture tools saved. The tools keep working on the poster; the agent learns the size's real name."""
+        self._add(Path(path), "size")
+
     def newest(self) -> Path | None:
-        items = self.all()
+        items = [i for i in self.all() if i["by"] != "size"]
         return Path(items[-1]["file"]) if items else None
 
     def describe(self) -> str:
-        items = self.all()
+        items = [i for i in self.all() if i["by"] != "size"]
+        sizes = [i["name"] for i in self.all() if i["by"] == "size"]
+        made = f" Sizes saved in this conversation, by their real file names: {', '.join(sizes)}." if sizes else ""
         if not items:
-            return "No pictures in this conversation yet."
+            return "No pictures in this conversation yet." + made
         listed = ", ".join(f"{i['name']} ({'attached by the marketer' if i['by'] == 'attached' else 'made by you'})" for i in items)
-        return f"Pictures in this conversation: {listed}. The picture tools work on the newest one, {items[-1]['name']}."
+        return f"Pictures in this conversation: {listed}. The picture tools work on the newest one, {items[-1]['name']}." + made

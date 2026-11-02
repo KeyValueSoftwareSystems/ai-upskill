@@ -252,3 +252,15 @@ def test_an_unreachable_model_proxy_stops_at_once(settings, monkeypatch):
     with pytest.raises(ModelProviderError, match="Is the VPN on"):
         check_reachable(model)
     assert time.time() - started < 5
+
+
+def test_saved_sizes_are_named_to_the_agent(settings):
+    """A size the tools save joins the conversation's list by its real name, so a later turn can put it on the brief.
+    The picture tools still work on the poster, not on the size."""
+    from launchkit.memory.attached_pictures import Pictures
+
+    pictures = Pictures(settings, "harbor", "maya", "sizes")
+    poster = pictures.attach(APPROVED)
+    pictures.size_made(settings.data_dir / "sizes" / "tidal-poster-crop-1080x1080-ab12.png")
+    assert pictures.newest() == poster
+    assert "tidal-poster-crop-1080x1080-ab12.png" in pictures.describe()

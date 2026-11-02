@@ -81,8 +81,9 @@ def needs_picture(fn):
 
 
 class PictureDesk:
-    def __init__(self, settings, colours: dict, trace: Trace, model=None, source=None):
+    def __init__(self, settings, colours: dict, trace: Trace, model=None, source=None, on_saved=None):
         self._source = source
+        self.on_saved = on_saved
         self.colours = colours
         self.trace = trace
         self.model = model
@@ -119,6 +120,8 @@ class PictureDesk:
         # A new name each time: a later run never overwrites, and the page never shows an older picture by the same name.
         path = self.out / f"{self.source.stem}-{kind}-{img.width}x{img.height}-{uuid.uuid4().hex[:4]}.png"
         img.save(path)
+        if self.on_saved is not None:
+            self.on_saved(path)
         return str(path)
 
     @todo

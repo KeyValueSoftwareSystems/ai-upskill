@@ -86,7 +86,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
     entries: list[Entry] = [
         Entry("get_brand_details", "look up this brand's guide and product facts", "read", make_get_brand_details(ws, trace, settings)),
         Entry("generate_image", "make a new poster picture from a scene description", "read", make_generate_image(make_images(settings), ws.colours, trace, pictures.made if pictures else None)),
-        *PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None).entries(),
+        *PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None).entries(),
     ]
     return Catalogue(entries, trace, approve)
 
