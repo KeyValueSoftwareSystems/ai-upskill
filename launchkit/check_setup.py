@@ -19,7 +19,6 @@ import tempfile
 
 from launchkit.opener.poster import OUT, ROOT
 
-NEXT_BRANCH = "session-01-llm-call"
 WIDTH = 38          # label + dots, so every status lines up in one column
 CHAT_TIMEOUT = 20   # seconds; a bad network should not hang the room
 IMAGE_TIMEOUT = 90  # image generation is slower than chat
@@ -274,7 +273,7 @@ def main(argv: list[str] | None = None) -> int:
     if c.failed:
         print("Setup incomplete: fix the items marked FAIL and run this again.")
         return 1
-    print(f"Setup complete. Next: git checkout {NEXT_BRANCH}")
+    print("Setup complete. Next: open docs/tools-1.md, the first step card.")
     return 0
 
 
