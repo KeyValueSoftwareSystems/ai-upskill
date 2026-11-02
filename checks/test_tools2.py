@@ -1,7 +1,7 @@
 import json
 
 from launchkit.tools.catalogue import load_skills
-from launchkit.tools.resize_poster import PictureDesk, window_around
+from launchkit.tools.resize_poster import APPROVED, PictureDesk, window_around
 from launchkit.trace import Trace
 
 BOTTLE = [492, 596, 660, 950]
@@ -38,7 +38,7 @@ def test_the_fit_rule_says_no_when_the_bottle_cannot_fit():
 
 def test_crop_without_a_window_cuts_around_the_bottle(settings):
     """crop with no window uses the fit rule: the product stays whole, and a shape it cannot fit says so."""
-    desk = PictureDesk(settings, {"navy": "#1F3A5F"}, Trace())
+    desk = PictureDesk(settings, {"navy": "#1F3A5F"}, Trace(), source=APPROVED)
     assert all(desk.crop(w, h)["product_whole"] for w, h in SIZES)
     assert desk.crop(1200, 100)["status"] == "does not fit"
 
@@ -48,7 +48,7 @@ def test_the_main_agent_follows_the_skill(settings, trace, request_for):
     from launchkit.adapters.fakes import ToolsModel
     from launchkit.agents.main_agent import run_main
 
-    run_main(request_for(text="Love the poster. Now all the sizes, please."), settings=settings, model=ToolsModel(), trace=trace, approve=NO)
+    run_main(request_for(text="Love the poster. Now all the sizes, please."), settings=settings, model=ToolsModel(), trace=trace, approve=NO, attach=[APPROVED])
     assert [e.detail["arguments"] for e in trace.tool_calls("run_skill")] == [{"name": "resize_image"}]
     assert len(trace.tool_calls("detect_focal_point")) == 1
     crops = trace.tool_calls("crop")
