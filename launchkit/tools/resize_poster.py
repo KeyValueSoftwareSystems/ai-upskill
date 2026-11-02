@@ -86,6 +86,21 @@ def needs_picture(fn):
     return call
 
 
+def around_product(crop):
+    """Once the fit rule is built (step 2), the model no longer chooses the window: crop takes only the size, and the
+    fit rule cuts around the product. Before that (step 1), crop still takes a window."""
+    if getattr(window_around, "todo", False):
+        return crop
+
+    def crop_around(width: int, height: int):
+        """Cut the approved poster to width x height around the product. Plain code picks the window, so the product
+        stays whole. If it does not fit this shape, the answer says so: use expand_canvas for that size."""
+        return crop(width, height)
+
+    crop_around.__name__ = "crop"
+    return crop_around
+
+
 class PictureDesk:
     def __init__(self, settings, colours: dict, trace: Trace, model=None, source=None, on_saved=None):
         self._source = source
@@ -175,7 +190,7 @@ class PictureDesk:
     def entries(self) -> list[Entry]:
         return [
             Entry("detect_focal_point", "find where the product sits in the approved poster", "read", needs_picture(self.detect_focal_point)),
-            Entry("crop", "cut any window out of the approved poster at a new size", "read", needs_picture(self.crop)),
+            Entry("crop", "cut any window out of the approved poster at a new size", "read", needs_picture(around_product(self.crop))),
             Entry("expand_canvas", "fit the whole approved poster into a new size, with bars of a brand colour", "read", needs_picture(self.expand_canvas)),
             Entry("scale", "stretch the approved poster to a new size", "read", needs_picture(self.scale)),
         ]

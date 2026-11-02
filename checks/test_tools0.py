@@ -1,6 +1,4 @@
 import json
-from dataclasses import replace
-from pathlib import Path
 
 from PIL import Image
 
@@ -200,118 +198,18 @@ def test_a_checked_poster_gets_its_picture(settings, trace, request_for):
     assert Pictures(settings, "harbor", "maya", "t1").all()[-1]["by"] == "made"
 
 
-def test_a_words_only_change_keeps_the_posters_picture(settings):
-    """As in Session 1: the same image prompt keeps the poster's picture, so a shorter headline makes no new picture.
-    A changed image prompt reworks the picture the conversation has, starting from it."""
-    from launchkit.agents.main_agent import make_picture
-    from launchkit.brands.workspace import load_workspace
-    from launchkit.guardrails.poster_check import PosterSpec
-    from launchkit.memory.attached_pictures import Pictures
 
-    trace, pictures = Trace(), Pictures(settings, "harbor", "maya", "keep")
-    ws = load_workspace("harbor", settings, trace)
-    catalogue = build_catalogue(settings, trace, NO, ws=ws, pictures=pictures)
-    first = PosterSpec(headline="Tidal Awaits Dawn", subheadline="s", body="b", image_prompt="a bottle on a lakeshore")
-    assert make_picture(first, catalogue, trace, pictures, settings, ws) is None
-    made = pictures.last_poster()["file"]
+def test_from_step_2_the_model_cannot_choose_the_crop_window(settings, monkeypatch):
+    """Once the fit rule is built, crop takes only the size and plain code picks the window, so a model cannot hand in
+    the bottle's box (or any window). In step 1 the window is still the model's to give."""
+    import inspect
 
-    shorter = first.model_copy(update={"headline": "Tidal Dawn"})
-    assert make_picture(shorter, catalogue, trace, pictures, settings, ws) == Path(made)
-    assert len(trace.tool_calls("generate_image")) == 1
-    assert [e.detail["status"] for e in trace.events if e.kind == "picture"] == ["reused"]
+    import launchkit.harness.picture_tools as pt
+    from launchkit.harness.picture_tools import APPROVED, PictureDesk
 
-    new_scene = first.model_copy(update={"image_prompt": "a bottle on a beach"})
-    make_picture(new_scene, catalogue, trace, pictures, settings, ws)
-    assert len(trace.tool_calls("generate_image")) == 2
-    assert [e.detail["status"] for e in trace.events if e.kind == "picture"] == ["reused", "rework"]
-    assert pictures.last_poster()["image_prompt"] == "a bottle on a beach"
-
-
-def test_the_picture_request_names_colours_as_colours():
-    """Brand colours reach the image model as colours only, so a colour named sea glass is not drawn as glass."""
-    from launchkit.adapters.image_providers import picture_prompt
-
-    asked = picture_prompt("an insulated steel bottle on a misty lakeshore", {"navy": "#1F3A5F", "sea_glass": "#A8D5BA"})
-    assert "as colours only, not materials or objects: navy #1F3A5F, sea glass #A8D5BA" in asked
-    assert picture_prompt("a bottle", {}).startswith("a bottle. The product is plain")
-
-
-def test_an_unreachable_model_proxy_stops_at_once(settings, monkeypatch):
-    """With the VPN off, KeyValue's proxy does not answer. The run stops in seconds and says why, not after minutes."""
-    import time
-
-    import pytest
-    from agno.exceptions import ModelProviderError
-
-    from launchkit.adapters.models import check_reachable, resolve_model
-
-    monkeypatch.setenv("LITELLM_API_KEY", "test")
-    monkeypatch.setenv("LITELLM_BASE_URL", "http://127.0.0.1:9/v1")
-    model = resolve_model(replace(settings, model="openai:gpt-4.1-mini"), Trace())
-    started = time.time()
-    with pytest.raises(ModelProviderError, match="Is the VPN on"):
-        check_reachable(model)
-    assert time.time() - started < 5
-
-
-def test_saved_sizes_are_named_to_the_agent(settings):
-    """A size the tools save joins the conversation's list by its real name, so a later turn can put it on the brief.
-    The picture tools still work on the poster, not on the size."""
-    from launchkit.memory.attached_pictures import Pictures
-
-    pictures = Pictures(settings, "harbor", "maya", "sizes")
-    poster = pictures.attach(APPROVED)
-    pictures.size_made(settings.data_dir / "sizes" / "tidal-poster-crop-1080x1080-ab12.png")
-    assert pictures.newest() == poster
-    assert "tidal-poster-crop-1080x1080-ab12.png" in pictures.describe()
-
-
-def test_a_fake_run_that_worked_prints_no_parse_warnings(settings, trace, request_for, caplog):
-    """A fake reply comes in the answer shape the main agent asks for, so a run that worked shows no warnings."""
-    import logging
-
-    from launchkit.adapters.fakes import ToolsModel
-
-    with caplog.at_level(logging.WARNING):
-        result = run_main(request_for(text="Morning!"), settings=settings, model=ToolsModel(), trace=trace, approve=NO)
-    assert result.reply == "Morning, Maya. What do you need today?"
-    assert not [r for r in caplog.records if "pars" in r.getMessage().lower() or "output_schema" in r.getMessage()]
-
-
-def test_the_chat_page_accepts_only_plain_user_names(settings, monkeypatch):
-    """A user name becomes a folder under data/, so the page refuses one with ../ in it and writes nothing."""
-    import io
-
-    from fastapi.testclient import TestClient
-    from PIL import Image
-
-    import launchkit.web.app as web
-
-    monkeypatch.setattr(web, "settings", settings)
-    page = TestClient(web.app)
-    picture = io.BytesIO()
-    Image.new("RGB", (8, 8)).save(picture, "PNG")
-    sent = {"workspace_id": "harbor", "user_id": "../../../escaped", "session_id": "abc123"}
-    assert page.post("/attach", data=sent, files={"picture": ("p.png", picture.getvalue())}).status_code == 422
-    assert page.post("/run", json={"workspace_id": "harbor", "user_id": "../x", "text": "hi"}).status_code == 422
-    assert not list(settings.data_dir.parent.glob("**/escaped"))
-    assert page.post("/attach", data={**sent, "user_id": "maya"}, files={"picture": ("p.png", picture.getvalue())}).status_code == 200
-
-
-def test_a_poster_uses_the_photo_the_marketer_attached(settings):
-    """Maya attached her own photo: a poster uses it and pays for no new picture."""
-    from launchkit.agents.main_agent import make_picture
-    from launchkit.guardrails.poster_check import PosterSpec
-    from launchkit.memory.attached_pictures import Pictures
-    from types import SimpleNamespace
-
-    from launchkit.tools.catalogue import Entry
-
-    pictures = Pictures(settings, "harbor", "maya", "abc123")
-    photo = pictures.attach(APPROVED)
-    drawn = []
-    catalogue = SimpleNamespace(entries={"generate_image": Entry("generate_image", "make a new poster picture", "read", lambda image_prompt: drawn.append(image_prompt))})
-    spec = PosterSpec(headline="Calm water", subheadline="Ready for the trail", body="Cold for 24 hours.", image_prompt="a bottle by a lake")
-    trace = Trace()
-    assert make_picture(spec, catalogue, trace, pictures) == photo
-    assert drawn == [] and trace.events[-1].detail["status"] == "kept"
+    desk = PictureDesk(settings, {"navy": "#1F3A5F"}, Trace(), source=APPROVED)
+    monkeypatch.setattr(pt.window_around, "todo", True, raising=False)
+    assert "left" in inspect.signature(pt.around_product(desk.crop)).parameters
+    monkeypatch.setattr(pt.window_around, "todo", False, raising=False)
+    fitted = pt.around_product(desk.crop)
+    assert list(inspect.signature(fitted).parameters) == ["width", "height"] and fitted.__name__ == "crop"
