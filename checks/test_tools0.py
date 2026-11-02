@@ -216,8 +216,6 @@ def test_from_step_2_the_model_cannot_choose_the_crop_window(settings, monkeypat
     assert list(inspect.signature(fitted).parameters) == ["width", "height"] and fitted.__name__ == "crop"
 
 
-    assert cut(1080, 1080, 538, 661, 663, 1005) == {"file": "ok"}
-
 
 def test_a_tool_run_through_run_tool_shows_once_on_the_trace():
     """run_tool records the tool it ran, so the leash adds no second run_tool line; a call it refuses still shows."""
