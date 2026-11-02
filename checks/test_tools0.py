@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from PIL import Image
 
@@ -273,3 +274,30 @@ def test_the_agent_with_the_doors_makes_one_tool_call_at_a_time(settings, monkey
     model = OpenAIChat(id="gpt-4.1-mini", api_key="none")
     agent = build_main_agent(load_workspace("harbor", settings, trace), ContextBuilder(settings.budgets), model, settings, trace, catalogue)
     assert agent.model.request_params == {"parallel_tool_calls": False} and model.request_params is None
+
+
+def test_a_words_only_change_keeps_the_posters_picture(settings):
+    """As in Session 1: the same image prompt keeps the poster's picture, so a shorter headline makes no new picture.
+    A changed image prompt reworks the picture the conversation has, starting from it."""
+    from launchkit.agents.main_agent import make_picture
+    from launchkit.brands.workspace import load_workspace
+    from launchkit.guardrails.poster_check import PosterSpec
+    from launchkit.memory.attached_pictures import Pictures
+
+    trace, pictures = Trace(), Pictures(settings, "harbor", "maya", "keep")
+    ws = load_workspace("harbor", settings, trace)
+    catalogue = build_catalogue(settings, trace, NO, ws=ws, pictures=pictures)
+    first = PosterSpec(headline="Tidal Awaits Dawn", subheadline="s", body="b", image_prompt="a bottle on a lakeshore")
+    assert make_picture(first, catalogue, trace, pictures, settings, ws) is None
+    made = pictures.last_poster()["file"]
+
+    shorter = first.model_copy(update={"headline": "Tidal Dawn"})
+    assert make_picture(shorter, catalogue, trace, pictures, settings, ws) == Path(made)
+    assert len(trace.tool_calls("generate_image")) == 1
+    assert [e.detail["status"] for e in trace.events if e.kind == "picture"] == ["reused"]
+
+    new_scene = first.model_copy(update={"image_prompt": "a bottle on a beach"})
+    make_picture(new_scene, catalogue, trace, pictures, settings, ws)
+    assert len(trace.tool_calls("generate_image")) == 2
+    assert [e.detail["status"] for e in trace.events if e.kind == "picture"] == ["reused", "rework"]
+    assert pictures.last_poster()["image_prompt"] == "a bottle on a beach"

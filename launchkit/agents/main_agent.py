@@ -17,7 +17,7 @@ from agno.models.openai import OpenAIChat
 from agno.tools.function import Function
 
 from launchkit.adapters.fakes import FakeModel
-from launchkit.adapters.image_providers import make_images
+from launchkit.adapters.image_providers import FromPicture, make_images
 from launchkit.adapters.models import model_name, resolve_model
 from launchkit.agents.prompt import ContextBuilder
 from launchkit.brands.request import Request, resolve_workspace_id
@@ -72,6 +72,7 @@ class MainResult:
     seconds: float = 0.0
     view_tokens: int = 0
     history_tokens: int = 0
+    kept: list[Path] = field(default_factory=list)
 
 
 def placements_text(ws) -> str:
@@ -142,7 +143,9 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
         turn.spec = checked_spec(turn.spec, agent, session, req, ws, model, trace, result)
     result.spec = turn.spec
     if turn.spec is not None and not any(trace.tool_calls(name) for name in PICTURE_WORK):
-        make_picture(turn.spec, catalogue, trace)
+        kept = make_picture(turn.spec, catalogue, trace, pictures, settings, ws)
+        if kept is not None:
+            result.kept.append(kept)
     result.reply = turn.reply or (poster_words(turn.spec) if turn.spec else "")
     result.seconds = time.perf_counter() - started
     result.view_tokens = tool_result_size(run)[0]
@@ -213,9 +216,23 @@ def loose(tools: list) -> list[Function]:
 PICTURE_WORK = ("generate_image", "centre_crop", "crop", "expand_canvas", "scale", "describe_image")
 
 
-def make_picture(spec: PosterSpec, catalogue: Catalogue, trace: Trace):
+def make_picture(spec: PosterSpec, catalogue: Catalogue, trace: Trace, pictures: Pictures | None = None, settings=None, ws=None) -> Path | None:
     """Session 1's picture phase, kept: a checked poster gets its picture, made from the image prompt, never from the
-    words. It joins the conversation, so "now all the sizes" works on it."""
+    words. It joins the conversation, so "now all the sizes" works on it. As in Session 1, the same image prompt keeps
+    the poster's picture, and a changed one reworks it. Returns the kept picture, if any."""
     generate = catalogue.entries.get("generate_image")
-    if generate is not None:
-        trace.tool("generate_image", {"image_prompt": spec.image_prompt}, generate.fn(spec.image_prompt))
+    if generate is None:
+        return None
+    last = pictures.last_poster() if pictures is not None else None
+    if last is not None and last["image_prompt"] == spec.image_prompt:
+        trace.picture("reused", file=last["file"], reason="the image prompt did not change")
+        return Path(last["file"])
+    fn = generate.fn
+    if last is not None and settings is not None and ws is not None:
+        trace.picture("rework", file=last["file"], reason="the image prompt changed, so the new picture starts from this one")
+        fn = make_generate_image(FromPicture(make_images(settings), Path(last["file"])), ws.colours, trace, pictures.made)
+    made = fn(spec.image_prompt)
+    trace.tool("generate_image", {"image_prompt": spec.image_prompt}, made)
+    if pictures is not None:
+        pictures.mark_poster(Path(made["file"]), spec.image_prompt)
+    return None
