@@ -55,6 +55,18 @@ class Pictures:
         """The agent made a picture in this conversation."""
         self._add(Path(path), "made")
 
+    def mark_poster(self, path: Path, image_prompt: str):
+        """This picture is the poster's, made from this image prompt, so the next poster can keep it."""
+        items = self.all()
+        for item in items:
+            if item["file"] == str(path):
+                item["image_prompt"] = image_prompt
+        self.index.write_text(json.dumps(items, indent=2), encoding="utf-8")
+
+    def last_poster(self) -> dict | None:
+        posters = [item for item in self.all() if "image_prompt" in item and Path(item["file"]).exists()]
+        return posters[-1] if posters else None
+
     def newest(self) -> Path | None:
         items = self.all()
         return Path(items[-1]["file"]) if items else None

@@ -189,7 +189,7 @@ def _worker(body: RunBody, queue: Queue):
         answer = {
             "type": "result",
             "reply": result.reply,
-            "files": new_files(current, started),
+            "files": new_files(current, started) + [f"/files/{p.relative_to(current.data_dir).as_posix()}" for p in result.kept],
             "view": {"tool_tokens": result.view_tokens, "history_tokens": result.history_tokens, "seconds": round(result.seconds, 1)},
         }
         conversation["turns"].append({"role": "assistant", "reply": answer["reply"], "files": answer["files"]})
