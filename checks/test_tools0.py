@@ -380,12 +380,14 @@ def test_a_poster_uses_the_photo_the_marketer_attached(settings):
     from launchkit.agents.main_agent import make_picture
     from launchkit.guardrails.poster_check import PosterSpec
     from launchkit.memory.attached_pictures import Pictures
-    from launchkit.tools.catalogue import Catalogue, Entry
+    from types import SimpleNamespace
+
+    from launchkit.tools.catalogue import Entry
 
     pictures = Pictures(settings, "harbor", "maya", "abc123")
     photo = pictures.attach(APPROVED)
     drawn = []
-    catalogue = Catalogue([Entry("generate_image", "make a new poster picture", "read", lambda image_prompt: drawn.append(image_prompt))], Trace(), lambda name, inputs: True)
+    catalogue = SimpleNamespace(entries={"generate_image": Entry("generate_image", "make a new poster picture", "read", lambda image_prompt: drawn.append(image_prompt))})
     spec = PosterSpec(headline="Calm water", subheadline="Ready for the trail", body="Cold for 24 hours.", image_prompt="a bottle by a lake")
     trace = Trace()
     assert make_picture(spec, catalogue, trace, pictures) == photo
