@@ -18,7 +18,7 @@ uv run launchkit main harbor "Love the poster. Now all the sizes, please." --att
 ```
 
 ```
-  tool      scale(1080, 1080) → file data/sizes/tidal-poster-scaled-1080x1080.png
+  tool      scale(1080, 1080) → file data/sizes/tidal-poster-scaled-1080x1080-5e2b.png
   ...
 ```
 
