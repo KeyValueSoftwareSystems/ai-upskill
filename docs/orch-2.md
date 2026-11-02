@@ -50,8 +50,8 @@ questions to research agents that run at the same time; get back one short repor
 In launchkit/skills/competitor_research/skill.md, change step 2: call run_tool once with name
 "research_many" and inputs {"briefs": ["How is <competitor> launching ...?", ...]}: one brief per
 competitor, each a plain sentence, not an object. Each brief stands alone,
-because the research agent sees nothing else: ask for the message, the channels and what to avoid
-copying, and list our never-say claims in it.
+because the research agent sees nothing else: name this month and year from today's date (it has no
+clock), ask for the message, the channels and what to avoid copying, and list our never-say claims in it.
 ```
 
 ## Prove it
