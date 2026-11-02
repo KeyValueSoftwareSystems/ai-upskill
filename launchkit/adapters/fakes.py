@@ -33,17 +33,24 @@ class FakeModel(Model):
     def answer(self, messages: list, tools: list) -> ModelResponse:
         raise NotImplementedError
 
+    def shaped(self, response: ModelResponse, kwargs: dict) -> ModelResponse:
+        """A plain-text reply, put in the answer shape when the agent asks for one, as a real model would."""
+        content = response.content
+        if kwargs.get("response_format") and isinstance(content, str) and not content.lstrip().startswith("{"):
+            response.content = reply_turn(content)
+        return response
+
     def invoke(self, *args, **kwargs) -> ModelResponse:
-        return self.answer(kwargs.get("messages") or [], kwargs.get("tools") or [])
+        return self.shaped(self.answer(kwargs.get("messages") or [], kwargs.get("tools") or []), kwargs)
 
     async def ainvoke(self, *args, **kwargs) -> ModelResponse:
-        return self.answer(kwargs.get("messages") or [], kwargs.get("tools") or [])
+        return self.shaped(self.answer(kwargs.get("messages") or [], kwargs.get("tools") or []), kwargs)
 
     def invoke_stream(self, *args, **kwargs) -> Iterator[ModelResponse]:
-        yield self.answer(kwargs.get("messages") or [], kwargs.get("tools") or [])
+        yield self.shaped(self.answer(kwargs.get("messages") or [], kwargs.get("tools") or []), kwargs)
 
     async def ainvoke_stream(self, *args, **kwargs) -> AsyncIterator[ModelResponse]:
-        yield self.answer(kwargs.get("messages") or [], kwargs.get("tools") or [])
+        yield self.shaped(self.answer(kwargs.get("messages") or [], kwargs.get("tools") or []), kwargs)
         return
 
     def _parse_provider_response(self, response: Any, **kwargs) -> ModelResponse:
