@@ -111,7 +111,7 @@ def check_python(c: Check) -> None:
 def check_dependencies(c: Check) -> bool:
     c.start("Dependencies")
     missing = []
-    for name in ("openai", "PIL", "dotenv", "langgraph"):
+    for name in ("openai", "PIL", "dotenv"):
         try:
             importlib.import_module(name)
         except Exception:
@@ -152,7 +152,7 @@ def check_chat(c: Check, blocked: str | None) -> None:
         c.skip(blocked)
         return
     try:
-        from .llm import client
+        from .adapters.llm import client
 
         reply = client().with_options(timeout=CHAT_TIMEOUT, max_retries=0).chat.completions.create(
             model=model,
@@ -208,7 +208,7 @@ def check_image(c: Check, blocked: str | None) -> None:
         c.skip(blocked)
         return
     try:
-        from .llm import client
+        from .adapters.llm import client
 
         reply = client().with_options(timeout=IMAGE_TIMEOUT, max_retries=0).images.generate(
             model=model, prompt="A plain blue circle on a white background", size="1024x1024",
@@ -252,7 +252,7 @@ def main(argv: list[str] | None = None) -> int:
     api_blocked = None if deps_ok and key_ok else ("no key" if deps_ok else "dependencies missing")
     check_chat(c, api_blocked)
 
-    from .gpu_images import image_provider
+    from .adapters.gpu_images import image_provider
 
     try:
         provider = image_provider()

@@ -133,3 +133,27 @@ def test_a_clear_error_is_not_retried(settings, images, trace, request_for):
     with pytest.raises(ModelProviderError, match="Budget has been exceeded"):
         run_request(request_for(), settings=settings, model=BrokenModel(), images=images, trace=trace)
     assert BrokenModel.calls == 1
+
+
+def test_setup_check_loads_only_modules_that_exist():
+    """Every module check_setup.py loads inside its checks exists, so moving a file breaks this check, not a participant's setup."""
+    import ast
+    import importlib
+    from pathlib import Path
+
+    import launchkit.check_setup as check_setup
+
+    tree = ast.parse(Path(check_setup.__file__).read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.level:
+            module = importlib.import_module("." * node.level + (node.module or ""), "launchkit")
+            for alias in node.names:
+                assert hasattr(module, alias.name), f"{node.module}.{alias.name}"
+
+
+def test_setup_check_does_not_ask_for_langgraph():
+    """Only the opener branches install LangGraph, so the setup check must not fail without it."""
+    import launchkit.check_setup as check_setup
+    from pathlib import Path
+
+    assert '"langgraph"' not in Path(check_setup.__file__).read_text(encoding="utf-8")
