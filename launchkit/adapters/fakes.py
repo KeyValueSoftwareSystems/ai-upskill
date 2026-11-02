@@ -285,7 +285,7 @@ class ToolsModel(FakeModel):
     def answer(self, messages, tools):
         asked = last_user_text(messages).lower()
         names = tool_names(tools)
-        if "find_tool" in names and any(word in asked for word in ("size", "photo", "talking about", "voice", "board", "card")):
+        if "find_tool" in names and any(word in asked for word in ("size", "photo", "talking about", "voice", "board", "card", "notion")):
             return self.through_the_doors(asked, fresh_results(messages), messages)
         if "photo" in asked and "generate_image" in names:
             return self.paid_picture(fresh_results(messages), messages)
@@ -338,12 +338,12 @@ class ToolsModel(FakeModel):
             return tool_call_response("find_tool", {"query": asked}, "find_1")
         listing = done[0]
         new_sizes = [f"tidal-{w}x{h}.png" for w, h in SIZES]
-        if "card" in asked and "skill post_to_board" in listing:
+        if ("card" in asked or ("notion" in asked and "put" in asked)) and "skill post_to_board" in listing:
             plan = [("run_skill", {"name": "post_to_board"}), ("run_tool", {"name": "read_card", "inputs": {"card": "tidal"}}),
                     ("run_tool", {"name": "attach_files", "inputs": {"card": "tidal", "files": new_sizes}}),
                     ("run_tool", {"name": "remove_files", "inputs": {"card": "tidal", "files": ["tidal-feed-1080x1080-approved.png", "tidal-story-1080x1920-approved.png"]}}),
                     ("run_tool", {"name": "update_status", "inputs": {"card": "tidal", "status": "Ready for review"}})]
-        elif "board" in asked and "tool read_card" in listing:
+        elif ("board" in asked or "notion" in asked) and "tool read_card" in listing:
             plan = [("run_tool", {"name": "read_card", "inputs": {"card": "tidal"}})]
         elif "photo" in asked and "tool generate_image" in listing and "only when no photo" not in listing:
             plan = [("run_tool", {"name": "generate_image", "inputs": {"image_prompt": "our shoot photo, story size"}})]

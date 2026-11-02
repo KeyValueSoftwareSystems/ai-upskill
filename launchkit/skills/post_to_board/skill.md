@@ -1,6 +1,6 @@
 # post_to_board
 
-Pick me when: the job reads the marketer's board or puts work back on it, e.g. "take the brief from our Notion board" or "put the sizes on the Tidal card".
+Pick me when: the job reads the marketer's board or puts work back on it, e.g. "take the Tidal launch brief from our Notion" or "put the new sizes on the Tidal launch brief in Notion".
 Uses: read_card, attach_files, update_status, notion-search, notion-fetch, notion-update-page, notion-create-comment
 
 ## Steps

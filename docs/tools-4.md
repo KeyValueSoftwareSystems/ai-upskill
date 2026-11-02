@@ -1,10 +1,10 @@
 # Step 4 · MCP: plug in Maya's Notion board
 
-Maya: "Take the brief from our Notion board, and put the sizes there when done." Her launch brief and placement list live on the team's board. Without a way in, she retypes the brief, and the finished sizes go back by hand.
+Maya: "Take the Tidal launch brief from our Notion, and put the sizes there when done." Her launch brief and placement list live on the team's board. Without a way in, she retypes the brief, and the finished sizes go back by hand.
 
 MCP (Model Context Protocol) is a common plug between an agent and an outside service. The service runs an MCP server that lists its own tools, each with a name, a description and a schema: the same three things the room wrote by hand in step 1. Any agent that speaks MCP can use them.
 
-The board is your real Notion, through Notion's own MCP server. Before the step, make Maya's card in your Notion by hand, as she would: a new page named "Tidal launch: campaign brief", with the text of `samples/board/tidal-card-to-paste.txt` pasted in (Cmd+Shift+V pastes it as plain text). Then, on the chat page, sign in as Maya and press **Connect Notion** once; Notion's login opens in a new tab. Connecting only logs in: it writes nothing. Each person connects their own Notion. `uv run launchkit notion` logs in from the terminal. To run the step again, edit the card back by hand. Notion's server lists 68 tools and says which ones only read. The harness plugs in six board tools: `notion-search`, `notion-fetch`, `notion-update-page`, `notion-create-comment`, `notion-get-comments` and, on purpose, `notion-delete-pages`, which can do harm.
+The board is your real Notion, through Notion's own MCP server. Before the step, make Maya's Tidal launch brief in your Notion by hand, as she would: a new page named "Tidal launch: campaign brief", with the text of `samples/board/tidal-card-to-paste.txt` pasted in (Cmd+Shift+V pastes it as plain text). Then, on the chat page, sign in as Maya and press **Connect Notion** once; Notion's login opens in a new tab. Connecting only logs in: it writes nothing. Each person connects their own Notion. `uv run launchkit notion` logs in from the terminal. To run the step again, edit the card back by hand. Notion's server lists 68 tools and says which ones only read. The harness plugs in six board tools: `notion-search`, `notion-fetch`, `notion-update-page`, `notion-create-comment`, `notion-get-comments` and, on purpose, `notion-delete-pages`, which can do harm.
 
 Offline, and for the checks and the fakes, `LAUNCHKIT_BOARD=local` uses a small MCP server in the repo instead (`launchkit/mcp/servers/local_board_server.py`): the same card, with the tools `read_card`, `attach_files`, `update_status` and `remove_files`.
 
@@ -21,7 +21,7 @@ Each file in `launchkit/mcp/servers/` is one MCP server. `notion.py` and `local_
 ## Break it first
 
 ```
-uv run launchkit main harbor "Take the brief from our Notion board." --model fake:tools
+uv run launchkit main harbor "Take the Tidal launch brief from our Notion." --model fake:tools
 ```
 
 ```
@@ -50,13 +50,13 @@ uv run launchkit check tools4
 
 - Over MCP, the board's server lists its tools, each with a description, a schema, and whether it only reads.
 - `connect` turns each tool into a catalogue entry, read or write as the server says.
-- `run_tool` reads the Tidal card over MCP, and a write changes the board.
+- `run_tool` reads the Tidal launch brief over MCP, and a write changes the board.
 - Ready-made: `post_to_board` writes Harbor's routine down.
-- Asked to put the sizes on the Tidal card, the main agent loads `post_to_board` and the files land on the card.
+- Asked to put the sizes on the Tidal launch brief, the main agent loads `post_to_board` and the files land on the card.
 
 ## Run it again
 
-The same ask, on the real model and your Notion, on the chat page: "Take the brief from our Notion board." `find_tool` lists `post_to_board` first, its steps name Notion's tools, and `run_tool` runs them. Then, in the same conversation, make the sizes: attach `samples/approved/tidal-poster.jpg` (📎) and send "Love the poster. Now all the sizes, please." Then send "Put the new sizes on the Tidal card and move it to Ready for review." Open the card in Notion: the Files line now lists the sizes the agent made, and the Status line says Ready for review. Notion's MCP tools here cannot upload images, so the card lists the file names; a real team would attach the images. Check it: the agent can say "done" when Notion took the call but changed nothing. And Notion also offers `notion-delete-pages`: the agent can now change things Maya never asked it to touch.
+The same ask, on the real model and your Notion, on the chat page: "Take the Tidal launch brief from our Notion." `find_tool` lists `post_to_board` first, its steps name Notion's tools, and `run_tool` runs them. Then, in the same conversation, make the sizes: attach `samples/approved/tidal-poster.jpg` (📎) and send "Love the poster. Now all the sizes, please." Then send "Put the new sizes on the Tidal launch brief in Notion, and move it to Ready for review." Open the card in Notion: the Files line now lists the sizes the agent made, and the Status line says Ready for review. Notion's MCP tools here cannot upload images, so the card lists the file names; a real team would attach the images. Check it: the agent can say "done" when Notion took the call but changed nothing. And Notion also offers `notion-delete-pages`: the agent can now change things Maya never asked it to touch.
 
 ## Stuck?
 
