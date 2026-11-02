@@ -296,3 +296,20 @@ def test_the_chat_page_accepts_only_plain_user_names(settings, monkeypatch):
     assert page.post("/run", json={"workspace_id": "harbor", "user_id": "../x", "text": "hi"}).status_code == 422
     assert not list(settings.data_dir.parent.glob("**/escaped"))
     assert page.post("/attach", data={**sent, "user_id": "maya"}, files={"picture": ("p.png", picture.getvalue())}).status_code == 200
+
+
+def test_a_poster_uses_the_photo_the_marketer_attached(settings):
+    """Maya attached her own photo: a poster uses it and pays for no new picture."""
+    from launchkit.agents.main_agent import make_picture
+    from launchkit.guardrails.poster_check import PosterSpec
+    from launchkit.memory.attached_pictures import Pictures
+    from launchkit.tools.catalogue import Catalogue, Entry
+
+    pictures = Pictures(settings, "harbor", "maya", "abc123")
+    photo = pictures.attach(APPROVED)
+    drawn = []
+    catalogue = Catalogue([Entry("generate_image", "make a new poster picture", "read", lambda image_prompt: drawn.append(image_prompt))], Trace(), lambda name, inputs: True)
+    spec = PosterSpec(headline="Calm water", subheadline="Ready for the trail", body="Cold for 24 hours.", image_prompt="a bottle by a lake")
+    trace = Trace()
+    assert make_picture(spec, catalogue, trace, pictures) == photo
+    assert drawn == [] and trace.events[-1].detail["status"] == "kept"
