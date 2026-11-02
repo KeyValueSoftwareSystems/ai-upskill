@@ -9,8 +9,9 @@ from pathlib import Path
 from queue import Queue
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import Path as UrlPart
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from launchkit.agents.main_agent import run_main
 from launchkit.brands.onboard import onboard_workspace
@@ -29,11 +30,12 @@ ASKS: dict[str, tuple[threading.Event, dict]] = {}
 DONE = object()
 ASK_WAIT = 300
 MEDIA = {".png", ".jpg", ".jpeg", ".webp", ".mp3", ".wav"}
+USER_ID = r"^[a-z0-9-]{1,32}$"  # a login name; it becomes a folder name under data/, so nothing else is accepted
 
 
 class RunBody(BaseModel):
     workspace_id: str
-    user_id: str
+    user_id: str = Field(pattern=USER_ID)
     text: str
     model: str | None = None
     session_id: str | None = None
@@ -206,7 +208,7 @@ def _worker(body: RunBody, queue: Queue):
 
 
 @app.post("/attach")
-async def attach_picture(workspace_id: str = Form(...), user_id: str = Form(...), session_id: str = Form(...), picture: UploadFile = File(...)):
+async def attach_picture(workspace_id: str = Form(...), user_id: str = Form(..., pattern=USER_ID), session_id: str = Form(...), picture: UploadFile = File(...)):
     """The marketer attached a picture to this conversation. The picture tools work on the newest one."""
     try:
         resolve_workspace_id(Request(workspace_id=workspace_id, user_id=user_id, session_id=session_id, text="attach"), settings)
