@@ -341,3 +341,15 @@ def test_saved_sizes_are_named_to_the_agent(settings):
     pictures.size_made(settings.data_dir / "sizes" / "tidal-poster-crop-1080x1080-ab12.png")
     assert pictures.newest() == poster
     assert "tidal-poster-crop-1080x1080-ab12.png" in pictures.describe()
+
+
+def test_a_fake_run_that_worked_prints_no_parse_warnings(settings, trace, request_for, caplog):
+    """A fake reply comes in the answer shape the main agent asks for, so a run that worked shows no warnings."""
+    import logging
+
+    from launchkit.adapters.fakes import ToolsModel
+
+    with caplog.at_level(logging.WARNING):
+        result = run_main(request_for(text="Morning!"), settings=settings, model=ToolsModel(), trace=trace, approve=NO)
+    assert result.reply == "Morning, Maya. What do you need today?"
+    assert not [r for r in caplog.records if "pars" in r.getMessage().lower() or "output_schema" in r.getMessage()]
