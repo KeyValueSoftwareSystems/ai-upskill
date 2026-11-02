@@ -110,7 +110,7 @@ How each step runs:
 
 The pictures come from the conversation, never from a hidden file. Maya's approved poster is in the repo at `samples/approved/tidal-poster.jpg`, and her shoot photo (step 3) at `samples/shoot/tidal-shoot.jpg`: attach them with 📎 next to the message box, or with `--attach` in the terminal. Or ask for a new poster first, in the same conversation. The picture tools work on the newest picture in the conversation.
 
-Before step 4, make Maya's card in your own Notion by hand: a new page named "Tidal launch: campaign brief", with the text of `samples/board/tidal-card-to-paste.txt` pasted in (Cmd+Shift+V pastes it as plain text). Then press **Connect Notion** on the chat page and log in. Connecting only logs in; the agent reads and writes the card only when an ask needs it. To run a step again, edit the card back by hand.
+Before step 4, make Maya's Tidal launch brief in your own Notion by hand: a new page named "Tidal launch: campaign brief", with the text of `samples/board/tidal-card-to-paste.txt` pasted in (Cmd+Shift+V pastes it as plain text). Then press **Connect Notion** on the chat page and log in. Connecting only logs in; the agent reads and writes the card only when an ask needs it. To run a step again, edit the card back by hand.
 
 Offline, or without a key: `LAUNCHKIT_SEARCH=saved` uses the saved pages, `LAUNCHKIT_BOARD=local` uses the board server in this repo, and the fake models need no key. The checks always run offline.
 
