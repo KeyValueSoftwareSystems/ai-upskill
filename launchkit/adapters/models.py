@@ -6,7 +6,7 @@ from agno.exceptions import ModelProviderError
 from agno.models.openai import OpenAIChat
 
 from launchkit.adapters.fakes import BriefModel, EchoModel, EndlessModel, GoodModel, LookupModel, MalformedModel, ProfileModel
-from launchkit.harness.trace import Trace
+from launchkit.trace import Trace
 
 PROVIDER_KEYS = {
     "openai": "OPENAI_API_KEY",

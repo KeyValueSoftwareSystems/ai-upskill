@@ -1,9 +1,9 @@
 from launchkit.adapters.fakes import COMPETITORS
-from launchkit.harness.agent import RESEARCH_TASK
-from launchkit.harness.board import Board
-from launchkit.harness.main import build_catalogue, run_main
-from launchkit.harness.trace import Trace
-from launchkit.harness.web import PAGES_DIR, make_search_web
+from launchkit.agents.copy_and_picture_agents import RESEARCH_TASK
+from launchkit.agents.main_agent import build_catalogue, run_main
+from launchkit.mcp.servers.local_board import Board
+from launchkit.tools.search_web import PAGES_DIR, make_search_web
+from launchkit.trace import Trace
 
 
 def test_the_catalogue_holds_search_and_the_board(settings):

@@ -1,5 +1,5 @@
-from launchkit.harness.catalogue import Entry
-from launchkit.harness.trace import Trace
+from launchkit.tools.catalogue import Entry
+from launchkit.trace import Trace
 
 
 def make_research_entries(model, settings, trace: Trace) -> list[Entry]:

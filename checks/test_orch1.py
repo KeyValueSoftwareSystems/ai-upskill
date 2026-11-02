@@ -1,7 +1,7 @@
-from launchkit.harness.board import Board
-from launchkit.harness.catalogue import load_skills
-from launchkit.harness.main import build_catalogue, run_main
-from launchkit.harness.trace import Trace
+from launchkit.agents.main_agent import build_catalogue, run_main
+from launchkit.mcp.servers.local_board import Board
+from launchkit.tools.catalogue import load_skills
+from launchkit.trace import Trace
 
 ASK = "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season? One paragraph each."
 FIVE = ["Hydro Flask", "Stanley", "Yeti", "Owala", "Klean Kanteen"]

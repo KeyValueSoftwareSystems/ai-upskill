@@ -8,8 +8,8 @@ The five competitors do not depend on each other, so five research agents can ru
 
 ## The slot
 
-- `launchkit/harness/agent.py` · `build_research_agent`. Today it returns None.
-- `launchkit/harness/research.py` · `make_research_entries`. Today it returns no tools.
+- `launchkit/agents/copy_and_picture_agents.py` · `build_research_agent`. Today it returns None.
+- `launchkit/orchestration/research_team.py` · `make_research_entries`. Today it returns no tools.
 - `launchkit/skills/competitor_research/skill.md`. Today it tells the main agent to search itself.
 
 ## Break it first
@@ -29,12 +29,12 @@ main agent's view  9858 tokens of tool results this turn · 0 tokens of history 
 Two parts, one after the other: the subagent first, then side by side. Run the check after both.
 
 ```
-Part 1, the subagent. In launchkit/harness/agent.py, build_research_agent(model, settings, trace)
+Part 1, the subagent. In launchkit/agents/copy_and_picture_agents.py, build_research_agent(model, settings, trace)
 returns an Agno Agent with system_message=RESEARCH_TASK (already written), tools=[make_search_web(settings)]
-from launchkit/harness/web.py, the same leash hook as build_picture_agent, and telemetry=False.
+from launchkit/tools/search_web.py, the same leash hook as build_picture_agent, and telemetry=False.
 No db and no history: it sees only its brief.
 
-In launchkit/harness/research.py, make_research_entries(model, settings, trace) returns one Entry:
+In launchkit/orchestration/research_team.py, make_research_entries(model, settings, trace) returns one Entry:
 "research", kind "read", note "hand one research question to a research agent; get back a short
 report, not the pages". Its function research(brief: str) -> str builds the research agent, runs it
 on the brief, calls raise_if_failed(run), records trace.model("research", model_name(model), run.metrics)

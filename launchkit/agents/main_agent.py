@@ -17,29 +17,30 @@ from agno.models.openai import OpenAIChat
 from agno.tools.function import Function
 
 from launchkit.adapters.fakes import FakeModel
-from launchkit.adapters.images import make_images
+from launchkit.adapters.image_providers import make_images
 from launchkit.adapters.models import model_name, resolve_model
-from launchkit.harness.agent import session_db
-from launchkit.harness.brand import make_get_brand_details
-from launchkit.harness.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
-from launchkit.harness.copy_check import make_check_copy
-from launchkit.harness.context import ContextBuilder
-from launchkit.harness.limits import make_leash
-from launchkit.harness.media import media_entries
-from launchkit.harness.notion import make_board
-from launchkit.harness.picture_tools import PictureDesk
-from launchkit.harness.pictures import Pictures
-from launchkit.harness.request import Request, resolve_workspace_id
+from launchkit.agents.prompt import ContextBuilder
+from launchkit.brands.request import Request, resolve_workspace_id
+from launchkit.guardrails.limits import make_leash
+from launchkit.mcp.servers.notion import make_board
+from launchkit.memory.attached_pictures import Pictures
+from launchkit.memory.chat_history import session_db
+from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
+from launchkit.tools.check_copy import make_check_copy
+from launchkit.tools.describe_image import describe_image_entry
+from launchkit.tools.get_brand_details import make_get_brand_details
+from launchkit.tools.resize_poster import PictureDesk
+from launchkit.tools.text_to_speech import text_to_speech_entry
 from pydantic import BaseModel, Field
 
-from launchkit.harness.research import make_research_entries
-from launchkit.harness.run import history_size, looked_up, raise_if_failed, tool_result_size
-from launchkit.harness.spec import PosterSpec, SpecError, repair_message, validate_spec
-from launchkit.harness.tools import make_generate_image
-from launchkit.harness.trace import Trace
-from launchkit.harness.web import search_entry
-from launchkit.harness.workspace import Workspace, load_workspace
+from launchkit.agents.poster_flow import history_size, looked_up, raise_if_failed, tool_result_size
+from launchkit.brands.workspace import Workspace, load_workspace
+from launchkit.guardrails.poster_check import PosterSpec, SpecError, repair_message, validate_spec
+from launchkit.orchestration.research_team import make_research_entries
 from launchkit.settings import settings as default_settings
+from launchkit.tools.generate_image import make_generate_image
+from launchkit.tools.search_web import search_entry
+from launchkit.trace import Trace
 
 MAIN_TASK = """You work for the marketer you are talking with. For any job beyond a greeting, call find_tool first, with the
 marketer's own words. It lists skills and tools, not answers: call it once for the whole job, not once per item.
@@ -114,7 +115,8 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
         *desk.entries(),
         Entry("check_copy", "check a headline, subheadline and body against the brand's word limits and banned claims", "read", make_check_copy(ws)),
         search_entry(settings),
-        *media_entries(settings, model, desk),
+        describe_image_entry(settings, model, desk),
+        text_to_speech_entry(settings, model),
         *(board or make_board(settings, trace, user)).entries(),
         *make_research_entries(model, settings, trace),
     ]

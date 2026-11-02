@@ -1,7 +1,7 @@
-from launchkit.harness.agent import build_research_agent
-from launchkit.harness.main import run_main
-from launchkit.harness.research import make_research_entries
-from launchkit.harness.trace import Trace
+from launchkit.agents.copy_and_picture_agents import build_research_agent
+from launchkit.agents.main_agent import run_main
+from launchkit.orchestration.research_team import make_research_entries
+from launchkit.trace import Trace
 
 ASK = "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season? One paragraph each."
 FIVE = ["Hydro Flask", "Stanley", "Yeti", "Owala", "Klean Kanteen"]

@@ -8,7 +8,7 @@ import re
 import httpx
 
 from launchkit.adapters.fakes import COMPETITORS
-from launchkit.harness.web import PAGE_CHARS, PAGES_DIR, TAVILY_URL
+from launchkit.tools.search_web import PAGE_CHARS, PAGES_DIR, TAVILY_URL
 from launchkit.settings import settings
 
 

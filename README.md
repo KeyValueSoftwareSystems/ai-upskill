@@ -137,7 +137,7 @@ Cards: `docs/tools-1.md` … `docs/tools-5.md`.
 | Step | Slot | Check | Branch with the answer |
 | --- | --- | --- | --- |
 | 1 · One agent and a skill | `launchkit/skills/competitor_research/skill.md` | `check orch1` | `session-02-orchestration-step1` |
-| 2 · Hand the digging to subagents | `agent.py` `build_research_agent`, `research.py`, the skill | `check orch2` | `session-02-orchestration-step2` |
+| 2 · Hand the digging to subagents | `agents/copy_and_picture_agents.py` `build_research_agent`, `orchestration/research_team.py`, the skill | `check orch2` | `session-02-orchestration-step2` |
 
 Cards: `docs/orch-1.md`, `docs/orch-2.md`.
 
@@ -182,6 +182,8 @@ launchkit/
     request.py                           works out which brand a request is for
     users.py                             who can sign in
     workspace.py                         loads a brand's SOUL, AGENTS and rules
+  orchestration/                         helper agents the main agent hands work to
+    research_team.py                     the helper agents for competitor research
   adapters/                              plumbing: models, fakes, image providers, prices
     fakes.py                             scripted models for the checks and offline runs
     gpu_images.py                        our GPU picture service
