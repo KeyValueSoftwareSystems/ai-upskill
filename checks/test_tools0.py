@@ -255,3 +255,21 @@ def test_a_flat_run_tool_call_still_runs_and_a_nameless_one_shows_on_the_trace()
         FunctionCall(function=door, arguments=arguments).execute()
     assert calls == [("crop", {"width": 1080}), ("crop", {"width": 1080})]
     assert [e.kind for e in trace.events] == ["refused"]
+
+
+def test_the_agent_with_the_doors_makes_one_tool_call_at_a_time(settings, monkeypatch):
+    """Several tool calls in one model message lose run_tool's name, so once run_tool is a door the model calls tools
+    one at a time. The model the caller passed in is left as it was."""
+    from agno.models.openai import OpenAIChat
+
+    from launchkit.harness.catalogue import Catalogue
+    from launchkit.harness.context import ContextBuilder
+    from launchkit.harness.main import build_main_agent
+    from launchkit.harness.workspace import load_workspace
+
+    trace = Trace()
+    monkeypatch.setattr(Catalogue, "lookup", property(lambda self: True))
+    catalogue = build_catalogue(settings, trace, NO)
+    model = OpenAIChat(id="gpt-4.1-mini", api_key="none")
+    agent = build_main_agent(load_workspace("harbor", settings, trace), ContextBuilder(settings.budgets), model, settings, trace, catalogue)
+    assert agent.model.request_params == {"parallel_tool_calls": False} and model.request_params is None

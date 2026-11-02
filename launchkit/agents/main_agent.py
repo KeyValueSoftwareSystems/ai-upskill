@@ -13,6 +13,7 @@ from datetime import date
 from typing import Literal
 
 from agno.agent import Agent
+from agno.models.openai import OpenAIChat
 from agno.tools.function import Function
 
 from launchkit.adapters.fakes import FakeModel
@@ -81,6 +82,9 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
     ctx.set("rules", f"{ws.soul}\n\n{ws.agents}\n\n{placements_text(ws)}")
     ctx.set("facts", f"Today is {date.today():%-d %B %Y}. {pictures.describe() if pictures else ''}".strip())
     ctx.set("task", MAIN_TASK if catalogue.lookup else "\n\n".join(part for part in (DIRECT_TASK, catalogue.skills_text()) if part))
+    if catalogue.lookup and isinstance(model, OpenAIChat):
+        # Several tool calls in one model message lose run_tool's name, so the agent with the doors calls one at a time.
+        model = replace(model, request_params={**(model.request_params or {}), "parallel_tool_calls": False})
     return Agent(
         model=model,
         system_message=ctx.render(),
