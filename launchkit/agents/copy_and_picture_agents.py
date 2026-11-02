@@ -7,7 +7,6 @@ from launchkit.guardrails.poster_check import PosterSpec, Turn
 from launchkit.memory.chat_history import session_db
 from launchkit.tools.generate_image import make_generate_image
 from launchkit.tools.get_brand_details import make_get_brand_details
-from launchkit.tools.search_web import make_search_web
 from launchkit.trace import Trace
 
 SPEC_TASK = """You are talking with a marketer. Decide what kind of turn this is.
@@ -19,10 +18,6 @@ Otherwise, for a greeting, a question or small talk: kind is "reply", with a sho
 
 PICTURE_TASK = """Make the poster picture. Call generate_image once with the scene description you were given.
 When the tool returns a file, reply with that file path and nothing else."""
-
-RESEARCH_TASK = """You research one question for a marketing team. Call search_web with a short query and read the pages that come back.
-Reply with a short report and nothing else: one paragraph of at most 60 words on the message, the channels and what to avoid copying,
-then the addresses of the pages you used."""
 
 
 def build_copy_agent(ws: Workspace, ctx: ContextBuilder, model, settings, trace: Trace) -> Agent:
@@ -46,17 +41,6 @@ def build_picture_agent(spec: PosterSpec, model, images, colours: dict, trace: T
         model=model,
         system_message=PICTURE_TASK,
         tools=[make_generate_image(images, colours, trace)],
-        tool_hooks=[make_leash(settings.limits, trace)],
-        telemetry=False,
-    )
-
-
-def build_research_agent(model, settings, trace: Trace) -> Agent | None:
-    """Orchestration step 2: the research subagent. RESEARCH_TASK, search_web only, no session store and no chat history."""
-    return Agent(
-        model=model,
-        system_message=RESEARCH_TASK,
-        tools=[make_search_web(settings)],
         tool_hooks=[make_leash(settings.limits, trace)],
         telemetry=False,
     )
