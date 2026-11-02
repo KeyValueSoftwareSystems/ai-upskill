@@ -56,7 +56,7 @@ def generate_image(visual_concept: str, brand: dict, *, conversation_id: str,
         if provider == "gpu":
             data = gpu_image(prompt, reference=reference)
         else:
-            from .llm import client
+            from launchkit.adapters.llm import client
             model = os.getenv("LAUNCHKIT_IMAGE_MODEL", "gpt-image-2")
             if reference:
                 with open(reference, "rb") as f:

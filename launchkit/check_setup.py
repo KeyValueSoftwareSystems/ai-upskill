@@ -14,10 +14,15 @@ import base64
 import importlib
 import io
 import os
+import re
 import sys
 import tempfile
+import tomllib
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 
-from launchkit.opener.poster import OUT, ROOT
+ROOT = Path(__file__).resolve().parent.parent  # the repo folder
+DATA = ROOT / "data"                           # where LaunchKit writes pictures, sessions and indexes
 
 WIDTH = 38          # label + dots, so every status lines up in one column
 CHAT_TIMEOUT = 20   # seconds; a bad network should not hang the room
@@ -107,6 +112,22 @@ def check_python(c: Check) -> None:
         c.fail(f"You are on Python {version}. Install Python 3.12+ and run through uv: uv run python -m launchkit.check_setup")
 
 
+def required_packages() -> list[str]:
+    """The packages this branch's pyproject.toml asks for on this machine, so the check always matches the branch."""
+    names = []
+    for dep in tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["dependencies"]:
+        spec, _, marker = dep.partition(";")
+        if marker.strip():
+            try:
+                from packaging.markers import Marker
+            except ImportError:
+                continue
+            if not Marker(marker).evaluate():
+                continue
+        names.append(re.match(r"[A-Za-z0-9_.-]+", spec.strip()).group(0))
+    return list(dict.fromkeys(names))
+
+
 def check_dependencies(c: Check) -> bool:
     c.start("Dependencies")
     missing = []
@@ -114,6 +135,11 @@ def check_dependencies(c: Check) -> bool:
         try:
             importlib.import_module(name)
         except Exception:
+            missing.append(name)
+    for name in required_packages():
+        try:
+            version(name)
+        except PackageNotFoundError:
             missing.append(name)
     if missing:
         c.fail(f"Missing: {', '.join(missing)}. Run `uv sync` in the repo root, then use `uv run`")
@@ -225,16 +251,16 @@ def check_image(c: Check, blocked: str | None) -> None:
         c.fail(f"'{model}' answered but the image could not be decoded. Set LAUNCHKIT_IMAGE_MODEL in .env to an image model such as gpt-image-2")
 
 
-def check_out_dir(c: Check) -> None:
-    c.start("Can write to out/")
+def check_data_dir(c: Check) -> None:
+    c.start("Can write to data/")
     try:
-        OUT.mkdir(parents=True, exist_ok=True)
-        fd, name = tempfile.mkstemp(dir=OUT, prefix=".setup_check_")
+        DATA.mkdir(parents=True, exist_ok=True)
+        fd, name = tempfile.mkstemp(dir=DATA, prefix=".setup_check_")
         os.close(fd)
         os.remove(name)
         c.ok()
     except OSError as err:
-        c.fail(f"Cannot write to {OUT} ({err.strerror}). Check the folder's permissions or clone the repo somewhere you own")
+        c.fail(f"Cannot write to {DATA} ({err.strerror}). Check the folder's permissions or clone the repo somewhere you own")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -267,7 +293,7 @@ def main(argv: list[str] | None = None) -> int:
     elif provider == "litellm":
         check_image(c, api_blocked or ("--no-image" if args.no_image else None))
 
-    check_out_dir(c)
+    check_data_dir(c)
 
     print()
     if c.failed:

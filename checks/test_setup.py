@@ -157,3 +157,22 @@ def test_setup_check_does_not_ask_for_langgraph():
     from pathlib import Path
 
     assert '"langgraph"' not in Path(check_setup.__file__).read_text(encoding="utf-8")
+
+
+def test_setup_check_asks_for_every_package_of_this_branch():
+    """The package check follows pyproject.toml, so a package this branch needs cannot be missing from it."""
+    from launchkit.check_setup import required_packages
+
+    names = required_packages()
+    assert {"agno", "lancedb", "sentence-transformers"} <= set(names)
+    assert "langgraph" not in names
+
+
+def test_setup_check_writes_to_data_not_the_openers_out_folder():
+    """Session 2 writes to data/, so that is the folder the setup check tests; it no longer needs the opener's code."""
+    from pathlib import Path
+
+    import launchkit.check_setup as check_setup
+
+    source = Path(check_setup.__file__).read_text(encoding="utf-8")
+    assert check_setup.DATA.name == "data" and "launchkit.opener" not in source
