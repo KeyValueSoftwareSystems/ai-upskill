@@ -41,7 +41,7 @@ The opener's code is on this branch too (`approach_llm/`, `approach_graph/`, `la
 | `uv run launchkit ui` | The chat page: sign in as a person, chat with the main agent, live trace, context view, the files it made, Allow and Deny before a write |
 | `uv run launchkit main harbor "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season?"` | Talk to the main agent: trace, reply, how much its view holds, how long it took |
 | `uv run launchkit check orch1` | Prove a step with fake models. `check orch` is the gate for both steps |
-| `uv run launchkit explain` | What the model saw on the last run, in what order, at what cost |
+| `uv run launchkit explain` | What the model saw on the last Session 1 poster run, in what order, at what cost |
 | `uv run launchkit check 1` | Prove step 1 with fake models. `check all` is the CP1.1 gate |
 | `uv run launchkit run harbor "..." --model fake:echo` | Force a fake model for one run |
 | `uv run launchkit run harbor "..." --facts workspaces/harbor/brand-book.md` | Load a file into the facts section |
@@ -68,7 +68,7 @@ Where retrieval plugs in:
 
 - `launchkit/agents/copy_and_picture_agents.py` · `build_copy_agent`: add your `get_brand_details` tool to `tools=[...]` on the copy agent. The copy agent already carries the leash hook, so every tool call goes through the trace with its result size in tokens and counts against the step cap.
 - `launchkit/agents/prompt.py` · `ContextBuilder`: `ctx.set("facts", text)` fills the facts section. Budgets live in `launchkit/settings.py` (`budgets`). A trimmed section says so inside the prompt.
-- `uv run launchkit explain` prints what the model saw on the last run, section by section, with tool results as a row.
+- `uv run launchkit explain` prints what the model saw on the last Session 1 poster run, section by section, with tool results as a row. Session 2 runs show their trace on the chat page and in the terminal instead.
 - `workspaces/harbor/brand-book.md` and `facts.md` hold Harbor's text with clear headings; Ember's are in `workspaces/ember/`.
 - `launchkit/brands/request.py`: the workspace id is already resolved from the trusted request. Your tool takes no workspace argument.
 
