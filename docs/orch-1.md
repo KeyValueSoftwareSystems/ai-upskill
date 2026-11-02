@@ -78,7 +78,7 @@ A skill adds ability inside one view. It changes what the agent knows, not what 
 
 ## See it
 
-The trainer runs the same ask on the real model: leave **Model** empty. On 30 Oct, gpt-4.1-mini with live web search, 2 runs: about 10,300 tokens of pages in view, 13 to 21 seconds. The five searches run one after another.
+The trainer runs the same ask on the real model: leave **Model** empty. On gpt-4.1-mini with live web search, expect about 10,300 tokens of pages in view and 13 to 21 seconds. The five searches run one after another.
 
 ## Stuck?
 

@@ -101,7 +101,7 @@ It is not free. Count the model calls in the trace: six instead of one. Each res
 
 ## See it
 
-The trainer runs the same ask on the real model: leave **Model** empty. On 30 Oct, gpt-4.1-mini with live web search, 2 runs: the main agent's view held 1,163 to 1,333 tokens instead of about 10,300, and the next turn carried 1,522 tokens of history. 17 to 22 seconds: the parallel run is only as fast as its slowest research agent.
+The trainer runs the same ask on the real model: leave **Model** empty. On gpt-4.1-mini with live web search, expect the main agent's view to hold about 1,100 to 1,300 tokens instead of about 10,300, and the next turn to carry about 1,500 tokens of history. Expect 17 to 22 seconds: the parallel run is only as fast as its slowest research agent.
 
 ## Stuck?
 
