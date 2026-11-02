@@ -21,7 +21,7 @@ LAUNCHKIT_SEARCH_DELAY=0.4 uv run launchkit main harbor "How are Hydro Flask, St
 ```
 
 ```
-main agent's view  9858 tokens of tool results this turn · 0 tokens of history carried in · took 2.1 s
+main agent's view  9915 tokens of tool results this turn · 0 tokens of history carried in · took 2.1 s
 ```
 
 ## Prompt card, for your coding agent
@@ -74,21 +74,21 @@ Then the gate for the whole part: `uv run launchkit check orch`.
 On the chat page, started with `LAUNCHKIT_SEARCH_DELAY=0.4` as in step 1: press **New conversation**, keep `fake:brief` in **Model** and send the same ask. The Trace tab shows:
 
 ```
-  tool      run_skill("competitor_research") → # competitor_research Pick me when: the job is to find out … · 223 tokens back
+  tool      run_skill("competitor_research") → # competitor_research Pick me when: the job is to find out … · 247 tokens back
   tool      search_web("How is Hydro Flask launching bottles this season? Message,…) → # Role Model and Hydro Flask Launch Limited Edition Drinkwa… · 1977 tokens back
-  model     research phase · fake:brief · sent 2179 tokens, got back 23
+  model     research phase · fake:brief · sent 2179 tokens, got back 12
   ...four more research agents, at the same time...
-  tool      research_many(['How is Hydro Flask launching bottles this season? Message…) → ['Hydro Flask: launch line, channels and what to avoid copy… · 121 tokens back
+  tool      research_many(['How is Hydro Flask launching bottles this season? Message…) → ['Hydro Flask: read variety.com and prnewswire.com.', 'Stan… · 67 tokens back
 ```
 
-The Context tab: 514 tokens of tool results, 0 of history carried in, 0.4 s.
+The Context tab: 540 tokens of tool results, 0 of history carried in, 0.4 s.
 
-And Maya's next ask in the same conversation, "Write one headline for the Tidal poster.": 0 tokens of tool results, 660 tokens of history carried in.
+And Maya's next ask in the same conversation, "Write one headline for the Tidal poster.": 0 tokens of tool results, 632 tokens of history carried in.
 
 | | Step 1 | Step 2 |
 | --- | --- | --- |
 | Pages in the main agent's view | about 9,900 tokens | none; five reports |
-| Carried into the next turn | 10,005 tokens | 660 tokens |
+| Carried into the next turn | 10,008 tokens | 632 tokens |
 | Five searches | one after another, 2.1 s | at the same time, 0.5 s |
 
 ## Why it matters

@@ -19,7 +19,7 @@ uv run launchkit main harbor "How are Hydro Flask, Stanley, Yeti, Owala and Klea
 ```
 
 ```
-  tool      find_tool("How are Hydro Flask, Stanley, Yeti, Owala and Klean Kantee…) → skill market_research: finding out what people are talking … · 38 tokens back
+  tool      find_tool("How are Hydro Flask, Stanley, Yeti, Owala and Klean Kantee…) → skill market_research: finding out what people are talking … · 95 tokens back
 
 reply
 I have no skill for competitor research yet.
@@ -62,13 +62,13 @@ The same ask after the build, on the chat page, with the pages as slow as a real
   ...three more, one after another...
 ```
 
-The Context tab: 9,858 tokens of tool results, 0 of history carried in, 2.1 s.
+The Context tab: 9,915 tokens of tool results, 0 of history carried in, 2.1 s.
 
-Then Maya's next ask, in the same conversation: "Write one headline for the Tidal poster." The Context tab: 0 tokens of tool results, 10,005 tokens of history carried in.
+Then Maya's next ask, in the same conversation: "Write one headline for the Tidal poster." The Context tab: 0 tokens of tool results, 10,008 tokens of history carried in.
 
 In the terminal, `uv run launchkit main harbor "..." --model fake:brief --session cp1` does the same; `--session` keeps the conversation.
 
-Five paragraphs came back, and every page the agent read came with them. Ten pages, about 9,900 tokens, sit in the main agent's view. A headline needs none of them, yet they ride along on every turn that follows. And the five searches ran one after another.
+An answer for each of the five came back, and every page the agent read came with them. Ten pages, about 9,900 tokens, sit in the main agent's view. A headline needs none of them, yet they ride along on every turn that follows. And the five searches ran one after another.
 
 ## Why it matters
 

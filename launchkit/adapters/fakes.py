@@ -375,14 +375,16 @@ def competitors_in(text: str) -> list[str]:
     return [name for name in COMPETITORS if name.lower() in text.lower()]
 
 
-def research_report(name: str) -> str:
-    return f"{name}: launch line, channels and what to avoid copying, in two lines from two saved pages."
+def research_report(name: str, pages: str) -> str:
+    """What the fake can honestly say about a competitor: which sites it read. Page text, titles included, stays out."""
+    sites = re.findall(r"^Address: https?://(?:www\.)?([^/\s]+)", pages, re.M)
+    return f"{name}: read {' and '.join(sites)}." if sites else f"{name}: no pages found."
 
 
 class BriefModel(FakeModel):
     """Plays both agents in the competitor job. As the main agent it finds the competitor_research skill, loads it and does
     what the skill names: search_web once per competitor, one after another, or research_many once.
-    As the research subagent it searches once and replies with a two-line report. It keeps every view it was shown in seen."""
+    As the research subagent it searches once and replies with a short report naming the sites it read. It keeps every view it was shown in seen."""
 
     def __init__(self):
         super().__init__("brief")
@@ -400,7 +402,8 @@ class BriefModel(FakeModel):
         brief = last_user_text(messages)
         if not has_tool_result(messages):
             return tool_call_response("search_web", {"query": brief}, "search_1")
-        return text_response(research_report(next(iter(competitors_in(brief)), "The competitor")), messages)
+        pages = [str(m.content or "") for m in messages if getattr(m, "role", None) == "tool"][-1]
+        return text_response(research_report(next(iter(competitors_in(brief)), "The competitor"), pages), messages)
 
     def main(self, messages):
         asked = last_user_text(messages)
@@ -420,4 +423,7 @@ class BriefModel(FakeModel):
             return tool_call_response("run_tool", {"name": "research_many", "inputs": {"briefs": briefs}}, "many_1")
         if "research_many" not in skill and "search_web" in skill and done < len(wanted):
             return tool_call_response("run_tool", {"name": "search_web", "inputs": {"query": f"{wanted[done]} bottle launch"}}, f"search_{done + 1}")
-        return text_response("\n".join(research_report(name) for name in wanted), messages)
+        if "research_many" in skill:
+            return text_response("\n".join(json.loads(results[2])), messages)
+        searches = results[2:] + [""] * len(wanted)
+        return text_response("\n".join(research_report(name, pages) for name, pages in zip(wanted, searches)), messages)
