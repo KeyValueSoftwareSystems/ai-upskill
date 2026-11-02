@@ -15,7 +15,7 @@ from agno.agent import Agent
 from agno.tools.function import Function
 
 from launchkit.adapters.image_providers import FromPicture, make_images
-from launchkit.adapters.models import model_name, resolve_model
+from launchkit.adapters.models import check_reachable, model_name, resolve_model
 from launchkit.agents.prompt import ContextBuilder
 from launchkit.brands.request import Request, resolve_workspace_id
 from launchkit.guardrails.limits import make_leash
@@ -100,6 +100,7 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     wid = resolve_workspace_id(req, settings)
     ws = load_workspace(wid, settings, trace)
     model = model if model is not None else resolve_model(settings, trace)
+    check_reachable(model)
     pictures = Pictures(settings, wid, req.user_id, req.session_id)
     for picture in attach:
         trace.note(f"attached {Path(picture).name} to this conversation")
