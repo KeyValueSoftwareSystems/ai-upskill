@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from pathlib import Path
 
 from PIL import Image
@@ -311,3 +312,20 @@ def test_the_picture_request_names_colours_as_colours():
     assert "as colours only, not materials or objects: navy #1F3A5F, sea glass #A8D5BA" in asked
     assert picture_prompt("a bottle", {}).startswith("a bottle. The product is plain")
 
+
+def test_an_unreachable_model_proxy_stops_at_once(settings, monkeypatch):
+    """With the VPN off, KeyValue's proxy does not answer. The run stops in seconds and says why, not after minutes."""
+    import time
+
+    import pytest
+    from agno.exceptions import ModelProviderError
+
+    from launchkit.adapters.models import check_reachable, resolve_model
+
+    monkeypatch.setenv("LITELLM_API_KEY", "test")
+    monkeypatch.setenv("LITELLM_BASE_URL", "http://127.0.0.1:9/v1")
+    model = resolve_model(replace(settings, model="openai:gpt-4.1-mini"), Trace())
+    started = time.time()
+    with pytest.raises(ModelProviderError, match="Is the VPN on"):
+        check_reachable(model)
+    assert time.time() - started < 5
