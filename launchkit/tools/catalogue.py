@@ -71,7 +71,7 @@ class Catalogue:
 
     def agent_tools(self) -> list[Callable]:
         if self.lookup:
-            return [self.make_find_tool(), self.make_run_skill(), self.make_run_tool()]
+            return [self.make_find_tool(), self.make_run_skill(), forgiving(self.make_run_tool(), self.trace)]
         tools = [e.fn for e in self.entries.values()]
         return tools + [self.make_run_skill()] if self.skills else tools
 
@@ -133,3 +133,22 @@ def run_tool_todo(name: str, inputs: dict) -> str:
 
 
 run_tool_todo.todo = True
+
+
+def forgiving(run_tool, trace: Trace):
+    """Models sometimes flatten the call to run_tool(width=1080, height=1080), with or without the name. A flat call
+    with a name still runs, its extra fields taken as the inputs. A call with no name gets a plain answer, and the
+    Trace tab shows it, so the model can fix the call and nothing fails out of sight."""
+    if getattr(run_tool, "todo", False):
+        return run_tool
+
+    def door(name: str = "", inputs: dict | None = None, **flat) -> str:
+        if not name:
+            reason = 'run_tool needs the tool\'s name first, like run_tool("crop", {"width": 1080, "height": 1080}).'
+            trace.refused("run_tool", reason)
+            return reason
+        return run_tool(name, {**(inputs or {}), **flat})
+
+    door.__name__ = "run_tool"
+    door.__doc__ = run_tool.__doc__
+    return door

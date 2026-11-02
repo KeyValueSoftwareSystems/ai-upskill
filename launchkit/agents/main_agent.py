@@ -4,6 +4,7 @@ Session 1's harness ran a fixed order, copy agent then picture agent. Here one a
 leash, same sessions. It holds get_brand_details and generate_image, and every tool the room builds after them.
 """
 
+import inspect
 import re
 import time
 from pathlib import Path
@@ -191,6 +192,13 @@ def loose(tools: list) -> list[Function]:
     for fn in tools:
         f = Function.from_callable(fn)
         f.strict = False
+        params = inspect.signature(fn).parameters.values()
+        if any(p.kind is p.VAR_KEYWORD for p in params):
+            # A tool that takes extra fields checks its own inputs: Agno keeps the schema as written and skips its check.
+            named = [p.name for p in params if p.kind is not p.VAR_KEYWORD]
+            f.parameters["properties"] = {k: v for k, v in f.parameters["properties"].items() if k in named}
+            f.parameters["required"] = named
+            f.skip_entrypoint_processing = True
         out.append(f)
     return out
 

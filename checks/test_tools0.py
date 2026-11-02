@@ -231,3 +231,27 @@ def test_a_tool_run_through_run_tool_shows_once_on_the_trace():
     leash("run_tool", run_tool, {"name": "crop", "inputs": {}})
     leash("run_tool", run_tool, {"name": "shrink", "inputs": {}})
     assert [e.detail["name"] for e in trace.tool_calls()] == ["crop", "run_tool"]
+
+
+def test_a_flat_run_tool_call_still_runs_and_a_nameless_one_shows_on_the_trace():
+    """Models sometimes flatten run_tool's inputs, or drop the name. The door takes the extra fields as the inputs,
+    and a call with no name gets a plain answer that the Trace tab shows."""
+    from agno.tools.function import FunctionCall
+
+    from launchkit.harness.catalogue import forgiving
+    from launchkit.harness.main import loose
+
+    trace, calls = Trace(), []
+
+    def run_tool(name: str, inputs: dict) -> str:
+        """Run a tool from the catalogue by name, with its inputs as an object."""
+        calls.append((name, inputs))
+        return "ok"
+
+    door = loose([forgiving(run_tool, trace)])[0]
+    door.process_entrypoint(strict=False)
+    assert door.name == "run_tool" and door.parameters["required"] == ["name", "inputs"]
+    for arguments in ({"name": "crop", "inputs": {"width": 1080}}, {"name": "crop", "width": 1080}, {"width": 1080, "height": 1080}):
+        FunctionCall(function=door, arguments=arguments).execute()
+    assert calls == [("crop", {"width": 1080}), ("crop", {"width": 1080})]
+    assert [e.kind for e in trace.events] == ["refused"]
