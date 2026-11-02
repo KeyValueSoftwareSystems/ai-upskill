@@ -1,5 +1,8 @@
 import os
+import socket
+from urllib.parse import urlparse
 
+from agno.exceptions import ModelProviderError
 from agno.models.openai import OpenAIChat
 
 from launchkit.adapters.fakes import EchoModel, EndlessModel, GoodModel, LookupModel, MalformedModel, ProfileModel
@@ -20,6 +23,15 @@ def proxy() -> tuple[str, str] | None:
     return (key, url) if key and url else None
 
 
+def reach(url: str, seconds: float = 3.0):
+    """KeyValue's proxy is reached through the VPN. If it does not answer, say so now; a model call would wait minutes."""
+    found = urlparse(url)
+    try:
+        socket.create_connection((found.hostname, found.port or (443 if found.scheme == "https" else 80)), timeout=seconds).close()
+    except OSError:
+        raise ModelProviderError(f"Cannot reach KeyValue's model proxy ({found.hostname}). Is the VPN on?", status_code=503) from None
+
+
 class ProxyChat(OpenAIChat):
     """Through the proxy a 401 is usually its upstream key having a bad moment, not ours, so it is worth another try."""
 
@@ -33,6 +45,13 @@ class ProxyChat(OpenAIChat):
         if getattr(self, "on_retry", None):
             self.on_retry(f"model call failed ({getattr(self, 'last_error', 'no answer')}), trying again: {attempt + 2} of {self.retries + 1}")
         return super()._get_retry_delay(attempt)
+
+
+
+def check_reachable(model):
+    """Called when a run starts: a proxy model whose proxy does not answer stops the run here."""
+    if isinstance(model, ProxyChat):
+        reach(str(model.base_url))
 
 
 def resolve_model(settings, trace: Trace):

@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from launchkit.adapters.image_providers import FromPicture, make_images
-from launchkit.adapters.models import model_name, resolve_model
+from launchkit.adapters.models import check_reachable, model_name, resolve_model
 from launchkit.adapters.pricing import cost_usd
 from agno.exceptions import ModelProviderError
 from agno.run.base import RunStatus
@@ -48,6 +48,7 @@ def run_request(
     if facts:
         ctx.set("facts", facts)
     model = model if model is not None else resolve_model(settings, trace)
+    check_reachable(model)
     images = images if images is not None else make_images(settings)
     result = Result(trace=trace)
 
