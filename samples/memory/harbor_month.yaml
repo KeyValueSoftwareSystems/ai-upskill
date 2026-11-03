@@ -1,0 +1,32 @@
+# A plausible month of rows at Harbor, for memory step 3: thirty things earlier conversations kept.
+# Each row: the fact, its kind, its topic, who said it, and whether it is theirs or everyone's at Harbor.
+- {text: "Harbor uses its own photography for launches, never AI-generated pictures.", kind: preference, topic: photography, author: maya, scope: workspace}
+- {text: "The Tidal shoot photos are in the shared drive under Shoots/2026-09.", kind: domain fact, topic: photography, author: maya, scope: workspace}
+- {text: "Shoot photos are taken at dawn on lakeshores; the brand avoids city backdrops.", kind: domain fact, topic: photography, author: sam, scope: workspace}
+- {text: "Maya reviews the square feed format first, then the rest.", kind: workflow, topic: review order, author: maya, scope: user}
+- {text: "Sam works picture-first: picture approved before any copy.", kind: workflow, topic: review order, author: sam, scope: user}
+- {text: "Maya likes headlines of four words or fewer.", kind: preference, topic: headlines, author: maya, scope: user}
+- {text: "Headlines lead with a number when the product has one, e.g. 24 hours.", kind: preference, topic: headlines, author: maya, scope: workspace}
+- {text: "Sam prefers headlines as questions for social posts.", kind: preference, topic: headlines, author: sam, scope: user}
+- {text: "Launch posts go out on Tuesdays at 8am local time.", kind: workflow, topic: scheduling, author: maya, scope: workspace}
+- {text: "Nothing goes live in the last week of December.", kind: workflow, topic: scheduling, author: maya, scope: workspace}
+- {text: "Stories are posted two days after the feed post, never the same day.", kind: workflow, topic: scheduling, author: sam, scope: workspace}
+- {text: "Voice-overs use the calm female voice, never the upbeat one.", kind: preference, topic: voice-over, author: maya, scope: workspace}
+- {text: "Voice-over scripts stay under 20 seconds.", kind: preference, topic: voice-over, author: maya, scope: workspace}
+- {text: "The display size (300x250) is only for retail partners, not Harbor's own channels.", kind: domain fact, topic: placements, author: maya, scope: workspace}
+- {text: "The web banner is only used on the homepage hero.", kind: domain fact, topic: placements, author: maya, scope: workspace}
+- {text: "Maya wants the story size checked on a phone before it goes on the card.", kind: workflow, topic: placements, author: maya, scope: user}
+- {text: "The board's Ready for review status means Maya's manager looks at it next.", kind: domain fact, topic: board, author: maya, scope: workspace}
+- {text: "Old files stay on the card until the launch is over.", kind: workflow, topic: board, author: maya, scope: workspace}
+- {text: "Sam names files with the size first, e.g. 1080x1350-tidal.png.", kind: preference, topic: board, author: sam, scope: user}
+- {text: "Competitor research covers Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen.", kind: domain fact, topic: competitors, author: maya, scope: workspace}
+- {text: "Never copy Stanley's colour-drop countdowns.", kind: correction, topic: competitors, author: maya, scope: workspace}
+- {text: "Owala's launches are watched most closely: same price point.", kind: domain fact, topic: competitors, author: sam, scope: workspace}
+- {text: "Trend research is weekly; results older than a week are stale.", kind: workflow, topic: research, author: maya, scope: workspace}
+- {text: "Maya trusts hiking forums over listicles for trends.", kind: preference, topic: research, author: maya, scope: user}
+- {text: "Copy says 'bottle', never 'flask', in headlines.", kind: correction, topic: wording, author: maya, scope: workspace}
+- {text: "Say 'cold for 24 hours', not 'ice cold all day'.", kind: correction, topic: wording, author: maya, scope: workspace}
+- {text: "Sam spells colour the British way.", kind: correction, topic: wording, author: sam, scope: workspace}
+- {text: "Maya is out on Fridays; approvals wait until Monday.", kind: domain fact, topic: availability, author: maya, scope: workspace}
+- {text: "Sam's internship ends in March.", kind: domain fact, topic: availability, author: sam, scope: user}
+- {text: "Maya prefers the navy background when a size needs bars.", kind: preference, topic: colours, author: maya, scope: user}

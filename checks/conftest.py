@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from launchkit.adapters.fakes import BriefModel, EchoModel, EndlessModel, GoodModel, LookupModel, MalformedModel
+from launchkit.adapters.fakes import BriefModel, EchoModel, EndlessModel, GoodModel, LookupModel, MalformedModel, MemoryModel
 from launchkit.adapters.image_providers import FakeImages
 from launchkit.brands.request import Request
 from launchkit.settings import ROOT, settings as base_settings
@@ -79,6 +79,11 @@ def endless():
 @pytest.fixture
 def brief():
     return BriefModel()
+
+
+@pytest.fixture
+def memory():
+    return MemoryModel()
 
 
 @pytest.fixture

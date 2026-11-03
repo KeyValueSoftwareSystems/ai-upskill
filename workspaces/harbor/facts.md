@@ -5,3 +5,4 @@ Lid: leak-proof, hand-wash only. Body: dishwasher-safe.
 Warranty: 5 years.
 Colours: navy, sea glass, sand.
 Plastic-free body.
+Next launch: Flask Trail 750 in the Breeze colourway, a deep blue. Launches next month, same placements as Tidal.

@@ -1,0 +1,7 @@
+# Where each row the memory store kept really belonged: one entry per row, with the reason.
+# belongs is one of: nowhere, the conversation, session state, the board, the brand files, the trace, memory.
+# Example entry:
+# - kept: "Maya likes short headlines"
+#   belongs: memory
+#   why: she says it at every launch, and it changes what the agent does next time.
+[]

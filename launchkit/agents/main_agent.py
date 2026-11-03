@@ -19,14 +19,17 @@ from agno.tools.function import Function
 from launchkit.adapters.fakes import FakeModel
 from launchkit.adapters.image_providers import FromPicture, make_images
 from launchkit.adapters.models import check_reachable, model_name, resolve_model
-from launchkit.agents.prompt import ContextBuilder
+from launchkit.agents.prompt import ContextBuilder, approx_tokens
 from launchkit.brands.request import Request, resolve_workspace_id
 from launchkit.guardrails.limits import make_leash
 from launchkit.mcp.client import closes_its_mcp_links
 from launchkit.mcp.servers import server_entries
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.chat_history import session_db
-from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
+from launchkit.memory.compaction import conversation_text
+from launchkit.memory.index import memory_index, recall
+from launchkit.memory.long_term import memory_db, memories_for, memory_text
+from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, built, load_skills
 from launchkit.tools.check_copy import make_check_copy
 from launchkit.tools.describe_image import describe_image_entry
 from launchkit.tools.get_brand_details import make_get_brand_details
@@ -79,6 +82,7 @@ class MainResult:
     seconds: float = 0.0
     view_tokens: int = 0
     history_tokens: int = 0
+    memory_tokens: int = 0
     kept: list[Path] = field(default_factory=list)
 
 
@@ -87,8 +91,11 @@ def placements_text(ws) -> str:
     return "This brand's placements (every size): " + ", ".join(sizes) + "." if sizes else ""
 
 
-def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue, pictures: Pictures | None = None) -> Agent:
+def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue, pictures: Pictures | None = None,
+                     db=None, memory: str = "", conversation: str = "") -> Agent:
     ctx.set("rules", f"{ws.soul}\n\n{ws.agents}\n\n{placements_text(ws)}")
+    ctx.set("memory", memory)
+    ctx.set("conversation", conversation)
     warnings = " ".join(e.detail["text"] for e in trace.events if e.kind == "warning")
     ctx.set("facts", f"Today is {date.today():%-d %B %Y}. {warnings} {pictures.describe() if pictures else ''}".strip())
     ctx.set("task", MAIN_TASK if catalogue.lookup else "\n\n".join(part for part in (DIRECT_TASK, catalogue.skills_text()) if part))
@@ -99,7 +106,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
         model=model,
         system_message=ctx.render(),
         output_schema=MainTurn,
-        db=session_db(settings),
+        db=db if db is not None else session_db(settings),
         add_history_to_context=True,
         num_history_runs=5,
         tools=loose(catalogue.agent_tools()),
@@ -108,7 +115,8 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
     )
 
 
-def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya", pictures: Pictures | None = None) -> Catalogue:
+def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya", pictures: Pictures | None = None,
+                    memories: list | None = None) -> Catalogue:
     ws = ws or load_workspace("harbor", settings, trace)
     desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None)
     entries: list[Entry] = [
@@ -121,6 +129,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
         text_to_speech_entry(settings, model),
         *(board.entries() if board else server_entries(settings, trace, user)),
         *make_research_entries(model, settings, trace),
+        *recall_entries(memories or []),
     ]
     catalogue = Catalogue(entries, load_skills(), trace, approve)
     catalogue.leash = make_leash(replace(settings.limits, step_cap=10_000), trace)
@@ -142,10 +151,13 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     for picture in attach:
         trace.note(f"attached {Path(picture).name} to this conversation")
         pictures.attach(Path(picture))
-    catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures)
-    agent = build_main_agent(ws, ContextBuilder(settings.budgets), model, settings, trace, catalogue, pictures)
-    started = time.perf_counter()
+    db = memory_db(settings, wid, req.user_id, trace, approve)
+    rows = memories_for(db, wid, req.user_id)
+    memory = memory_index(rows) if built(memory_index) else memory_text(rows)
     session = f"{wid}:{req.user_id}:{req.session_id}:main"
+    catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures, rows)
+    agent = build_main_agent(ws, ContextBuilder(settings.budgets), model, settings, trace, catalogue, pictures, db, memory, conversation_text(db, session))
+    started = time.perf_counter()
     run = agent.run(req.text, session_id=session, user_id=req.user_id)
     raise_if_failed(run)
     trace.model("main", model_name(model), run.metrics)
@@ -162,7 +174,21 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     result.seconds = time.perf_counter() - started
     result.view_tokens = tool_result_size(run)[0]
     result.history_tokens = history_size(run)[0]
+    result.memory_tokens = approx_tokens(memory)
     return result
+
+
+def recall_entries(rows: list) -> list[Entry]:
+    """The lookup behind the Memory index: once memory step 3 builds recall, the agent reads one topic's full facts."""
+    if not built(recall) or not rows:
+        return []
+
+    def recall_topic(topic: str) -> str:
+        """Read every fact kept under one topic of the Memory index, in full."""
+        return recall(rows, topic)
+
+    recall_topic.__name__ = "recall"
+    return [Entry("recall", "read the full facts kept under one topic named in the Memory index", "read", recall_topic)]
 
 
 def main_turn(content) -> MainTurn:

@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 from agno.exceptions import ModelProviderError
 from agno.models.openai import OpenAIChat
 
-from launchkit.adapters.fakes import BriefModel, EchoModel, EndlessModel, GoodModel, LookupModel, MalformedModel, ProfileModel
+from launchkit.adapters.fakes import BriefModel, EchoModel, EndlessModel, GoodModel, LookupModel, MalformedModel, MemoryModel, ProfileModel
 from launchkit.trace import Trace
 
 PROVIDER_KEYS = {
@@ -15,7 +15,7 @@ PROVIDER_KEYS = {
     "groq": "GROQ_API_KEY",
 }
 
-FAKES = {"echo": EchoModel, "malformed": MalformedModel, "endless": EndlessModel, "good": GoodModel, "lookup": LookupModel, "profile": ProfileModel, "brief": BriefModel}
+FAKES = {"echo": EchoModel, "malformed": MalformedModel, "endless": EndlessModel, "good": GoodModel, "lookup": LookupModel, "profile": ProfileModel, "brief": BriefModel, "memory": MemoryModel}
 
 
 def proxy() -> tuple[str, str] | None:

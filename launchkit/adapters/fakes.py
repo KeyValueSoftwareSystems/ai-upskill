@@ -427,3 +427,103 @@ class BriefModel(FakeModel):
             return text_response("\n".join(json.loads(results[2])), messages)
         searches = results[2:] + [""] * len(wanted)
         return text_response("\n".join(research_report(name, pages) for name, pages in zip(wanted, searches)), messages)
+
+
+# What a memory step keeps from Maya's two Tidal messages: the words that set it off, the row, its kind and its topic.
+# Five of the seven kinds are not kinds of memory at all; the room sorts them in memory step 1.
+CANDIDATES = [
+    (("thank",), "Maya says thanks at the end of a job.", "thanks", "manners"),
+    (("wide",), "Maya prefers wide formats.", "one-off", "formats"),
+    (("attach",), "Maya approved attaching files to the Tidal card.", "permission", "board"),
+    (("mark it ready", "marked ready"), "The new sizes are on the Tidal card, marked ready.", "output", "board"),
+    (("unbreakable",), "Never call the bottle unbreakable.", "brand rule", "wording"),
+    (("lakeside",), "Maya picked the lakeside concept.", "one-off", "concepts"),
+    (("shoot photo", "not an ai", "own photography"), "Harbor uses its own photography for launches, never AI-generated pictures.", "preference", "photography"),
+]
+MEMORY_KINDS = ("preference", "domain fact", "workflow", "correction")
+BREEZE_SPEC = {
+    "headline": "Cold for 24 hours",
+    "subheadline": "Breeze, the new deep blue Flask Trail",
+    "body": "Fill it at dawn and drink it cold at dusk. Built for long days outside.",
+    "image_prompt": "A deep blue steel bottle on a misty lakeshore at dawn, navy water, sea glass and sand tones, soft light",
+    "format": "A3 portrait",
+}
+SUMMARY_ASK = "Provide the summary of the conversation."
+
+
+def candidates(text: str) -> list[tuple[str, str, str]]:
+    lowered = text.lower()
+    return [(row, kind, topic) for words, row, kind, topic in CANDIDATES if any(w in lowered for w in words)]
+
+
+def calls_made(messages: list, name: str) -> int:
+    """How many times this turn has already called a tool, counted from the model's own messages, not the history."""
+    return sum(1 for m in messages if getattr(m, "role", None) == "assistant" and not getattr(m, "from_history", False)
+               for call in (getattr(m, "tool_calls", None) or []) if call.get("function", {}).get("name") == name)
+
+
+class MemoryModel(FakeModel):
+    """Plays every part in the memory steps. As the main agent it runs Maya's launches and asks; with the memory tool it
+    hands each thing worth a look to update_user_memory; with an index in its prompt it recalls the photo topic. As the
+    memory manager (it holds add_memory) it keeps rows: with Agno's own instructions, everything that looks worth
+    keeping; with the room's rules, only rows of a kind the rules name. As the summariser it writes a summary that
+    leaves the lid rule out, as a summary can."""
+
+    def __init__(self):
+        super().__init__("memory")
+
+    def answer(self, messages, tools):
+        names = tool_names(tools)
+        if last_user_text(messages) == SUMMARY_ASK:
+            return text_response(json.dumps({"summary": "Maya is preparing the Breeze launch: trends, placements, the colourway, posting days, shoot moods and competitors.",
+                                             "topics": ["breeze", "launch"]}), messages)
+        if "add_memory" in names:
+            return self.manager(messages)
+        return self.main(messages, names)
+
+    def manager(self, messages):
+        system = system_text(messages)
+        capture = section(system, "<memories_to_capture>").split("</memories_to_capture>")[0] if "<memories_to_capture>" in system else system
+        said = " ".join(str(m.content or "") for m in messages if getattr(m, "role", None) == "user")
+        found = [c for c in candidates(said) if c[0] not in system]
+        if "Personal facts:" not in capture:
+            found = [c for c in found if c[1] in MEMORY_KINDS and c[1] in capture.lower()]
+        done = calls_made(messages, "add_memory")
+        if done < len(found):
+            row, kind, topic = found[done]
+            return tool_call_response("add_memory", {"memory": row, "topics": [kind, topic]}, f"add_{done + 1}")
+        return text_response("Memories updated." if found else "No memory updates needed.", messages)
+
+    def main(self, messages, names):
+        asked = last_user_text(messages)
+        lowered = asked.lower()
+        system = system_text(messages)
+        if "update_user_memory" in names:
+            pending = candidates(asked)
+            done = calls_made(messages, "update_user_memory")
+            if done < len(pending):
+                return tool_call_response("update_user_memory", {"task": f"Keep this about the marketer if it qualifies: {pending[done][0]}"}, f"memory_{done + 1}")
+        memory = section(system, "\n# Memory")
+        no_picture = "No pictures in this conversation yet" in system
+        launch = any(w in lowered for w in ("launch", "poster", "concepts", "size"))
+        topics = re.findall(r'recall\("([^"]+)"\)', memory)
+        photo_topic = next((t for t in topics if "photo" in t), None)
+        if launch and photo_topic and "run_tool" in names and calls_made(messages, "run_tool") == 0:
+            return tool_call_response("run_tool", {"name": "recall", "inputs": {"topic": photo_topic}}, "recall_1")
+        known = (memory + " " + " ".join(fresh_results(messages))).lower()
+        if launch and no_picture and "own photograph" in known:
+            return text_response("Harbor uses its own photography, so I have not made an AI picture. Attach the shoot photo and I will make the concepts and every size from it.", messages)
+        if launch and no_picture and "photo" in lowered:
+            return text_response("Attach the shoot photo and I will make the poster from it.", messages)
+        if launch:
+            return text_response(poster_turn(BREEZE_SPEC if "breeze" in lowered else HARBOR_SPEC), messages)
+        if "headline" in lowered:
+            everything = " ".join(str(m.content or "") for m in messages).lower()
+            if "never mention the lid" in everything:
+                return text_response("Cold from trail to train.\nDeep blue, all day cold.\nBreeze keeps the morning cold.", messages)
+            return text_response("A lid that never leaks.\nDeep blue, all day cold.\nBreeze: the leak-proof lid, made new.", messages)
+        if "attach" in lowered:
+            return text_response("There is nothing new to attach yet: no sizes were made in this conversation.", messages)
+        if "thank" in lowered:
+            return text_response("You're welcome, Maya.", messages)
+        return text_response("Noted." if asked.strip() else "Morning, Maya. Ready when you are.", messages)

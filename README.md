@@ -12,8 +12,10 @@ A marketing assistant built in steps across the session. A marketer asks for a p
 | `session-01-rag-step1` … `step4` | retrieval (CP1.2): one `get_brand_details` tool, rebuilt four times |
 | `session-02-tools` | tools, skills, lookup, MCP and permissions (Session 2, part 1): the main agent and Maya's "every size" |
 | `session-02-tools-step1` … `step5` | each step's answer |
-| **`session-02-orchestration`** (you are here) | agents and orchestration (Session 2, part 2): the main agent, the Tidal launch brief, saved competitor pages |
+| `session-02-orchestration` | agents and orchestration (Session 2, part 2): the main agent, the Tidal launch brief, saved competitor pages |
 | `session-02-orchestration-step1`, `step2` | each step's answer |
+| **`session-03-memory-step1`** (you are here) | agent memory (Session 3): Session 2's answer plus the memory setup; hands-on 1 starts here |
+| `session-03-memory-step2` … `step4` | the start of each later hands-on, with the one before it answered; `step4` is compaction |
 
 Each branch contains the previous branch's solution. Fall behind, check out the next one.
 
@@ -141,6 +143,30 @@ Cards: `docs/tools-1.md` … `docs/tools-5.md`.
 
 Cards: `docs/orch-1.md`, `docs/orch-2.md`.
 
+## Session 3: before you start
+
+Session 3 starts on the branch `session-03-memory-step1`. Nothing new to sign up for: the same `.env` as Session 2.
+
+```
+git checkout session-03-memory-step1
+uv sync
+uv run launchkit check mem0     # the setup: Breeze at Harbor, Sam signed in, the store, the seeded month
+uv run launchkit ui
+```
+
+Every branch here is the **start** of a hands-on. The one before it is already answered, so if you fall behind, check out the next branch. `fake:memory` is the scripted model for these steps; leave **Model** empty for the real one. To run a step again from nothing, `uv run launchkit forget harbor` empties Harbor's memory store (conversations stay). `uv run launchkit memories harbor --user maya` prints what the store keeps for a person, and `uv run launchkit store` lists its tables.
+
+## Session 3 · Agent memory, four hands-on steps
+
+| Hands-on (start on) | Slot | Check | Card |
+| --- | --- | --- | --- |
+| 1 · Switch it on, then read what it kept (`session-03-memory-step1`) | `agents/main_agent.py` `build_main_agent`, `memory/layer_map.yaml` | `check mem1` | `docs/memory-1.md` |
+| 2 · What earns a write, and whose it is (`session-03-memory-step2`) | `agents/main_agent.py` `build_main_agent`, `memory/write_rules.md`, `memory/write_gate.py` `ask_before_keeping` | `check mem2` | `docs/memory-2.md` |
+| 3 · Read it back cheaply (`session-03-memory-step3`) | `memory/index.py` `memory_index`, `recall` | `check mem3` | `docs/memory-3.md` |
+| 4 · One long conversation (`session-03-memory-step4`) | `agents/main_agent.py` `build_main_agent`, `memory/compaction.py` `must_keep` | `check mem4` | `docs/memory-4.md` |
+
+`uv run launchkit check mem` runs every memory check on the branch.
+
 ## Layout
 
 ```
@@ -170,9 +196,14 @@ launchkit/
   guardrails/                            what the harness stops or checks
     limits.py                            step cap and image budget
     poster_check.py                      checks the poster and asks the model to repair it
-  memory/                                what one conversation keeps
+  memory/                                what one conversation keeps, and what outlives it
     attached_pictures.py                 pictures attached or made in this conversation
     chat_history.py                      past turns of this conversation
+    long_term.py                         the memory table, its door (MemoryDb) and who may read which row
+    layer_map.yaml                       where each kept row really belonged (memory step 1)
+    write_gate.py                        Maya says yes, and whose it is, before a row is kept (memory step 2)
+    index.py                             the index in the prompt and the recall lookup (memory step 3)
+    compaction.py                        the summary and what must survive it (memory step 4)
   knowledge/                             brand facts the agent looks up (RAG)
     brand_index.py                       puts the brand books in the vector database (launchkit index)
     brand_library.py                     reads a brand's files
@@ -221,5 +252,6 @@ docs/         setup, glossary, one card per step
 | Stop, cap or check something | `guardrails/` |
 | Change what the model sees | `agents/prompt.py`, and the task text in `agents/main_agent.py` |
 | Hand work to a helper agent | `orchestration/` |
+| Keep something past the conversation, or change what is kept | `memory/`: the store and its door (`long_term.py`), the policy (`write_rules.md`, `write_gate.py`), the index (`index.py`), compaction (`compaction.py`) |
 | A new brand | `uv run launchkit onboard` writes `workspaces/<brand>/` (`brands/onboard.py`) |
 | New brand facts to look up | `workspaces/<brand>/facts.md`, then `uv run launchkit index` (`knowledge/`) |

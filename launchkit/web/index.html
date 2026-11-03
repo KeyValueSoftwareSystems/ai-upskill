@@ -306,7 +306,8 @@ function traceLine(ev){ const d = document.createElement("div"); d.className = e
 function showView(x){
   $("context").innerHTML = `<table><tr><th>main agent's view, this turn</th><th class="n">tokens</th></tr>
     <tr><td>tool results</td><td class="n">${x.tool_tokens}</td></tr>
-    <tr><td>history carried in</td><td class="n">${x.history_tokens}</td></tr></table>
+    <tr><td>history carried in</td><td class="n">${x.history_tokens}</td></tr>
+    <tr><td>memory in the prompt</td><td class="n">${x.memory_tokens ?? 0}</td></tr></table>
     <p>took ${x.seconds} s</p><p class="empty">Everything a tool returns stays in the main agent's view and rides along on later turns.</p>`;
 }
 function askHtml(ev){
@@ -358,7 +359,7 @@ $("form").onsubmit = async e => {
     if (ev.type === "trace" && ev.kind === "warning") { add("error", esc(ev.detail.text)); showNotion(); }
     if (ev.type === "result" || ev.type === "error") answered = true;
     if (ev.type === "ask") showAsk(ev);
-    if (ev.type === "result") { renderTurn({ role: "assistant", reply: ev.reply, files: ev.files }); showView(ev.view); }
+    if (ev.type === "result") { renderTurn({ role: "assistant", reply: ev.reply, files: ev.files }); showView({ ...ev.view, memory_tokens: ev.memory_tokens }); }
     if (ev.type === "error") sendAgain(add("error", `<b>${esc(ev.kind)}</b>\n${esc(ev.message)}`));
   };
   es.addEventListener("done", () => { es.close(); finish(); refreshSessions(); });

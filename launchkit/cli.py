@@ -68,8 +68,77 @@ def cmd_main(args):
     console.print(result.reply, highlight=False, markup=False)
     console.print(
         f"\n[bold]main agent's view[/bold]  {result.view_tokens} tokens of tool results this turn · "
-        f"{result.history_tokens} tokens of history carried in · took {result.seconds:.1f} s"
+        f"{result.history_tokens} tokens of history carried in · {result.memory_tokens} tokens of memory in the prompt · took {result.seconds:.1f} s"
     )
+    return 0
+
+
+def cmd_memories(args):
+    """What the store holds for one person, as Agno returns it: their own rows, then the workspace's."""
+    from launchkit.memory.long_term import everyone, memory_db, memories_for
+
+    db = memory_db(settings, args.workspace, args.user)
+    rows = memories_for(db, args.workspace, args.user)
+    if not rows:
+        console.print(f"No memories for {args.user} at {args.workspace}.")
+        return 0
+    for n, row in enumerate(rows, 1):
+        whose = f"everyone at {args.workspace}" if row.user_id == everyone(args.workspace) else row.user_id
+        console.print(f"{n:>2}. {row.memory}", highlight=False, markup=False)
+        console.print(f"    [dim]{whose} · topics: {', '.join(row.topics or []) or 'none'}[/dim]", highlight=False)
+    return 0
+
+
+def cmd_store(args):
+    """The one Db object Agno writes to: every table in data/sessions.db, and how many rows each holds."""
+    import sqlite3
+
+    path = settings.data_dir / "sessions.db"
+    if not path.exists():
+        console.print("No store yet: run the agent once.")
+        return 0
+    with sqlite3.connect(path) as con:
+        tables = [row[0] for row in con.execute("select name from sqlite_master where type = 'table' order by name")]
+        table = Table("table", "rows")
+        for name in tables:
+            table.add_row(name, str(con.execute(f'select count(*) from "{name}"').fetchone()[0]))
+    console.print(f"[bold]{path.relative_to(ROOT)}[/bold]")
+    console.print(table)
+    return 0
+
+
+def cmd_seed_memories(args):
+    from launchkit.memory.long_term import seed
+
+    console.print(f"Seeded {seed(settings, args.workspace)} rows into {args.workspace}'s memory store.")
+    return 0
+
+
+def cmd_forget(args):
+    """Empty the memory store for a workspace: everyone's rows and the workspace's. Sessions stay."""
+    from launchkit.memory.long_term import everyone, memory_db
+    from launchkit.brands.users import list_logins
+
+    db = memory_db(settings, args.workspace, "")
+    owners = [login["user_id"] for login in list_logins(settings) if login["workspace_id"] == args.workspace] + [everyone(args.workspace)]
+    ids = [row.memory_id for owner in owners for row in db.get_user_memories(user_id=owner) or []]
+    if ids:
+        db.delete_user_memories(ids)
+    console.print(f"Forgot {len(ids)} rows at {args.workspace}.")
+    return 0
+
+
+def cmd_replay(args):
+    """Send each line of a file as one message, in one conversation, the way Maya typed them over a week."""
+    from launchkit.agents.main_agent import run_main
+
+    current = replace(settings, model=args.model) if args.model else settings
+    lines = [line.strip() for line in Path(args.file).read_text(encoding="utf-8").splitlines() if line.strip() and not line.startswith("#")]
+    for n, text in enumerate(lines, 1):
+        req = Request(workspace_id=args.workspace, user_id=args.user, session_id=args.session, text=text)
+        result = run_main(req, settings=current, trace=Trace())
+        console.print(f"[bold]{n}. {args.user}[/bold] {text}", highlight=False)
+        console.print(f"   {result.reply.splitlines()[0] if result.reply else ''}", highlight=False, markup=False)
     return 0
 
 
@@ -209,6 +278,7 @@ def cmd_explain(args):
 RAG_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_rag*.py"))
 TOOLS_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_tools*.py"))
 ORCH_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_orch*.py"))
+MEM_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_mem*.py"))
 ORCH_GATE = ORCH_STEPS + [name for name in TOOLS_STEPS if name in ("tools3", "tools4", "tools5")]
 
 
@@ -220,8 +290,10 @@ def cmd_check(args):
         names = RAG_STEPS
     elif args.step == "orch":
         names = ORCH_GATE
+    elif args.step == "mem":
+        names = MEM_STEPS
     else:
-        names = [args.step if args.step in extra + RAG_STEPS + TOOLS_STEPS + ORCH_STEPS else f"step{args.step}"]
+        names = [args.step if args.step in extra + RAG_STEPS + TOOLS_STEPS + ORCH_STEPS + MEM_STEPS else f"step{args.step}"]
     targets = [ROOT / "checks" / f"test_{name}.py" for name in names]
     command = [sys.executable, "-m", "pytest", "-q", "--tb=no", "-rN", "-p", "no:cacheprovider", *map(str, targets)]
     proc = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
@@ -296,9 +368,33 @@ def main(argv=None):
     explain.add_argument("--show", action="store_true", help="print the system message as sent")
     explain.set_defaults(func=cmd_explain)
 
-    check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all; retrieval: check rag1.. or rag; orchestration: check orch0.. or orch")
-    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch"])
+    check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all; retrieval: check rag1.. or rag; orchestration: check orch0.. or orch; memory: check mem0.. or mem")
+    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch", *MEM_STEPS, "mem"])
     check.set_defaults(func=cmd_check)
+
+    memories = sub.add_parser("memories", help="print what the memory store keeps for one person: their rows and the workspace's")
+    memories.add_argument("workspace")
+    memories.add_argument("--user", default="maya")
+    memories.set_defaults(func=cmd_memories)
+
+    store = sub.add_parser("store", help="list the tables in the agent's store and how many rows each holds")
+    store.set_defaults(func=cmd_store)
+
+    seed = sub.add_parser("seed-memories", help="write a month of memory rows into a workspace's store (memory step 3)")
+    seed.add_argument("workspace")
+    seed.set_defaults(func=cmd_seed_memories)
+
+    forget = sub.add_parser("forget", help="empty a workspace's memory store, to run a step again from nothing")
+    forget.add_argument("workspace")
+    forget.set_defaults(func=cmd_forget)
+
+    replay = sub.add_parser("replay", help="send each line of a file as one message in one conversation (memory step 4)")
+    replay.add_argument("workspace")
+    replay.add_argument("file")
+    replay.add_argument("--user", default="maya")
+    replay.add_argument("--session", default="week")
+    replay.add_argument("--model", help="override LAUNCHKIT_MODEL, e.g. fake:memory")
+    replay.set_defaults(func=cmd_replay)
 
     ui = sub.add_parser("ui", help="start the chat page")
     ui.add_argument("--port", type=int, default=8000)
