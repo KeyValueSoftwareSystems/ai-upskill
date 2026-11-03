@@ -160,7 +160,7 @@ Every step has a card in `docs/` (`tools-1.md` to `tools-5.md`, `orch-1.md`, `or
 - **Build:** `run_tool` in `launchkit/tools/catalogue.py` (about 20 lines).
 - **Prove it:** `uv run launchkit check tools3`, 11 passed.
 - **Run it again (real model):**
-  - "Morning!" again in a new conversation: about 880 tokens.
+  - "Morning!" again in a new conversation: about 1,100 tokens (the three doors plus their rules).
   - The photo ask: new conversation, attach `samples/shoot/tidal-shoot.jpg`, send "Use our shoot photo for the story size." Expect `find_tool`, then `run_skill("ingest_image")`, then `describe_image`, `detect_focal_point` and `crop` through `run_tool`. No paid picture.
 - **Ready-made skills that arrive here:** `market_research` (live web search), `ingest_image` and `voice_over`. See [section 6](#6-ready-made-skills-to-show-when-there-is-time).
 - **Answer:** `session-02-tools-step3`.
@@ -176,9 +176,9 @@ Every step has a card in `docs/` (`tools-1.md` to `tools-5.md`, `orch-1.md`, `or
 - **Build:** `connect(server)` in `launchkit/mcp/client.py`.
 - **Prove it:** `uv run launchkit check tools4`, 10 passed.
 - **Run it again (real model, your Notion), in one conversation:**
-  1. "Take the Tidal launch brief from our Notion." `find_tool` lists `post_to_board` first; the agent reads the card.
-  2. Attach the poster, then "Love the poster. Now all the sizes, please."
-  3. "Put the new sizes on the Tidal launch brief in Notion, and move it to Ready for review."
+  1. Attach the poster, then "Love the poster. Now all the sizes, please."
+  2. "Put the new sizes on the Tidal launch brief in Notion, and move it to Ready for review." `find_tool` lists `post_to_board` first; its steps read the brief, then write.
+- **Make the sizes before you open the brief.** With the brief in the conversation first, the model can read "all the sizes" as the brief's hand-back task and write file names it never made onto the card.
 - **Then open the card in Notion.** The Files line lists the new file names, and Status says Ready for review. Notion's MCP tools here cannot upload images, so the card lists file names; a real team would attach the images. Point out that an agent can say "done" when Notion took the call but changed nothing: always check.
 - **Offline backup:** `LAUNCHKIT_BOARD=local` in `.env` uses the small board server in the repo (`read_card`, `attach_files`, `update_status`, `remove_files`). The fakes and the checks always use it.
 - **Answer:** `session-02-tools-step4`.
@@ -227,7 +227,7 @@ On the fake model the reply only names the sites it read; the real model writes 
 - **Run it again (fake, `fake:brief`), new conversation:**
   - The Trace: `run_skill("competitor_research")`, then five `search_web` calls, one after another.
   - The Context tab: 9,915 tokens of tool results, 0 of history, 2.1 s.
-  - Then, in the same conversation, "Write one headline for the Tidal poster." The Context tab: 0 tokens of tool results, 10,008 tokens of history carried in.
+  - Then, in the same conversation, "Write one headline for the Tidal poster." The Context tab: 0 tokens of tool results, 10,020 tokens of history carried in.
 - **On the real model (trainer):** leave **Model** empty. Expect about 10,300 tokens of pages in view and 13 to 21 seconds.
 - **Answer:** `session-02-orchestration-step1`.
 
@@ -243,16 +243,16 @@ On the fake model the reply only names the sites it read; the real model writes 
 - **Prove it:** `uv run launchkit check orch2`, 6 passed. Then the gate for the part: `uv run launchkit check orch`, 39 passed.
 - **Run it again (fake, `fake:brief`), new conversation:**
   - The Trace: `run_skill`, five research agents searching at the same time, one `research_many` line with five short reports.
-  - The Context tab: 540 tokens of tool results, 0.4 s.
-  - The headline turn: 0 tokens of tool results, 632 tokens of history.
+  - The Context tab: 579 tokens of tool results, 0.4 s.
+  - The headline turn: 0 tokens of tool results, 683 tokens of history.
 - **On the real model (trainer):** expect the main view at about 1,100 to 1,300 tokens instead of about 10,300, and 17 to 22 seconds. The searches say this month and year, for example "Stanley bottle launch November 2026". Not faster than one agent: each research agent runs its own model calls, and the run is only as fast as the slowest.
 - **The headline turn on the real model** gets a plain one-line reply, no picture. The main agent answers with a full poster only when asked for a whole poster.
 - **Answer:** `session-02-orchestration-step2`.
 
 | | Step 1 | Step 2 |
 | --- | --- | --- |
-| Pages in the main agent's view (fake) | 9,915 tokens | none; five reports, 540 tokens |
-| Carried into the next turn (fake) | 10,008 tokens | 632 tokens |
+| Pages in the main agent's view (fake) | 9,915 tokens | none; five reports, 579 tokens |
+| Carried into the next turn (fake) | 10,020 tokens | 683 tokens |
 | Five searches (fake, 0.4 s each) | one after another, 2.1 s | at the same time, about 0.4 s |
 | Main view on the real model | about 10,300 tokens | about 1,100 to 1,300 tokens |
 
