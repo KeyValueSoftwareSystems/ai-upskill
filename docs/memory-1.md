@@ -51,7 +51,8 @@ Nothing in this list is new to build. It is here so nothing changes without you 
 ## The slot
 
 - `launchkit/agents/main_agent.py`, `build_main_agent`: one setting on the `Agent(...)` call.
-- `launchkit/memory/layer_map.yaml`: where each kept row really belonged. You write this by hand, not your coding agent.
+
+Then a sort, by hand, on a ready-made page: `docs/memory-sort.html`.
 
 ## Break it first
 
@@ -84,13 +85,19 @@ uv run launchkit store agno_memories               # the same rows, every column
 
 Expect several rows: the photo rule, plus things that were never memories. The exact rows depend on the model, so read the list as it came back.
 
-**Now sort them, by hand.** For each row, write one entry in `launchkit/memory/layer_map.yaml`. Copy the row's words, then say where it belonged and why. `belongs` is one of: `nowhere`, `the conversation`, `session state`, `the board`, `the brand files`, `the trace`, `memory`.
+**Now sort them.** Open `docs/memory-sort.html` in your browser: double-click it in your file manager, or run `xdg-open docs/memory-sort.html` (`open` on a Mac).
+- It holds nine sentences like the ones your store kept, one for each place a sentence can belong:
+  - nowhere;
+  - the conversation;
+  - session state;
+  - the board;
+  - the brand files;
+  - a skill;
+  - the trace;
+  - the memory store.
+- For each one, pick a place from the list, then press **Reveal**. You see the right place, the kind of memory it is (short-term, working, episodic, semantic, procedural, or not memory at all), and why.
 
-```
-- kept: "<the row, as the store has it>"
-  belongs: ...
-  why: ...
-```
+Then go back to your own dump: each of your rows is one of those nine kinds. How many of yours belonged in the memory store?
 
 ## Prove it
 
@@ -101,8 +108,6 @@ uv run launchkit check mem1
 The check runs offline on a scripted model, so it gives everyone the same result.
 
 - After Maya's two Tidal messages, the store holds rows for her, and the photo rule is one of them.
-- `layer_map.yaml` sorts the dump: at least five rows, each in one of the seven places, each with why.
-- Of everything it kept, only the photo rule belongs in memory.
 - Breeze in a new chat, after the two launches: no AI picture; the agent asks for Harbor's photo.
 
 ## Run it again
@@ -117,13 +122,7 @@ Attach `samples/shoot/breeze-shoot.jpg` with 📎 and send "Here it is." The pos
 
 ## Why it matters
 
-It worked: Maya does not have to type the photo rule again. But only one row was a memory. The rest were:
-- politeness;
-- one afternoon's yes;
-- work already on the board;
-- a rule already in the brand files;
-- a one-off pick;
-- a one-off format.
+It worked: Maya does not have to type the photo rule again. But only one row was a memory. The rest were politeness, one afternoon's yes, work already on the board, a rule already in the brand files, a one-off pick and a one-off format. Memory is not one store: the sort just named its kinds.
 
 Whatever your store kept about *wide* now argues with every square feed post. Nothing here is a bug. This is "remember what matters" with nobody deciding what matters.
 

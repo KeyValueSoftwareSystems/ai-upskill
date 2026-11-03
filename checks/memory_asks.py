@@ -6,4 +6,3 @@ TIDAL = [
 ]
 BREEZE = "Breeze launches next month. Same as Tidal — concepts, then every size."
 PHOTO_RULE = "Harbor uses its own photography for launches, never AI-generated pictures."
-PLACES = ("nowhere", "the conversation", "session state", "the board", "the brand files", "the trace", "memory")

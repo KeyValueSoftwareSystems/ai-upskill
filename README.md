@@ -195,7 +195,7 @@ In your editor: install the **SQLite Viewer** extension (`qwtel.sqlite-viewer`; 
 
 | Hands-on (start on) | Slot | Check | Card |
 | --- | --- | --- | --- |
-| 1 · Switch it on, then read what it kept (`session-03-memory-step1`) | `agents/main_agent.py` `build_main_agent`, `memory/layer_map.yaml` | `check mem1` | `docs/memory-1.md` |
+| 1 · Switch it on, then read what it kept (`session-03-memory-step1`) | `agents/main_agent.py` `build_main_agent`; then sort on `docs/memory-sort.html` | `check mem1` | `docs/memory-1.md` |
 | 2 · What earns a write, and whose it is (`session-03-memory-step2`) | `agents/main_agent.py` `build_main_agent`, `memory/write_rules.md`, `memory/write_gate.py` `ask_before_keeping` | `check mem2` | `docs/memory-2.md` |
 | 3 · Read it back cheaply (`session-03-memory-step3`) | `memory/index.py` `memory_index`, `recall` | `check mem3` | `docs/memory-3.md` |
 | 4 · One long conversation (`session-03-memory-step4`) | `agents/main_agent.py` `build_main_agent`, `memory/compaction.py` `must_keep` | `check mem4` | `docs/memory-4.md` |
@@ -235,7 +235,6 @@ launchkit/
     attached_pictures.py                 pictures attached or made in this conversation
     chat_history.py                      past turns of this conversation
     long_term.py                         the memory table, its door (MemoryDb) and who may read which row
-    layer_map.yaml                       where each kept row really belonged (memory step 1)
     write_gate.py                        Maya says yes, and whose it is, before a row is kept (memory step 2)
     index.py                             the index in the prompt and the recall lookup (memory step 3)
     compaction.py                        the summary and what must survive it (memory step 4)

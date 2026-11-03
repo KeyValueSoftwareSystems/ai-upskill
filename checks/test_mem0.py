@@ -44,3 +44,13 @@ def test_the_tidal_launch_is_ready_to_recreate():
     lines = [line for line in (ROOT / "samples" / "sessions" / "tidal_launch.txt").read_text(encoding="utf-8").splitlines() if line and not line.startswith("#")]
     assert len(lines) >= 3 and lines[0].startswith("[attach samples/shoot/tidal-shoot.jpg]")
     assert (ROOT / "samples" / "shoot" / "tidal-shoot.jpg").exists()
+
+
+def test_the_sorting_page_has_every_kind():
+    """docs/memory-sort.html has a sentence to sort for each place, and an answer with its memory type for each."""
+    from launchkit.settings import ROOT
+
+    page = (ROOT / "docs" / "memory-sort.html").read_text(encoding="utf-8")
+    for place in ("nowhere", "conversation", "session", "board", "brand", "skill", "trace", "memory"):
+        assert f'answer: "{place}"' in page
+    assert page.count("answer: ") == page.count("type: ") >= 8

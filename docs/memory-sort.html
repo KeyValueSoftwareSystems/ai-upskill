@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sort the dump</title>
+<style>
+  :root {
+    --bg: #f7f6f2; --card: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --line: #e2e0d8;
+    --accent: #1f3a5f; --right: #1e7a46; --right-bg: #e6f4ec; --wrong: #b3261e; --wrong-bg: #fbe9e7; --chip: #eef1f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141413; --card: #1d1d1b; --ink: #ecebe6; --muted: #a3a29c; --line: #34332f;
+      --accent: #9cc3ff; --right: #6fd39c; --right-bg: #173324; --wrong: #ff8a80; --wrong-bg: #3a1c1a; --chip: #262b33;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 920px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .lede { color: var(--muted); margin: 0 0 24px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 0 0 16px; }
+  .score { font-weight: 600; }
+  button { font: inherit; border: 1px solid var(--accent); background: var(--accent); color: var(--bg); border-radius: 8px; padding: 6px 14px; cursor: pointer; }
+  button.quiet { background: transparent; color: var(--accent); }
+  .item { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin: 0 0 12px; }
+  .item.right { border-color: var(--right); }
+  .item.wrong { border-color: var(--wrong); }
+  .said { margin: 0 0 4px; font-size: 1.05rem; }
+  .context { color: var(--muted); font-size: .9rem; margin: 0 0 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  label { color: var(--muted); font-size: .9rem; }
+  select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); min-width: 220px; }
+  .answer { display: none; margin-top: 12px; padding: 12px; border-radius: 8px; background: var(--chip); }
+  .item.shown .answer { display: block; }
+  .item.right .answer { background: var(--right-bg); }
+  .item.wrong .answer { background: var(--wrong-bg); }
+  .verdict { font-weight: 600; }
+  .item.right .verdict { color: var(--right); }
+  .item.wrong .verdict { color: var(--wrong); }
+  .type { display: inline-block; margin: 6px 0; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); font-size: .85rem; }
+  .why { margin: 4px 0 0; }
+  .words { margin-top: 32px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .words h2 { font-size: 1.1rem; margin: 0 0 8px; }
+  .words dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; }
+  .words dt { font-weight: 600; }
+  .words dd { margin: 0; }
+  .note { color: var(--muted); font-size: .9rem; margin-top: 12px; }
+  @media (max-width: 560px) { .words dl { grid-template-columns: 1fr; } select { min-width: 0; width: 100%; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Sort the dump</h1>
+  <p class="lede">With memory switched on, the agent kept everything that looked worth keeping. Each line below is one of those things, or close to one. Pick where it really belongs, then press Reveal.</p>
+
+  <div class="bar">
+    <span class="score" id="score">0 of 0 revealed</span>
+    <button id="reveal-all">Reveal all</button>
+    <button class="quiet" id="reset">Start again</button>
+  </div>
+
+  <div id="items"></div>
+
+  <section class="words">
+    <h2>The words, once you have sorted</h2>
+    <dl>
+      <dt>Short-term</dt><dd>The conversation the agent is in. It lasts as long as the conversation, and the window keeps only the last few turns of it.</dd>
+      <dt>Working</dt><dd>True for this run only: a yes to one action, the step the agent is on.</dd>
+      <dt>Episodic</dt><dd>What happened, one event at a time. Its home is the trace, read when someone asks.</dd>
+      <dt>Semantic</dt><dd>What is true, whatever run you are in. Authored facts live in the brand files; learned ones go to the memory store.</dd>
+      <dt>Procedural</dt><dd>How the work gets done. Written down as a skill, loaded when the job needs it, not retrieved.</dd>
+      <dt>Long-term</dt><dd>Anything that outlives the conversation: episodic, semantic and procedural are all long-term. Only one of them is the memory store.</dd>
+    </dl>
+    <p class="note">Two more words are ways of managing one long conversation, not kinds of memory: <b>sliding window</b> (keep the last N turns) and <b>compaction</b> (shorten the conversation, e.g. with a summary).</p>
+  </section>
+</main>
+
+<script>
+const PLACES = [
+  ["nowhere", "Nowhere (keep nothing)"],
+  ["conversation", "The conversation it was said in"],
+  ["session", "Session state (this run only)"],
+  ["board", "The board (the work itself)"],
+  ["brand", "The brand files (facts.md, brand.json)"],
+  ["skill", "A skill (skills/<name>/skill.md)"],
+  ["trace", "The trace of that run"],
+  ["memory", "The memory store"],
+];
+
+const ITEMS = [
+  { said: "Maya says thanks at the end of a job.",
+    context: "She typed “Thanks!” after the sizes were done.",
+    answer: "nowhere", type: "Not memory",
+    why: "Politeness, not a fact. Nothing the agent does next time changes because of it." },
+  { said: "Maya prefers wide formats.",
+    context: "She said “make this one wide, it's for the web banner”, once, about one picture.",
+    answer: "conversation", type: "Short-term",
+    why: "It was true for that banner, in that chat. Stored as a standing preference it argues with every square feed post." },
+  { said: "Maya approved attaching files to the Tidal card.",
+    context: "She pressed Allow when the agent asked to attach the sizes.",
+    answer: "session", type: "Working",
+    why: "A yes to one action, for one run. It expired with that run, and the approval rule asks again next time." },
+  { said: "The new sizes are on the Tidal card, marked ready.",
+    context: "The agent attached five files and set the card's status.",
+    answer: "board", type: "Not memory: the work",
+    why: "The board is where the work lives. A copy in memory can only go stale the moment someone moves the card." },
+  { said: "Never call the bottle unbreakable.",
+    context: "She reminded the agent while it wrote the copy.",
+    answer: "brand", type: "Long-term · semantic, authored",
+    why: "It is already in Harbor's never-say list, written and reviewed by a person. A learned copy adds nothing and can drift from the real list." },
+  { said: "Maya picked the lakeside concept.",
+    context: "She chose one of three concepts for the Tidal poster.",
+    answer: "trace", type: "Long-term · episodic",
+    why: "One choice on one afternoon is a record of what happened, not a preference. Stored as a rule, it narrows every future concept to a lake." },
+  { said: "Harbor uses its own photography for launches, never AI-generated pictures.",
+    context: "She types it at every launch.",
+    answer: "memory", type: "Long-term · semantic, learned",
+    why: "True beyond any one run, said by a person, not written anywhere else, and it changes which tool the agent picks. This is what the store is for." },
+  { said: "To make every size: find the product, crop around it, and add navy bars when it does not fit.",
+    context: "How the sizes were made, step by step.",
+    answer: "skill", type: "Long-term · procedural",
+    why: "How the work gets done belongs in a written how-to that a person can read and change: the resize_image skill. It is loaded for the job, not remembered." },
+  { said: "For this whole Breeze conversation: never mention the lid.",
+    context: "She said it on Monday, in a chat she kept using all week.",
+    answer: "conversation", type: "Short-term · must survive compaction",
+    why: "It holds for this conversation and ends with it, so it is not a memory. But the window drops it after a few turns, so it has to be re-stated (memory step 4)." },
+];
+
+const label = Object.fromEntries(PLACES);
+const items = document.getElementById("items");
+const score = document.getElementById("score");
+
+function render() {
+  items.innerHTML = "";
+  ITEMS.forEach((item, i) => {
+    const el = document.createElement("article");
+    el.className = "item";
+    el.innerHTML = `
+      <p class="said">“${item.said}”</p>
+      <p class="context">${item.context}</p>
+      <div class="row">
+        <label for="pick-${i}">Belongs in</label>
+        <select id="pick-${i}"><option value="">Choose a place…</option>${PLACES.map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select>
+        <button class="quiet" data-i="${i}">Reveal</button>
+      </div>
+      <div class="answer">
+        <div class="verdict"></div>
+        <span class="type">${item.type}</span>
+        <p class="why">${item.why}</p>
+      </div>`;
+    el.querySelector("button").onclick = () => reveal(i);
+    items.appendChild(el);
+  });
+  update();
+}
+
+function reveal(i) {
+  const el = items.children[i];
+  const picked = el.querySelector("select").value;
+  const item = ITEMS[i];
+  const right = picked === item.answer;
+  el.classList.add("shown");
+  el.classList.toggle("right", right);
+  el.classList.toggle("wrong", !right);
+  el.querySelector(".verdict").textContent = right
+    ? `Right: ${label[item.answer]}.`
+    : `${picked ? "Not quite." : "No pick yet."} It belongs in: ${label[item.answer]}.`;
+  update();
+}
+
+function update() {
+  const shown = items.querySelectorAll(".item.shown").length;
+  const right = items.querySelectorAll(".item.right").length;
+  score.textContent = shown ? `${right} of ${shown} right, ${ITEMS.length - shown} to go` : `${ITEMS.length} to sort`;
+}
+
+document.getElementById("reveal-all").onclick = () => ITEMS.forEach((_, i) => reveal(i));
+document.getElementById("reset").onclick = render;
+render();
+</script>
+</body>
+</html>
