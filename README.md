@@ -156,6 +156,32 @@ uv run launchkit ui
 
 Every branch here is the **start** of a hands-on. The one before it is already answered, so if you fall behind, check out the next branch. `fake:memory` is the scripted model for these steps; leave **Model** empty for the real one. To run a step again from nothing, `uv run launchkit forget harbor` empties Harbor's memory store (conversations stay). `uv run launchkit memories harbor --user maya` prints what the store keeps for a person, and `uv run launchkit store` lists its tables.
 
+### See what the agent stored
+
+Everything Agno keeps for LaunchKit is one SQLite file, `data/sessions.db`. It appears after the first run; `data/` is not in git. Three tables matter in this session:
+
+| Table | One row per | Columns to watch |
+| --- | --- | --- |
+| `agno_memories` | thing the agent kept | `memory`, `user_id` (`maya`, `sam`, or `harbor:everyone` for everyone at Harbor), `topics` (the kind, `author:`, `source:`), `created_at` |
+| `agno_sessions` | conversation | `session_id`, `user_id`, `summary` (from memory step 4) |
+| `agno_runs` | turn in a conversation | `session_id`, `run_index`, `status`, `run_data` |
+
+In the terminal:
+
+```
+uv run launchkit store                             # every table and how many rows it holds
+uv run launchkit store agno_memories               # the memory rows, column by column, as Agno stored them
+uv run launchkit store agno_memories --user maya   # only Maya's own rows; --user harbor:everyone for Harbor's
+uv run launchkit store agno_sessions               # one row per conversation; the summary column is step 4's
+uv run launchkit store agno_runs                   # one row per turn
+uv run launchkit store agno_memories --schema      # a table's columns and their types
+uv run launchkit memories harbor --user maya       # what one person may read: their rows and Harbor's, as get_user_memories returns them
+```
+
+Long values are cut at 100 characters; add `--full` to see them whole, and `--limit N` for more than 20 rows.
+
+In your editor: install the **SQLite Viewer** extension (`qwtel.sqlite-viewer`; it works in VS Code and Cursor) and open `data/sessions.db` from the file explorer. Each table opens as a grid with its real columns. Close and reopen the tab after a run to see new rows. Use it to look, not to edit: to start again, `uv run launchkit forget harbor` empties Harbor's memory rows.
+
 ## Session 3 · Agent memory, four hands-on steps
 
 | Hands-on (start on) | Slot | Check | Card |

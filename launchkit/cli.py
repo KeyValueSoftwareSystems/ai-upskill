@@ -90,7 +90,8 @@ def cmd_memories(args):
 
 
 def cmd_store(args):
-    """The one Db object Agno writes to: every table in data/sessions.db, and how many rows each holds."""
+    """The one Db object Agno writes to, data/sessions.db, read as it is. With no table: every table and how many rows
+    it holds. With a table: its rows, column by column, as Agno stored them (like sqlite3's .mode line)."""
     import sqlite3
 
     path = settings.data_dir / "sessions.db"
@@ -99,11 +100,37 @@ def cmd_store(args):
         return 0
     with sqlite3.connect(path) as con:
         tables = [row[0] for row in con.execute("select name from sqlite_master where type = 'table' order by name")]
-        table = Table("table", "rows")
-        for name in tables:
-            table.add_row(name, str(con.execute(f'select count(*) from "{name}"').fetchone()[0]))
-    console.print(f"[bold]{path.relative_to(ROOT)}[/bold]")
-    console.print(table)
+        if not args.table:
+            table = Table("table", "rows")
+            for name in tables:
+                table.add_row(name, str(con.execute(f'select count(*) from "{name}"').fetchone()[0]))
+            console.print(f"[bold]{path.relative_to(ROOT)}[/bold]")
+            console.print(table)
+            return 0
+        name = args.table if args.table in tables else f"agno_{args.table}"
+        if name not in tables:
+            console.print(f"No table {args.table!r}. Tables: {', '.join(tables)}")
+            return 1
+        columns = [row[1] for row in con.execute(f'pragma table_info("{name}")')]
+        if args.schema:
+            table = Table("column", "type")
+            for row in con.execute(f'pragma table_info("{name}")'):
+                table.add_row(row[1], row[2])
+            console.print(f"[bold]{name}[/bold]")
+            console.print(table)
+            return 0
+        where, params = ("where user_id = ?", [args.user]) if args.user and "user_id" in columns else ("", [])
+        order = "order by created_at" if "created_at" in columns else ""
+        rows = con.execute(f'select * from "{name}" {where} {order} limit ?', [*params, args.limit]).fetchall()
+    console.print(f"[bold]{name}[/bold] · {len(rows)} rows" + (f" for user_id {args.user}" if where else "") + (f" (first {args.limit})" if len(rows) == args.limit else ""))
+    width = max(len(c) for c in columns)
+    for n, row in enumerate(rows, 1):
+        console.print(f"[dim]── row {n} ──[/dim]")
+        for column, value in zip(columns, row):
+            text = "NULL" if value is None else str(value)
+            if not args.full and len(text) > 100:
+                text = text[:100] + f"… ({len(text)} characters; --full shows all)"
+            console.print(f"{column:<{width}}  {text}", highlight=False, markup=False)
     return 0
 
 
@@ -377,7 +404,12 @@ def main(argv=None):
     memories.add_argument("--user", default="maya")
     memories.set_defaults(func=cmd_memories)
 
-    store = sub.add_parser("store", help="list the tables in the agent's store and how many rows each holds")
+    store = sub.add_parser("store", help="read the agent's store, data/sessions.db: its tables, or one table's rows column by column")
+    store.add_argument("table", nargs="?", help="a table, e.g. agno_memories, agno_sessions, agno_runs (the agno_ can be left out)")
+    store.add_argument("--user", help="only rows with this user_id, e.g. maya, sam, harbor:everyone")
+    store.add_argument("--schema", action="store_true", help="the table's columns and their types, not its rows")
+    store.add_argument("--full", action="store_true", help="print long values (session_data, run_data) in full")
+    store.add_argument("--limit", type=int, default=20, help="at most this many rows (default 20)")
     store.set_defaults(func=cmd_store)
 
     seed = sub.add_parser("seed-memories", help="write a month of memory rows into a workspace's store (memory step 3)")
