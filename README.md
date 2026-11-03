@@ -154,7 +154,14 @@ uv run launchkit check mem0     # the setup: Breeze at Harbor, Sam signed in, th
 uv run launchkit ui
 ```
 
-Every branch here is the **start** of a hands-on. The one before it is already answered, so if you fall behind, check out the next branch. `fake:memory` is the scripted model for these steps; leave **Model** empty for the real one. To run a step again from nothing, `uv run launchkit forget harbor` empties Harbor's memory store (conversations stay). `uv run launchkit memories harbor --user maya` prints what the store keeps for a person, and `uv run launchkit store` lists its tables.
+Every branch here is the **start** of a hands-on. The one before it is already answered, so if you fall behind, check out the next branch.
+
+How each step runs:
+
+1. Start on the step's branch and restart `uv run launchkit ui` after each checkout.
+2. Everything Maya types goes on the chat page: sign in as Maya (or Sam) at Harbor, press **New conversation**, leave **Model** empty for the real model, and send the message on the card. Asks to keep a memory come up as **Allow** or **Deny** in the chat.
+3. The terminal is for what Maya would not do on the page: `uv run launchkit forget harbor` to start a step again from an empty store (conversations stay), `uv run launchkit seed-memories harbor` for step 3's month of rows, `uv run launchkit store …` and `uv run launchkit memories …` to read the store, and `uv run launchkit check mem1` … `mem4` to prove a step.
+4. `fake:memory` is the fallback: a scripted model that gives the same answer every time. Type it in **Model** when you are offline, without a key, or want the card's exact output. The checks always run on it.
 
 ### See what the agent stored
 
