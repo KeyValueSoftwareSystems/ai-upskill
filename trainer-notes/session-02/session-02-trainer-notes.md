@@ -85,7 +85,7 @@ Connecting only logs in. It writes nothing. To run a step again, edit the card b
 | 3 | Lookup | `session-02-tools-step2` | Build `run_tool`: the agent holds three doors, not every tool. | `check tools3`: 11 passed |
 | 4 | MCP | `session-02-tools-step3` | Build `connect`: Maya's Notion board joins the catalogue. | `check tools4`: 10 passed |
 | 5 | Permissions | `session-02-tools-step4` | A write asks Maya first. | `check tools5`: 4 passed |
-| 6 | What is left on the brief | none | Talk only. | n/a |
+| 6 | The one task still open on the brief | none | Talk only: show the brief. Steps 1 to 5 did three of its four tasks; Task 2, the competitors, is still open. | n/a |
 | 7 | One agent and a skill | `session-02-orchestration` | Write the `competitor_research` skill. | `check orch1`: 4 passed |
 | 8 | When a subagent earns its place | none | Talk only. | n/a |
 | 9 | Subagents | `session-02-orchestration-step1` | Build the research subagent and run five at once. | `check orch2`: 6 passed; `check orch`: 39 passed |
@@ -178,7 +178,7 @@ Every step has a card in `docs/` (`tools-1.md` to `tools-5.md`, `orch-1.md`, `or
 - **Run it again (real model, your Notion), in one conversation:**
   1. Attach the poster, then "Love the poster. Now all the sizes, please."
   2. "Put the new sizes on the Tidal launch brief in Notion, and move it to Ready for review." `find_tool` lists `post_to_board` first; its steps read the brief, then write.
-- **Make the sizes before you open the brief.** With the brief in the conversation first, the model can read "all the sizes" as the brief's hand-back task and write file names it never made onto the card.
+- **Keep this order: sizes first, then the brief.** The brief has its own task: "hand back every size". If the agent reads the brief first, it can take Maya's "all the sizes" to mean that task. Then it writes size names on the card but makes no files.
 - **Then open the card in Notion.** The Files line lists the new file names, and Status says Ready for review. Notion's MCP tools here cannot upload images, so the card lists file names; a real team would attach the images. Point out that an agent can say "done" when Notion took the call but changed nothing: always check.
 - **Offline backup:** `LAUNCHKIT_BOARD=local` in `.env` uses the small board server in the repo (`read_card`, `attach_files`, `update_status`, `remove_files`). The fakes and the checks always use it.
 - **Answer:** `session-02-tools-step4`.
