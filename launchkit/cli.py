@@ -156,17 +156,44 @@ def cmd_forget(args):
 
 
 def cmd_replay(args):
-    """Send each line of a file as one message, in one conversation, the way Maya typed them over a week."""
+    """Send each line of a file as one message, in one conversation, the way Maya typed them. A line that starts with
+    [attach <file>] attaches that picture first, as the paperclip does on the chat page. The conversation is saved for
+    the chat page too, so it shows in the list there and can be carried on."""
+    import time
+    import uuid
+
     from launchkit.agents.main_agent import run_main
+    from launchkit.memory.attached_pictures import Pictures
 
     current = replace(settings, model=args.model) if args.model else settings
+    session = args.session or uuid.uuid4().hex[:6]
     lines = [line.strip() for line in Path(args.file).read_text(encoding="utf-8").splitlines() if line.strip() and not line.startswith("#")]
-    for n, text in enumerate(lines, 1):
-        req = Request(workspace_id=args.workspace, user_id=args.user, session_id=args.session, text=text)
-        result = run_main(req, settings=current, trace=Trace())
-        console.print(f"[bold]{n}. {args.user}[/bold] {text}", highlight=False)
+    page = current.data_dir / "conversations" / args.workspace / args.user / f"{session}.json"
+    conversation = json.loads(page.read_text(encoding="utf-8")) if page.exists() else {"session_id": session, "turns": []}
+    for n, line in enumerate(lines, 1):
+        attach = re.match(r"\[attach ([^\]]+)\]\s*(.*)", line)
+        pictures, text = ([attach.group(1)], attach.group(2)) if attach else ([], line)
+        console.print(f"[bold]{n}. {args.user}[/bold] " + (f"📎 {Path(pictures[0]).name} · " if pictures else "") + text, highlight=False)
+        started = time.time()
+        req = Request(workspace_id=args.workspace, user_id=args.user, session_id=session, text=text)
+        result = run_main(req, settings=current, trace=Trace(), attach=pictures)
         console.print(f"   {result.reply.splitlines()[0] if result.reply else ''}", highlight=False, markup=False)
+        folder = Pictures(current, args.workspace, args.user, session).dir
+        conversation["turns"].append({"role": "user", "text": text, "files": [address(current, folder / Path(p).name) for p in pictures]})
+        made = sorted(p for p in current.data_dir.rglob("*") if p.suffix.lower() in MEDIA and p.stat().st_mtime >= started and p.parent != folder)
+        conversation["turns"].append({"role": "assistant", "reply": result.reply, "files": [address(current, p) for p in made + result.kept]})
+    if re.fullmatch(r"[0-9a-f]{6}", session):
+        page.parent.mkdir(parents=True, exist_ok=True)
+        page.write_text(json.dumps(conversation, indent=2), encoding="utf-8")
+        console.print(f"\nSaved for the chat page: sign in as {args.user} and pick \"{conversation['turns'][0]['text'][:40]}…\" in the conversation list.")
     return 0
+
+
+MEDIA = {".png", ".jpg", ".jpeg", ".webp", ".mp3", ".wav"}
+
+
+def address(current, path: Path) -> str:
+    return f"/files/{Path(path).relative_to(current.data_dir).as_posix()}"
 
 
 def print_trace(trace: Trace):
@@ -420,11 +447,11 @@ def main(argv=None):
     forget.add_argument("workspace")
     forget.set_defaults(func=cmd_forget)
 
-    replay = sub.add_parser("replay", help="send each line of a file as one message in one conversation (memory step 4)")
+    replay = sub.add_parser("replay", help="send each line of a file as one message in one conversation, saved for the chat page too")
     replay.add_argument("workspace")
     replay.add_argument("file")
     replay.add_argument("--user", default="maya")
-    replay.add_argument("--session", default="week")
+    replay.add_argument("--session", help="carry on this conversation (its 6-letter id on the chat page); a new one by default")
     replay.add_argument("--model", help="override LAUNCHKIT_MODEL, e.g. fake:memory")
     replay.set_defaults(func=cmd_replay)
 

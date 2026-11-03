@@ -1,0 +1,6 @@
+# Maya's Tidal launch, a month before this session, before LaunchKit kept any memory.
+# One message per line, sent as one conversation by `uv run launchkit replay harbor samples/sessions/tidal_launch.txt`.
+# A line that starts with [attach <file>] attaches that picture first, as the paperclip does on the chat page.
+[attach samples/shoot/tidal-shoot.jpg] Tidal poster from our shoot photo: the lakeside one. Use our shoot photo, not an AI one, and never call it unbreakable.
+Make this one wide, it's for the web banner.
+Love it. Now all the sizes, please.

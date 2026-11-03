@@ -35,3 +35,12 @@ def test_a_month_of_rows_is_ready_to_seed(settings):
     assert seed(settings, "harbor") == 30
     db = memory_db(settings, "harbor", "maya")
     assert len(memories_for(db, "harbor", "maya")) > 0 and len(memories_for(db, "harbor", "sam")) > 0
+
+
+def test_the_tidal_launch_is_ready_to_recreate():
+    """samples/sessions/tidal_launch.txt holds Maya's Tidal messages, and the shoot photo it attaches is in the repo."""
+    from launchkit.settings import ROOT
+
+    lines = [line for line in (ROOT / "samples" / "sessions" / "tidal_launch.txt").read_text(encoding="utf-8").splitlines() if line and not line.startswith("#")]
+    assert len(lines) >= 3 and lines[0].startswith("[attach samples/shoot/tidal-shoot.jpg]")
+    assert (ROOT / "samples" / "shoot" / "tidal-shoot.jpg").exists()
