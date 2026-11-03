@@ -303,4 +303,6 @@ class ToolsModel(FakeModel):
     def plan(self, names: set[str]) -> list[tuple[str, dict]]:
         if "centre_crop" in names:
             return [("centre_crop", {"width": w, "height": h}) for w, h in SIZES]
+        if "scale" in names:
+            return [("scale", {"width": w, "height": h}) for w, h in SIZES]
         return []
