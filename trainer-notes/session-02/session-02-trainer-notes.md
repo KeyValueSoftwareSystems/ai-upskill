@@ -129,7 +129,8 @@ Every step has a card in `docs/` (`tools-1.md` to `tools-5.md`, `orch-1.md`, `or
 
 - **Start:** `session-02-tools`. Card: `docs/tools-1.md`.
 - **The ask:** attach `samples/approved/tidal-poster.jpg`, then send "Love the poster. Now all the sizes, please."
-- **Break it first (real model):** the agent says it cannot resize: it holds only `get_brand_details` and `generate_image`.
+- **Break it first (real model):** the agent holds only `get_brand_details` and `generate_image`; neither can resize. The result changes from run to run: it may say it cannot resize, list the sizes in words, or draw a brand-new picture with `generate_image` and call it the story size. That picture is not the poster, and it costs money. On `fake:tools` it always says it cannot resize.
+- **Why it does not just say no:** nothing tells a model to refuse when no tool fits. It tries to finish the job with the closest tool it holds. A missing tool does not stop the agent; it does the wrong thing and says it is done. That is why step 1 gives it the right tools.
 - **Build:** prompt card 1 (`PictureDesk.centre_crop`), run it, look at the banner. Then prompt card 2 (`detect_focal_point`, `crop`, `expand_canvas`, `scale`).
 - **Prove it:** `uv run launchkit check tools1`, 7 passed.
 - **Run it again (real model):** five sizes come back. Point at the budget: Session 1's image budget is 3, yet five come back, because a size cuts the existing poster in plain code and makes no paid picture. Then watch the Trace: the model picks `scale` and squashes the bottle, crops before it finds the bottle, or adds bars where a crop was fine.
