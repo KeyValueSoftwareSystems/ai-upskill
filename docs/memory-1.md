@@ -95,7 +95,7 @@ Expect several rows: the photo rule, plus things that were never memories. The e
   - a skill;
   - the trace;
   - the memory store.
-- For each one, pick a place from the list, then press **Reveal**. You see the right place, the kind of memory it is (short-term, working, episodic, semantic, procedural, or not memory at all), and why.
+- Pick a place for every sentence, then press **Reveal answers** at the end. Each sentence shows the right place, the kind of memory it is (short-term, working, episodic, semantic, procedural, or not memory at all), and why, with your score.
 
 Then go back to your own dump: each of your rows is one of those nine kinds. How many of yours belonged in the memory store?
 

@@ -20,7 +20,7 @@
   main { max-width: 920px; margin: 0 auto; padding: 32px 16px 64px; }
   h1 { font-size: 1.6rem; margin: 0 0 4px; }
   .lede { color: var(--muted); margin: 0 0 24px; }
-  .bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 0 0 16px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 20px 0 0; }
   .score { font-weight: 600; }
   button { font: inherit; border: 1px solid var(--accent); background: var(--accent); color: var(--bg); border-radius: 8px; padding: 6px 14px; cursor: pointer; }
   button.quiet { background: transparent; color: var(--accent); }
@@ -53,15 +53,15 @@
 <body>
 <main>
   <h1>Sort the dump</h1>
-  <p class="lede">With memory switched on, the agent kept everything that looked worth keeping. Each line below is one of those things, or close to one. Pick where it really belongs, then press Reveal.</p>
-
-  <div class="bar">
-    <span class="score" id="score">0 of 0 revealed</span>
-    <button id="reveal-all">Reveal all</button>
-    <button class="quiet" id="reset">Start again</button>
-  </div>
+  <p class="lede">With memory switched on, the agent kept everything that looked worth keeping. Each line below is one of those things, or close to one. Pick where each one really belongs, then press Reveal answers at the end.</p>
 
   <div id="items"></div>
+
+  <div class="bar">
+    <button id="reveal-all">Reveal answers</button>
+    <button class="quiet" id="reset">Start again</button>
+    <span class="score" id="score"></span>
+  </div>
 
   <section class="words">
     <h2>The words, once you have sorted</h2>
@@ -84,7 +84,7 @@ const PLACES = [
   ["session", "Session state (this run only)"],
   ["board", "The board (the work itself)"],
   ["brand", "The brand files (facts.md, brand.json)"],
-  ["skill", "A skill (skills/<name>/skill.md)"],
+  ["skill", "A skill (a how-to in launchkit/skills)"],
   ["trace", "The trace of that run"],
   ["memory", "The memory store"],
 ];
@@ -143,14 +143,12 @@ function render() {
       <div class="row">
         <label for="pick-${i}">Belongs in</label>
         <select id="pick-${i}"><option value="">Choose a place…</option>${PLACES.map(([v, t]) => `<option value="${v}">${t}</option>`).join("")}</select>
-        <button class="quiet" data-i="${i}">Reveal</button>
       </div>
       <div class="answer">
         <div class="verdict"></div>
         <span class="type">${item.type}</span>
         <p class="why">${item.why}</p>
       </div>`;
-    el.querySelector("button").onclick = () => reveal(i);
     items.appendChild(el);
   });
   update();
@@ -173,10 +171,12 @@ function reveal(i) {
 function update() {
   const shown = items.querySelectorAll(".item.shown").length;
   const right = items.querySelectorAll(".item.right").length;
-  score.textContent = shown ? `${right} of ${shown} right, ${ITEMS.length - shown} to go` : `${ITEMS.length} to sort`;
+  const picked = [...items.querySelectorAll("select")].filter(select => select.value).length;
+  score.textContent = shown ? `${right} of ${ITEMS.length} right` : `${picked} of ${ITEMS.length} sorted`;
 }
 
 document.getElementById("reveal-all").onclick = () => ITEMS.forEach((_, i) => reveal(i));
+items.addEventListener("change", update);
 document.getElementById("reset").onclick = render;
 render();
 </script>
