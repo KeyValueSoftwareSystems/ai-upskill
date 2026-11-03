@@ -17,6 +17,11 @@ HARBOR_SPEC = {
 }
 
 
+# What Agno's session summary manager sends (memory step 4). Every fake answers it in its shape, outside answer(),
+# so a summary call never looks like a turn of the agent the fake is playing.
+SUMMARY_ASK = "Provide the summary of the conversation."
+
+
 class FakeModel(Model):
     supports_native_structured_outputs = False
     supports_json_schema_outputs = False
@@ -33,6 +38,14 @@ class FakeModel(Model):
     def answer(self, messages: list, tools: list) -> ModelResponse:
         raise NotImplementedError
 
+    def summary(self, messages: list) -> str:
+        return "The marketer and the agent talked about the brand's work."
+
+    def respond(self, messages: list, tools: list) -> ModelResponse:
+        if last_user_text(messages) == SUMMARY_ASK:
+            return text_response(json.dumps({"summary": self.summary(messages), "topics": ["work"]}), messages)
+        return self.answer(messages, tools)
+
     def shaped(self, response: ModelResponse, kwargs: dict) -> ModelResponse:
         """A plain-text reply, put in the answer shape when the agent asks for one, as a real model would."""
         content = response.content
@@ -41,16 +54,16 @@ class FakeModel(Model):
         return response
 
     def invoke(self, *args, **kwargs) -> ModelResponse:
-        return self.shaped(self.answer(kwargs.get("messages") or [], kwargs.get("tools") or []), kwargs)
+        return self.shaped(self.respond(kwargs.get("messages") or [], kwargs.get("tools") or []), kwargs)
 
     async def ainvoke(self, *args, **kwargs) -> ModelResponse:
-        return self.shaped(self.answer(kwargs.get("messages") or [], kwargs.get("tools") or []), kwargs)
+        return self.shaped(self.respond(kwargs.get("messages") or [], kwargs.get("tools") or []), kwargs)
 
     def invoke_stream(self, *args, **kwargs) -> Iterator[ModelResponse]:
-        yield self.shaped(self.answer(kwargs.get("messages") or [], kwargs.get("tools") or []), kwargs)
+        yield self.shaped(self.respond(kwargs.get("messages") or [], kwargs.get("tools") or []), kwargs)
 
     async def ainvoke_stream(self, *args, **kwargs) -> AsyncIterator[ModelResponse]:
-        yield self.shaped(self.answer(kwargs.get("messages") or [], kwargs.get("tools") or []), kwargs)
+        yield self.shaped(self.respond(kwargs.get("messages") or [], kwargs.get("tools") or []), kwargs)
         return
 
     def _parse_provider_response(self, response: Any, **kwargs) -> ModelResponse:
@@ -448,9 +461,6 @@ BREEZE_SPEC = {
     "image_prompt": "A deep blue steel bottle on a misty lakeshore at dawn, navy water, sea glass and sand tones, soft light",
     "format": "A3 portrait",
 }
-SUMMARY_ASK = "Provide the summary of the conversation."
-
-
 def candidates(text: str) -> list[tuple[str, str, str]]:
     lowered = text.lower()
     return [(row, kind, topic) for words, row, kind, topic in CANDIDATES if any(w in lowered for w in words)]
@@ -474,12 +484,12 @@ class MemoryModel(FakeModel):
 
     def answer(self, messages, tools):
         names = tool_names(tools)
-        if last_user_text(messages) == SUMMARY_ASK:
-            return text_response(json.dumps({"summary": "Maya is preparing the Breeze launch: trends, placements, the colourway, posting days, shoot moods and competitors.",
-                                             "topics": ["breeze", "launch"]}), messages)
         if "add_memory" in names:
             return self.manager(messages)
         return self.main(messages, names)
+
+    def summary(self, messages):
+        return "Maya is preparing the Breeze launch: trends, placements, the colourway, posting days, shoot moods and competitors."
 
     def manager(self, messages):
         system = system_text(messages)
@@ -505,7 +515,7 @@ class MemoryModel(FakeModel):
                 return tool_call_response("update_user_memory", {"task": f"Keep this about the marketer if it qualifies: {pending[done][0]}"}, f"memory_{done + 1}")
         memory = section(system, "\n# Memory")
         no_picture = "No pictures in this conversation yet" in system
-        launch = any(w in lowered for w in ("launch", "poster", "concepts", "size"))
+        launch = any(w in lowered for w in ("poster", "concepts", "every size"))
         topics = re.findall(r'recall\("([^"]+)"\)', memory)
         photo_topic = next((t for t in topics if "photo" in t), None)
         if launch and photo_topic and "run_tool" in names and calls_made(messages, "run_tool") == 0:
