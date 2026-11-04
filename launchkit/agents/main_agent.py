@@ -13,6 +13,7 @@ from datetime import date
 from typing import Literal
 
 from agno.agent import Agent
+from agno.memory import MemoryManager
 from agno.models.openai import OpenAIChat
 from agno.tools.function import Function
 
@@ -26,7 +27,7 @@ from launchkit.mcp.client import closes_its_mcp_links
 from launchkit.mcp.servers import server_entries
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.chat_history import session_db
-from launchkit.memory.long_term import MEMORY_SHARE, MEMORY_TASK, memory_db, memories_for, memory_text
+from launchkit.memory.long_term import MEMORY_SHARE, MEMORY_TASK, memory_db, memories_for, memory_text, write_rules
 from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
 from launchkit.tools.check_copy import make_check_copy
 from launchkit.tools.describe_image import describe_image_entry
@@ -106,6 +107,8 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
         db=db if db is not None else session_db(settings),
         add_history_to_context=True,
         num_history_runs=5,
+        enable_agentic_memory=True,
+        memory_manager=MemoryManager(memory_capture_instructions=write_rules(), delete_memories=False),
         tools=loose(catalogue.agent_tools()),
         tool_hooks=[make_leash(replace(settings.limits, step_cap=MAIN_STEP_CAP), trace)],
         telemetry=False,
