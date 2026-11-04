@@ -15,6 +15,7 @@ from typing import Literal
 from agno.agent import Agent
 from agno.memory import MemoryManager
 from agno.models.openai import OpenAIChat
+from agno.session.summary import SessionSummaryManager
 from agno.tools.function import Function
 
 from launchkit.adapters.fakes import FakeModel
@@ -100,6 +101,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
     warnings = " ".join(e.detail["text"] for e in trace.events if e.kind == "warning")
     ctx.set("facts", f"Today is {date.today():%-d %B %Y}. {warnings} {pictures.describe() if pictures else ''}".strip())
     ctx.set("task", MAIN_TASK if catalogue.lookup else "\n\n".join(part for part in (DIRECT_TASK, catalogue.skills_text()) if part))
+    summariser = model  # before parallel_tool_calls is set: see the session summary below
     if catalogue.lookup and isinstance(model, OpenAIChat):
         # Several tool calls in one model message lose run_tool's name, so the agent with the doors calls one at a time.
         model = replace(model, request_params={**(model.request_params or {}), "parallel_tool_calls": False})
@@ -116,6 +118,10 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
         tool_hooks=[make_leash(replace(settings.limits, step_cap=MAIN_STEP_CAP), trace)],
         telemetry=False,
     )
+    if agent.enable_session_summaries:
+        # The summary call sends no tools, and the proxy refuses parallel_tool_calls without tools, so the summary is
+        # written by the model as given. Passed to Agent(...), a summary manager would switch summaries on by itself.
+        agent.session_summary_manager = SessionSummaryManager(model=summariser)
     if agent.enable_agentic_memory:
         # Agno tells the model about update_user_memory in the system message it builds itself. LaunchKit writes its
         # own, so the harness says it: first in the Task section, as the one step before find_tool, and in the Memory
