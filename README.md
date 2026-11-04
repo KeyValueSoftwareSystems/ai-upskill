@@ -233,6 +233,7 @@ launchkit/
     attached_pictures.py                 pictures attached or made in this conversation
     chat_history.py                      past turns of this conversation
     long_term.py                         the memory table, its door (MemoryDb) and who may read which row
+    write_gate.py                        Maya says yes, and whose it is, before a row is kept (hands-on 1, part 3)
   knowledge/                             brand facts the agent looks up (RAG)
     brand_index.py                       puts the brand books in the vector database (launchkit index)
     brand_library.py                     reads a brand's files
