@@ -44,7 +44,9 @@ Nothing in this list is new to build. It is here so nothing changes without you 
   - One Db object holds sessions and memories, each in its own table, with different lifetimes: a session lasts one conversation, and a memory outlives it.
 - **New in the harness, ready-made:**
   - A `# Memory` section in the prompt (`launchkit/agents/prompt.py`). LaunchKit writes its own system message, so Agno's `add_memories_to_context` never reaches the prompt here. The harness does what Agno's default does instead: every row this person may read, every turn (`memory_text` in `launchkit/memory/long_term.py`).
-  - `MemoryDb`, the memory table's door. It marks every row with who said it and where it came from. The harness sets those two fields, never the agent.
+  - `MemoryDb` (`launchkit/memory/long_term.py`): the agent's database, `data/sessions.db`, passed to the agent as `db=`. It is Agno's `SqliteDb` with a door on one write: sessions and runs pass through unchanged, and every memory row goes through the door first.
+    - On this branch the door marks each row with who said it (`author:`) and where it came from (`source:`). The harness sets those two fields, never the agent.
+    - The door has to be inside the database, because Agno's memory manager writes straight to whatever `db` it is given. A check anywhere else would be skipped. From memory step 2 the door also asks Maya first.
   - The Context tab now shows the tokens of memory in the prompt.
   - Breeze in Harbor's `facts.md`, and its shoot photo in `samples/shoot/breeze-shoot.jpg`.
 

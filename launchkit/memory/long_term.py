@@ -30,8 +30,10 @@ def everyone(workspace_id: str) -> str:
 
 
 class MemoryDb(SqliteDb):
-    """The memory table's door. Every row written gets the fields the harness owns, never the agent: who said it and
-    where it came from."""
+    """The agent's database: Agno's SqliteDb with a door on one write. Sessions and runs pass through unchanged; every
+    memory row goes through upsert_user_memory first and gets the fields the harness owns, never the agent: who said
+    it and where it came from. The door sits inside the database because Agno's memory manager writes straight to
+    whatever db it is given."""
 
     def __init__(self, db_file: str, workspace_id: str, user_id: str, trace: Trace | None = None):
         super().__init__(db_file=db_file, memory_table=MEMORY_TABLE)
