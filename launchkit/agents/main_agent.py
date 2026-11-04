@@ -26,7 +26,7 @@ from launchkit.mcp.client import closes_its_mcp_links
 from launchkit.mcp.servers import server_entries
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.chat_history import session_db
-from launchkit.memory.long_term import memory_db, memories_for, memory_text
+from launchkit.memory.long_term import MEMORY_TASK, memory_db, memories_for, memory_text
 from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
 from launchkit.tools.check_copy import make_check_copy
 from launchkit.tools.describe_image import describe_image_entry
@@ -99,7 +99,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
     if catalogue.lookup and isinstance(model, OpenAIChat):
         # Several tool calls in one model message lose run_tool's name, so the agent with the doors calls one at a time.
         model = replace(model, request_params={**(model.request_params or {}), "parallel_tool_calls": False})
-    return Agent(
+    agent = Agent(
         model=model,
         system_message=ctx.render(),
         output_schema=MainTurn,
@@ -110,6 +110,12 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
         tool_hooks=[make_leash(replace(settings.limits, step_cap=MAIN_STEP_CAP), trace)],
         telemetry=False,
     )
+    if agent.enable_agentic_memory:
+        # Agno tells the model about update_user_memory in the system message it builds itself. LaunchKit writes its
+        # own, so the harness says it here, in the Memory section, worded for the three doors.
+        ctx.set("memory", "\n\n".join(part for part in (MEMORY_TASK, ctx.sections.get("memory", "")) if part))
+        agent.system_message = ctx.render()
+    return agent
 
 
 def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya", pictures: Pictures | None = None) -> Catalogue:
@@ -146,7 +152,7 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     for picture in attach:
         trace.note(f"attached {Path(picture).name} to this conversation")
         pictures.attach(Path(picture))
-    db = memory_db(settings, wid, req.user_id, trace)
+    db = memory_db(settings, wid, req.user_id, trace, approve)
     memory = memory_text(memories_for(db, wid, req.user_id))
     session = f"{wid}:{req.user_id}:{req.session_id}:main"
     catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures)

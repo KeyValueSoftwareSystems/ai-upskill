@@ -17,7 +17,7 @@ HARBOR_SPEC = {
 }
 
 
-# What Agno's session summary manager sends (memory step 4). Every fake answers it in its shape, outside answer(),
+# What Agno's session summary manager sends (memory hands-on 2). Every fake answers it in its shape, outside answer(),
 # so a summary call never looks like a turn of the agent the fake is playing.
 SUMMARY_ASK = "Provide the summary of the conversation."
 
@@ -442,8 +442,8 @@ class BriefModel(FakeModel):
         return text_response("\n".join(research_report(name, pages) for name, pages in zip(wanted, searches)), messages)
 
 
-# What a memory step keeps from Maya's two Tidal messages: the words that set it off, the row, its kind and its topic.
-# Five of the seven kinds are not kinds of memory at all; the room sorts them in memory step 1.
+# What memory keeps from Maya's two Tidal messages: the words that set it off, the row, its kind and its topic.
+# Five of the seven kinds are not kinds of memory at all; the room sorts them in memory hands-on 1.
 CANDIDATES = [
     (("thank",), "Maya says thanks at the end of a job.", "thanks", "manners"),
     (("wide",), "Maya prefers wide formats.", "one-off", "formats"),
@@ -495,6 +495,13 @@ class MemoryModel(FakeModel):
         system = system_text(messages)
         capture = section(system, "<memories_to_capture>").split("</memories_to_capture>")[0] if "<memories_to_capture>" in system else system
         said = " ".join(str(m.content or "") for m in messages if getattr(m, "role", None) == "user")
+        kept = dict(re.findall(r"ID: (\S+)\nMemory: (.+)", system))
+        if "everyone" in said.lower():
+            # Already kept, now for everyone: who it is for is new, so the row is updated and the door moves it.
+            shared = [(mid, c) for c in candidates(said) for mid, text in kept.items() if text == c[0]]
+            if shared and not calls_made(messages, "update_memory"):
+                mid, (row, kind, topic) = shared[0]
+                return tool_call_response("update_memory", {"memory_id": mid, "memory": row, "topics": [kind, topic]}, "update_1")
         found = [c for c in candidates(said) if c[0] not in system]
         if "Personal facts:" not in capture:
             found = [c for c in found if c[1] in MEMORY_KINDS and c[1] in capture.lower()]
@@ -502,7 +509,7 @@ class MemoryModel(FakeModel):
         if done < len(found):
             row, kind, topic = found[done]
             return tool_call_response("add_memory", {"memory": row, "topics": [kind, topic]}, f"add_{done + 1}")
-        return text_response("Memories updated." if found else "No memory updates needed.", messages)
+        return text_response("Memories updated." if found or calls_made(messages, "update_memory") else "No memory updates needed.", messages)
 
     def main(self, messages, names):
         asked = last_user_text(messages)
@@ -512,7 +519,8 @@ class MemoryModel(FakeModel):
             pending = candidates(asked)
             done = calls_made(messages, "update_user_memory")
             if done < len(pending):
-                return tool_call_response("update_user_memory", {"task": f"Keep this about the marketer if it qualifies: {pending[done][0]}"}, f"memory_{done + 1}")
+                share = " It is for everyone at the brand." if "everyone" in lowered else ""
+                return tool_call_response("update_user_memory", {"task": f"Keep this about the marketer if it qualifies: {pending[done][0]}{share}"}, f"memory_{done + 1}")
         memory = section(system, "\n# Memory")
         no_picture = "No pictures in this conversation yet" in system
         launch = any(w in lowered for w in ("poster", "concepts", "every size"))

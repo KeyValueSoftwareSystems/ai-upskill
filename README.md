@@ -14,8 +14,8 @@ A marketing assistant built in steps across the session. A marketer asks for a p
 | `session-02-tools-step1` … `step5` | each step's answer |
 | `session-02-orchestration` | agents and orchestration (Session 2, part 2): the main agent, the Tidal launch brief, saved competitor pages |
 | `session-02-orchestration-step1`, `step2` | each step's answer |
-| **`session-03-memory-step1`** (you are here) | agent memory (Session 3): Session 2's answer plus the memory setup; hands-on 1 starts here |
-| `session-03-memory-step2` … `step4` | the start of each later hands-on, with the one before it answered; `step4` is compaction |
+| **`session-03-memory-step1`** (you are here) | agent memory (Session 3): Session 2's answer plus the memory setup; hands-on 1 (what goes in) starts here |
+| `session-03-memory-step2` | hands-on 2 (what comes back, and for how long: the index, then compaction), with hands-on 1 answered |
 
 Each branch contains the previous branch's solution. Fall behind, check out the next one.
 
@@ -162,7 +162,7 @@ How each step runs:
 
 1. Start on the step's branch and restart `uv run launchkit ui` after each checkout.
 2. Everything Maya types goes on the chat page: sign in as Maya (or Sam) at Harbor, press **New conversation**, leave **Model** empty for the real model, and send the message on the card. Asks to keep a memory come up as **Allow** or **Deny** in the chat.
-3. The terminal is for what Maya would not do on the page: `uv run launchkit forget harbor` to start a step again from an empty store (conversations stay), `uv run launchkit seed-memories harbor` for step 3's month of rows, `uv run launchkit replay` to send a file of Maya's messages as one conversation, `uv run launchkit store …` and `uv run launchkit memories …` to read the store, and `uv run launchkit check mem1` … `mem4` to prove a step.
+3. The terminal is for what Maya would not do on the page: `uv run launchkit forget harbor` to start a step again from an empty store (conversations stay), `uv run launchkit seed-memories harbor` for hands-on 2's month of rows, `uv run launchkit replay` to send a file of Maya's messages as one conversation, `uv run launchkit store …` and `uv run launchkit memories …` to read the store, and `uv run launchkit check mem1` or `mem2` to prove a hands-on.
 4. `fake:memory` is the fallback: a scripted model that gives the same answer every time. Type it in **Model** when you are offline, without a key, or want the card's exact output. The checks always run on it.
 
 ### See what the agent stored
@@ -172,7 +172,7 @@ Everything Agno keeps for LaunchKit is one SQLite file, `data/sessions.db`. It a
 | Table | One row per | Columns to watch |
 | --- | --- | --- |
 | `agno_memories` | thing the agent kept | `memory`, `user_id` (`maya`, `sam`, or `harbor:everyone` for everyone at Harbor), `topics` (the kind, `author:`, `source:`), `created_at` |
-| `agno_sessions` | conversation | `session_id`, `user_id`, `summary` (from memory step 4) |
+| `agno_sessions` | conversation | `session_id`, `user_id`, `summary` (from hands-on 2, part B) |
 | `agno_runs` | turn in a conversation | `session_id`, `run_index`, `status`, `run_data` |
 
 In the terminal:
@@ -181,7 +181,7 @@ In the terminal:
 uv run launchkit store                             # every table and how many rows it holds
 uv run launchkit store agno_memories               # the memory rows, column by column, as Agno stored them
 uv run launchkit store agno_memories --user maya   # only Maya's own rows; --user harbor:everyone for Harbor's
-uv run launchkit store agno_sessions               # one row per conversation; the summary column is step 4's
+uv run launchkit store agno_sessions               # one row per conversation; the summary column is hands-on 2's
 uv run launchkit store agno_runs                   # one row per turn
 uv run launchkit store agno_memories --schema      # a table's columns and their types
 uv run launchkit memories harbor --user maya       # what one person may read: their rows and Harbor's, as get_user_memories returns them
@@ -191,14 +191,12 @@ Long values are cut at 100 characters; add `--full` to see them whole, and `--li
 
 In your editor: install the **SQLite Viewer** extension (`qwtel.sqlite-viewer`; it works in VS Code and Cursor) and open `data/sessions.db` from the file explorer. Each table opens as a grid with its real columns. Close and reopen the tab after a run to see new rows. Use it to look, not to edit: to start again, `uv run launchkit forget harbor` empties Harbor's memory rows.
 
-## Session 3 · Agent memory, four hands-on steps
+## Session 3 · Agent memory, two hands-on steps
 
-| Hands-on (start on) | Slot | Check | Card |
+| Hands-on (start on) | Parts and slots | Check | Card |
 | --- | --- | --- | --- |
-| 1 · Switch it on, then read what it kept (`session-03-memory-step1`) | `agents/main_agent.py` `build_main_agent`; then sort on `docs/memory-sort.html` | `check mem1` | `docs/memory-1.md` |
-| 2 · What earns a write, and whose it is (`session-03-memory-step2`) | `agents/main_agent.py` `build_main_agent`, `memory/write_rules.md`, `memory/write_gate.py` `ask_before_keeping` | `check mem2` | `docs/memory-2.md` |
-| 3 · Read it back cheaply (`session-03-memory-step3`) | `memory/index.py` `memory_index`, `recall` | `check mem3` | `docs/memory-3.md` |
-| 4 · One long conversation (`session-03-memory-step4`) | `agents/main_agent.py` `build_main_agent`, `memory/compaction.py` `must_keep` | `check mem4` | `docs/memory-4.md` |
+| 1 · What goes in (`session-03-memory-step1`) | 1, switch it on: `agents/main_agent.py` `build_main_agent`, then sort on `docs/memory-sort.html`; 2, what earns a write: `agents/main_agent.py` `build_main_agent`, `memory/write_rules.md`; 3, whose it is: `memory/write_gate.py` `ask_before_keeping` | `check mem1` | `docs/memory-1.md` |
+| 2 · What comes back, and for how long (`session-03-memory-step2`) | A, read it back cheaply: `memory/index.py` `memory_index`, `recall`; B, one long conversation: `agents/main_agent.py` `build_main_agent`, `memory/compaction.py` `must_keep` | `check mem2` | `docs/memory-2.md` |
 
 `uv run launchkit check mem` runs every memory check on the branch.
 
@@ -283,6 +281,6 @@ docs/         setup, glossary, one card per step
 | Stop, cap or check something | `guardrails/` |
 | Change what the model sees | `agents/prompt.py`, and the task text in `agents/main_agent.py` |
 | Hand work to a helper agent | `orchestration/` |
-| Keep something past the conversation, or change what is kept | `memory/`: the store and its door (`long_term.py`); each memory step adds its own file there |
+| Keep something past the conversation, or change what is kept | `memory/`: the store and its door (`long_term.py`); each memory hands-on adds its own files there |
 | A new brand | `uv run launchkit onboard` writes `workspaces/<brand>/` (`brands/onboard.py`) |
 | New brand facts to look up | `workspaces/<brand>/facts.md`, then `uv run launchkit index` (`knowledge/`) |

@@ -1,4 +1,4 @@
-# A plausible month of rows at Harbor, for memory step 3: thirty things earlier conversations kept.
+# A plausible month of rows at Harbor, for memory hands-on 2: thirty things earlier conversations kept.
 # Each row: the fact, its kind, its topic, who said it, and whether it is theirs or everyone's at Harbor.
 - {text: "Harbor uses its own photography for launches, never AI-generated pictures.", kind: preference, topic: photography, author: maya, scope: workspace}
 - {text: "The Tidal shoot photos are in the shared drive under Shoots/2026-09.", kind: domain fact, topic: photography, author: maya, scope: workspace}

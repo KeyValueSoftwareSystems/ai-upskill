@@ -439,7 +439,7 @@ def main(argv=None):
     store.add_argument("--limit", type=int, default=20, help="at most this many rows (default 20)")
     store.set_defaults(func=cmd_store)
 
-    seed = sub.add_parser("seed-memories", help="write a month of memory rows into a workspace's store (memory step 3)")
+    seed = sub.add_parser("seed-memories", help="write a month of memory rows into a workspace's store (memory hands-on 2)")
     seed.add_argument("workspace")
     seed.set_defaults(func=cmd_seed_memories)
 
