@@ -12,8 +12,6 @@ import yaml
 from agno.db.schemas.memory import UserMemory
 from agno.db.sqlite import SqliteDb
 
-from launchkit.memory.write_gate import ask_before_keeping
-from launchkit.tools.catalogue import built
 from launchkit.trace import Trace
 
 MEMORY_TABLE = "agno_memories"
@@ -33,32 +31,22 @@ def everyone(workspace_id: str) -> str:
 
 class MemoryDb(SqliteDb):
     """The memory table's door. Every row written gets the fields the harness owns, never the agent: who said it and
-    where it came from. Once ask_before_keeping is built, Maya says yes or no to each row first, and whether it is
-    hers or everyone's at the workspace."""
+    where it came from."""
 
-    def __init__(self, db_file: str, workspace_id: str, user_id: str, trace: Trace | None = None, approve=None):
+    def __init__(self, db_file: str, workspace_id: str, user_id: str, trace: Trace | None = None):
         super().__init__(db_file=db_file, memory_table=MEMORY_TABLE)
         self.workspace_id, self.user_id = workspace_id, user_id
         self.trace = trace if trace is not None else Trace()
-        self.approve = approve
 
     def upsert_user_memory(self, memory: UserMemory, deserialize: bool | None = True):
-        scope = "user"
-        if self.approve is not None and built(ask_before_keeping):
-            scope = ask_before_keeping(memory.memory, list(memory.topics or []), self.approve)
-            if scope is None:
-                self.trace.refused("keep a memory", f"Maya said no to: {memory.memory}")
-                return None
         memory.topics = [t for t in (memory.topics or []) if not t.startswith(OWNED)] + [f"author:{self.user_id}", "source:conversation"]
-        if scope == "workspace":
-            memory.user_id = everyone(self.workspace_id)
-        self.trace.note(f"memory kept · {'everyone at ' + self.workspace_id if scope == 'workspace' else memory.user_id} · {memory.memory}")
+        self.trace.note(f"memory kept · {memory.user_id} · {memory.memory}")
         return super().upsert_user_memory(memory, deserialize)
 
 
-def memory_db(settings, workspace_id: str, user_id: str, trace: Trace | None = None, approve=None) -> MemoryDb:
+def memory_db(settings, workspace_id: str, user_id: str, trace: Trace | None = None) -> MemoryDb:
     settings.data_dir.mkdir(parents=True, exist_ok=True)
-    return MemoryDb(str(settings.data_dir / "sessions.db"), workspace_id, user_id, trace, approve)
+    return MemoryDb(str(settings.data_dir / "sessions.db"), workspace_id, user_id, trace)
 
 
 def memories_for(db: SqliteDb, workspace_id: str, user_id: str) -> list[UserMemory]:
