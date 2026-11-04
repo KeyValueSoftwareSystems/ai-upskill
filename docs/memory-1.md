@@ -58,10 +58,11 @@ Nothing in this list is new to build. It is here so nothing changes without you 
     - Every read is the person's own rows plus the workspace's, and nobody else's.
     - The door has to be inside the database, because Agno's memory manager writes straight to whatever `db` it is given. A check anywhere else would be skipped.
 - **`write_rules()`** in `long_term.py` reads `launchkit/memory/write_rules.md`, once you have written it (Part 2).
-- **The instruction for the memory tool** (`MEMORY_TASK`, same file).
-    - Agno tells the model about `update_user_memory` inside the system message it builds itself, and LaunchKit writes its own. LaunchKit's task also says to call tools only through `run_tool`.
+- **The instruction for the memory tool** (`MEMORY_TASK` and `MEMORY_SHARE`, same file).
+    - Agno tells the model about `update_user_memory` inside the system message it builds itself, and LaunchKit writes its own. LaunchKit's task also says to call `find_tool` first and every tool only through `run_tool`.
     - So without this, the real model holds the tool but never calls it, and nothing reaches the memory manager.
-    - Once you turn `enable_agentic_memory` on (Part 2), the harness puts Agno's instruction, worded for the three doors, at the top of the `# Memory` section.
+    - Once you turn `enable_agentic_memory` on (Part 2), the harness opens the `# Task` section with Agno's instruction, worded for the three doors: before `find_tool`, call `update_user_memory` when the message states a rule, preference or correction meant to last. It has to come first: placed later in the prompt, "call find_tool first" wins, and the model rarely calls the memory tool.
+    - The `# Memory` section adds one line for Part 3: call it again when something already kept should be kept for everyone.
 - **The Context tab** shows the tokens of memory in the prompt.
 - **Breeze** in Harbor's `facts.md`, and its shoot photo in `samples/shoot/breeze-shoot.jpg`.
 

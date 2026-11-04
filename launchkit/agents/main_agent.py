@@ -26,7 +26,7 @@ from launchkit.mcp.client import closes_its_mcp_links
 from launchkit.mcp.servers import server_entries
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.chat_history import session_db
-from launchkit.memory.long_term import MEMORY_TASK, memory_db, memories_for, memory_text
+from launchkit.memory.long_term import MEMORY_SHARE, MEMORY_TASK, memory_db, memories_for, memory_text
 from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
 from launchkit.tools.check_copy import make_check_copy
 from launchkit.tools.describe_image import describe_image_entry
@@ -112,8 +112,10 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
     )
     if agent.enable_agentic_memory:
         # Agno tells the model about update_user_memory in the system message it builds itself. LaunchKit writes its
-        # own, so the harness says it here, in the Memory section, worded for the three doors.
-        ctx.set("memory", "\n\n".join(part for part in (MEMORY_TASK, ctx.sections.get("memory", "")) if part))
+        # own, so the harness says it: first in the Task section, as the one step before find_tool, and in the Memory
+        # section for a row that is already kept but now for everyone.
+        ctx.set("task", f"{MEMORY_TASK}\n{ctx.sections['task']}")
+        ctx.set("memory", "\n\n".join(part for part in (MEMORY_SHARE, ctx.sections.get("memory", "")) if part))
         agent.system_message = ctx.render()
     return agent
 

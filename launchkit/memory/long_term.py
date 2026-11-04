@@ -22,14 +22,14 @@ OWNED = ("author:", "source:")
 SAMPLES = Path(__file__).resolve().parents[2] / "samples" / "memory"
 RULES = Path(__file__).resolve().parent / "write_rules.md"
 
-# Agno's own instruction for update_user_memory (agno/agent/_messages.py, <updating_user_memories>), which never
-# reaches LaunchKit's system message, said for the three doors: this one tool is called directly.
-MEMORY_TASK = ("You also hold update_user_memory. It is the one tool you call directly, not through run_tool, and you "
-               "need no find_tool for it. When the marketer's message includes something that should be remembered for "
-               "next time, call update_user_memory first, with that one thing as the task in a plain sentence; then do "
-               "the job as usual. If their message holds nothing worth remembering, do not call it. What is kept is "
-               "decided after your call, not by you. Call it as well when they want something already kept changed, or "
-               "kept for everyone at the brand: who it is for is new, even when the fact is not.")
+# Agno's own instruction for update_user_memory (agno/agent/_messages.py, <updating_user_memories>) never reaches
+# LaunchKit's system message, so the harness says it, worded for the three doors. MEMORY_TASK opens the Task section:
+# placed anywhere later, "call find_tool first" wins and the model rarely calls the memory tool at all.
+MEMORY_TASK = ('Before find_tool: if the message states a rule, preference or correction meant to last ("use our...", '
+               '"never...", "always...", "from now on..."), call update_user_memory first, directly, with it in one sentence. '
+               "When unsure, call it. Then call find_tool for the job as usual.")
+MEMORY_SHARE = ("Call update_user_memory as well when the marketer wants something already kept changed, or kept for "
+                "everyone at the brand: who it is for is new, even when the fact is not.")
 
 MEMORY_HEADER = ("Kept from earlier conversations. Follow these unless this conversation says otherwise. If one says to use "
                  "the brand's own photos and none is in this conversation, ask the marketer for the photo instead of writing a poster.")
