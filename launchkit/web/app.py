@@ -48,7 +48,8 @@ class RunBody(BaseModel):
 
 
 class Answer(BaseModel):
-    allow: bool
+    allow: bool = False
+    choice: str | None = None
 
 
 class Person(BaseModel):
@@ -136,17 +137,17 @@ def start_run(body: RunBody):
 
 
 def ask_on_page(queue: Queue):
-    """The page's version of ask_in_terminal: the run stops, the chat shows Allow and Deny, and the answer comes back
-    through /answer. No answer in five minutes counts as no."""
+    """The page's version of ask_in_terminal: the run stops, the chat shows Allow and Deny (or one button per choice,
+    when the ask carries choices), and the answer comes back through /answer. No answer in five minutes counts as no."""
 
-    def approve(name: str, inputs: dict) -> bool:
+    def approve(name: str, inputs: dict) -> bool | str | None:
         ask_id = uuid.uuid4().hex[:8]
-        answered, answer = threading.Event(), {"allow": False}
+        answered, answer = threading.Event(), {"allow": False, "choice": None}
         ASKS[ask_id] = (answered, answer)
         queue.put({"type": "ask", "id": ask_id, "name": name, "inputs": inputs})
         answered.wait(ASK_WAIT)
         ASKS.pop(ask_id, None)
-        return answer["allow"]
+        return answer["choice"] if "choices" in inputs else answer["allow"]
 
     return approve
 
@@ -156,7 +157,7 @@ def answer(ask_id: str, body: Answer):
     if ask_id not in ASKS:
         raise HTTPException(404, "that question is no longer open")
     answered, answer = ASKS[ask_id]
-    answer["allow"] = body.allow
+    answer["allow"], answer["choice"] = body.allow, body.choice
     answered.set()
     return {"ok": True}
 

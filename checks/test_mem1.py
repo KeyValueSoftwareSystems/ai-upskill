@@ -4,14 +4,15 @@ from agno.db.schemas.memory import UserMemory
 
 from launchkit.agents.main_agent import run_main
 from launchkit.memory.long_term import KINDS, RULES, memory_db, memories_for
+from launchkit.memory.write_gate import DONT_KEEP, EVERYONE, JUST_ME
 
 from memory_asks import BREEZE, PHOTO_RULE, TIDAL
 
 
 def says(keep: bool, everyone: bool = False):
-    """Maya's answers once part 3 asks her: yes or no to keeping a row, and yes or no to keeping it for everyone at
-    Harbor. No to any other write."""
-    return lambda name, inputs: {"keep_in_memory": keep, "keep_for_everyone": everyone}.get(name, False)
+    """Maya's answer once part 3 asks her, one per row: just her, everyone at Harbor, or don't keep. No to any other write."""
+    pick = (EVERYONE if everyone else JUST_ME) if keep else DONT_KEEP
+    return lambda name, inputs: pick if name == "keep_in_memory" else False
 
 
 def two_launches(settings, request_for, memory, trace, approve):

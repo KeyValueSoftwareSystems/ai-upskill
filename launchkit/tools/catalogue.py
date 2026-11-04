@@ -52,7 +52,14 @@ def load_skills(folder: Path = SKILLS_DIR) -> dict[str, Skill]:
     return skills
 
 
-def ask_in_terminal(name: str, inputs: dict) -> bool:
+def ask_in_terminal(name: str, inputs: dict) -> bool | str | None:
+    """Yes or no; or, when the ask carries choices, the choice picked by its number (anything else picks none)."""
+    choices = inputs.get("choices")
+    if choices:
+        shown = {k: v for k, v in inputs.items() if k != "choices"}
+        menu = "  ".join(f"[{i}] {c}" for i, c in enumerate(choices, 1))
+        answer = input(f"\nMaya, the agent wants to {name}({json.dumps(shown)}).\n{menu}  ").strip()
+        return choices[int(answer) - 1] if answer.isdigit() and 1 <= int(answer) <= len(choices) else None
     answer = input(f"\nMaya, the agent wants to {name}({json.dumps(inputs)}). Allow? [y/N] ")
     return answer.strip().lower() in ("y", "yes")
 

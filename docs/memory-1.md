@@ -234,18 +234,20 @@ The obvious repair is to give everyone at Harbor the same id. It works on the Mo
 ### What changes, and why
 
 - **Before:** a row is kept as soon as the rules let it through, and always as the speaker's.
-- **After:** Maya is asked before a row is kept, and asked again whether it is for everyone at Harbor, with a warning that this changes the agent for everybody. Personal by default, workspace only on a yes.
+- **After:** Maya is asked once before a row is kept: **Just me**, **Everyone at the brand**, or **Don't keep**, with a warning that everyone changes the agent for everybody. Workspace only when she picks it.
 - The ask is Session 2's approval rule, now in front of the memory table. The scope is chosen when the fact is written, not when it is read.
-- A row already kept can be shared later. Maya says so in the chat, and her answer to the second ask moves the row (`MemoryDb` does the moving, ready-made).
+- A row already kept can be shared later. Maya says so in the chat, picks **Everyone at the brand**, and the row moves (`MemoryDb` does the moving, ready-made).
 
 ### Prompt card, for your coding agent
 
 ```
 4. In launchkit/memory/write_gate.py, build ask_before_keeping(memory, topics, approve): remove the
    @todo and the raise. Find the kind among topics (preference, domain fact, workflow, correction).
-   Call approve("keep_in_memory", {"memory": memory, "kind": kind}); on no, return None. Then call
-   approve("keep_for_everyone", {"memory": memory, "warning": "This changes the agent for everybody
-   at the brand, not only you."}); return "workspace" on yes, "user" on no.
+   Ask once: approve("keep_in_memory", {"memory": memory, "kind": kind, "warning": "Everyone at the
+   brand changes the agent for everybody there, not only you.", "choices": ["Just me", "Everyone at
+   the brand", "Don't keep"]}). The answer is the choice picked: return "user" for Just me,
+   "workspace" for Everyone at the brand, None for anything else. The warning and the three choices
+   are ready-made at the top of the file: EVERYONE_WARNING, JUST_ME, EVERYONE, DONT_KEEP.
 ```
 
 ### Run it again
@@ -257,15 +259,13 @@ Saving `write_gate.py` restarted the page by itself, so it runs your gate: check
 On the chat page:
 
 1. Signed in as Maya, stay in your open conversation and send: "Use our own shoot photos, never AI pictures. That goes for everyone at Harbor."
-2. The chat stops to ask, twice:
-    - *The agent wants to keep_in_memory*, with the sentence and its kind;
-    - *keep_for_everyone*, with the warning.
-3. **Allow** both.
+2. The chat stops to ask once: *The agent wants to keep_in_memory*, with the sentence, its kind and the warning, and three buttons.
+3. Pick **Everyone at the brand**.
 4. Sign in as **Sam**, press **New conversation**, and send the Breeze message. A new conversation keeps Sam's earlier Breeze turns out of the history.
 
 **What to look for:**
 
-- **The Trace tab, as Maya:** `update_user_memory(…)`, then `note  memory kept · everyone at harbor · …`. The rule was already kept, but who it is for is new, so the agent still calls the tool. If you deny the second ask, the note says `maya`, and Sam never sees it.
+- **The Trace tab, as Maya:** `update_user_memory(…)`, then `note  memory kept · everyone at harbor · …`. The rule was already kept, but who it is for is new, so the agent still calls the tool. If you pick **Just me**, the note says `maya`, and Sam never sees it.
 - **The store** (`uv run launchkit store agno_memories`):
     - the photo rule now has `user_id` `harbor:everyone`;
     - `topics` carries `preference`, `author:maya` and `source:conversation`;

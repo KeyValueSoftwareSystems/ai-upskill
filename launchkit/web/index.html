@@ -311,15 +311,19 @@ function showView(x){
     <p>took ${x.seconds} s</p><p class="empty">Everything a tool returns stays in the main agent's view and rides along on later turns.</p>`;
 }
 function askHtml(ev){
-  return `<b>The agent wants to ${esc(ev.name)}</b><pre>${esc(JSON.stringify(ev.inputs, null, 2))}</pre><div class="row"><button data-allow="1">Allow</button><button class="quiet" data-allow="0">Deny</button></div>`;
+  const { choices, ...shown } = ev.inputs;
+  const buttons = choices
+    ? choices.map((c, i) => `<button${i === choices.length - 1 ? ' class="quiet"' : ""} data-choice="${esc(c)}">${esc(c)}</button>`).join("")
+    : `<button data-allow="1">Allow</button><button class="quiet" data-allow="0">Deny</button>`;
+  return `<b>The agent wants to ${esc(ev.name)}</b><pre>${esc(JSON.stringify(shown, null, 2))}</pre><div class="row">${buttons}</div>`;
 }
 function showAsk(ev){
   const d = add("ask", askHtml(ev));
   d.querySelectorAll("button").forEach(b => b.onclick = async () => {
-    const allow = b.dataset.allow === "1";
+    const choice = b.dataset.choice ?? null, allow = b.dataset.allow === "1";
     d.querySelectorAll("button").forEach(x => x.disabled = true);
-    await fetch(`/answer/${ev.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ allow }) });
-    d.querySelector(".row").outerHTML = `<div>${allow ? "Allowed." : "Denied."}</div>`;
+    await fetch(`/answer/${ev.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ allow, choice }) });
+    d.querySelector(".row").outerHTML = `<div>${choice !== null ? esc(choice) + "." : allow ? "Allowed." : "Denied."}</div>`;
   });
 }
 let ATTACHED = [];
