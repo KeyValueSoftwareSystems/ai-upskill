@@ -239,6 +239,9 @@ launchkit/
     chat_history.py                      past turns of this conversation
     long_term.py                         the memory table, its door (MemoryDb) and who may read which row
     write_gate.py                        Maya says yes, and whose it is, before a row is kept (hands-on 1, part 3)
+    write_rules.md                       what earns a write, in the room's words (hands-on 1, part 2)
+    index.py                             the index in the prompt and the recall lookup (hands-on 2, part A)
+    compaction.py                        the summary and what must survive it (hands-on 2, part B)
   knowledge/                             brand facts the agent looks up (RAG)
     brand_index.py                       puts the brand books in the vector database (launchkit index)
     brand_library.py                     reads a brand's files
@@ -287,6 +290,6 @@ docs/         setup, glossary, one card per step
 | Stop, cap or check something | `guardrails/` |
 | Change what the model sees | `agents/prompt.py`, and the task text in `agents/main_agent.py` |
 | Hand work to a helper agent | `orchestration/` |
-| Keep something past the conversation, or change what is kept | `memory/`: the store and its door (`long_term.py`); each memory hands-on adds its own files there |
+| Keep something past the conversation, or change what is kept | `memory/`: the store and its door (`long_term.py`), the policy (`write_rules.md`, `write_gate.py`), the index (`index.py`), compaction (`compaction.py`) |
 | A new brand | `uv run launchkit onboard` writes `workspaces/<brand>/` (`brands/onboard.py`) |
 | New brand facts to look up | `workspaces/<brand>/facts.md`, then `uv run launchkit index` (`knowledge/`) |
