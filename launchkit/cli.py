@@ -82,6 +82,16 @@ def cmd_memories(args):
     if not rows:
         console.print(f"No memories for {args.user} at {args.workspace}.")
         return 0
+    if args.prompt:
+        from launchkit.agents.prompt import approx_tokens
+        from launchkit.memory.index import memory_index
+        from launchkit.memory.long_term import memory_text
+        from launchkit.tools.catalogue import built
+
+        text = memory_index(rows) if built(memory_index) else memory_text(rows)
+        console.print(f"[bold]# Memory, as the prompt carries it[/bold] ({'the index' if built(memory_index) else 'every row'}, about {approx_tokens(text)} tokens)")
+        console.print(text, highlight=False, markup=False)
+        return 0
     for n, row in enumerate(rows, 1):
         whose = f"everyone at {args.workspace}" if row.user_id == everyone(args.workspace) else row.user_id
         console.print(f"{n:>2}. {row.memory}", highlight=False, markup=False)
@@ -131,6 +141,27 @@ def cmd_store(args):
             if not args.full and len(text) > 100:
                 text = text[:100] + f"… ({len(text)} characters; --full shows all)"
             console.print(f"{column:<{width}}  {text}", highlight=False, markup=False)
+    return 0
+
+
+def cmd_optimize(args):
+    """Agno's one pruning lever: merge a person's own rows into a summary. A preview unless --apply; --apply rewrites
+    the store and there is no going back, so the trainer runs it, from the trainer's machine."""
+    from agno.memory import MemoryManager
+
+    from launchkit.adapters.models import resolve_model
+    from launchkit.memory.long_term import memory_db
+
+    current = replace(settings, model=args.model) if args.model else settings
+    db = memory_db(current, args.workspace, args.user)
+    before = db.get_user_memories(user_id=args.user) or []
+    after = MemoryManager(model=resolve_model(current, Trace()), db=db).optimize_memories(user_id=args.user, apply=args.apply)
+    console.print(f"[bold]{len(before)} rows before[/bold]")
+    for row in before:
+        console.print(f"  - {row.memory}", highlight=False, markup=False)
+    console.print(f"\n[bold]{len(after)} after{' (applied)' if args.apply else ' (preview: nothing written)'}[/bold]")
+    for row in after:
+        console.print(f"  - {row.memory}", highlight=False, markup=False)
     return 0
 
 
@@ -433,6 +464,7 @@ def main(argv=None):
     memories = sub.add_parser("memories", help="print what the memory store keeps for one person: their rows and the workspace's")
     memories.add_argument("workspace")
     memories.add_argument("--user", default="maya")
+    memories.add_argument("--prompt", action="store_true", help="print the Memory section the prompt carries for this person, not the rows")
     memories.set_defaults(func=cmd_memories)
 
     store = sub.add_parser("store", help="read the agent's store, data/sessions.db: its tables, or one table's rows column by column")
@@ -446,6 +478,13 @@ def main(argv=None):
     seed = sub.add_parser("seed-memories", help="write a month of memory rows into a workspace's store (memory hands-on 2)")
     seed.add_argument("workspace")
     seed.set_defaults(func=cmd_seed_memories)
+
+    optimize = sub.add_parser("optimize", help="trainer only: merge a person's rows into a summary with Agno's optimize_memories; a preview unless --apply")
+    optimize.add_argument("workspace")
+    optimize.add_argument("--user", default="maya")
+    optimize.add_argument("--apply", action="store_true", help="write the merged rows over the old ones; there is no undo")
+    optimize.add_argument("--model", help="override LAUNCHKIT_MODEL")
+    optimize.set_defaults(func=cmd_optimize)
 
     forget = sub.add_parser("forget", help="empty a workspace's memory store, to run a step again from nothing")
     forget.add_argument("workspace")
