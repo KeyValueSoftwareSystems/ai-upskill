@@ -40,7 +40,7 @@ The opener's code is on this branch too (`approach_llm/`, `approach_graph/`, `la
 | Command | What it does |
 | --- | --- |
 | `uv run launchkit run harbor "Poster for the Tidal bottle on a misty lakeshore at dawn."` | One request in the terminal: trace, spec, picture path |
-| `uv run launchkit ui` | The chat page: sign in as a person, chat with the main agent, live trace, context view, the files it made, Allow and Deny before a write |
+| `uv run launchkit ui` | The chat page, restarting by itself when the code changes: sign in as a person, chat with the main agent, live trace, context view, the files it made, Allow and Deny before a write |
 | `uv run launchkit main harbor "How are Hydro Flask, Stanley, Yeti, Owala and Klean Kanteen launching bottles this season?"` | Talk to the main agent: trace, reply, how much its view holds, how long it took |
 | `uv run launchkit check orch1` | Prove a step with fake models. `check orch` is the gate for both steps |
 | `uv run launchkit explain` | What the model saw on the last Session 1 poster run, in what order, at what cost |
@@ -160,7 +160,7 @@ Every branch here is the **start** of a hands-on. The one before it is already a
 
 How each step runs:
 
-1. Start on the step's branch and restart `uv run launchkit ui` after each checkout.
+1. Start on the step's branch and keep `uv run launchkit ui` running. It restarts by itself when a `.py` file under `launchkit/` changes, including after a checkout: the terminal says `Reloading...`, and you reload the browser tab. `uv run launchkit ui --no-reload` turns that off.
 2. Everything Maya types goes on the chat page: sign in as Maya (or Sam) at Harbor, press **New conversation**, leave **Model** empty for the real model, and send the message on the card. Asks to keep a memory come up as **Allow** or **Deny** in the chat.
 3. The terminal is for what Maya would not do on the page: `uv run launchkit forget harbor` to start a step again from an empty store (conversations stay), `uv run launchkit seed-memories harbor` for hands-on 2's month of rows, `uv run launchkit replay` to send a file of Maya's messages as one conversation, `uv run launchkit store …` and `uv run launchkit memories …` to read the store, and `uv run launchkit check mem1` or `mem2` to prove a hands-on.
 4. `fake:memory` is the fallback: a scripted model that gives the same answer every time. Type it in **Model** when you are offline, without a key, or want the card's exact output. The checks always run on it.

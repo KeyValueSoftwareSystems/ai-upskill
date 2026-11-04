@@ -19,6 +19,8 @@ uv run launchkit forget harbor
 uv run launchkit ui
 ```
 
+Leave the page running for the whole hands-on. When you save a change to the code, it restarts by itself: the terminal says `Reloading...`. Then reload the browser tab.
+
 On the chat page, sign in as **Maya** at **Harbor**, press **New conversation**, and leave **Model** empty for the real model. Then send three messages, one at a time, waiting for each reply.
 
 1. Press 📎 and attach `samples/shoot/tidal-shoot.jpg` from the repo. Then send: "Tidal poster from our shoot photo: the lakeside one. Use our shoot photo, not an AI one, and never call it unbreakable."
@@ -92,7 +94,7 @@ On the chat page, still signed in as Maya, press **New conversation** and send: 
 
 ### Run it again
 
-Restart `uv run launchkit ui`.
+Save the file. The page restarts by itself (the terminal says `Reloading...`); reload the browser tab.
 
 Memory starts now. It learns nothing from the Tidal chat, which ran before it was switched on. So on the chat page, signed in as Maya, press **New conversation** and run a short launch, two messages:
 
@@ -148,7 +150,7 @@ Carry on from Part 1: do not empty the store. Memory belongs to the person, not 
 uv run launchkit memories harbor                   # Maya's rows from Part 1
 ```
 
-**If it says No memories** (you emptied the store), restart `uv run launchkit ui` and send the two Tidal messages from Part 1 once on the chat page as Maya, with **Model** empty. Any conversation will do.
+**If it says No memories** (you emptied the store), send the two Tidal messages from Part 1 once on the chat page as Maya, with **Model** empty. Any conversation will do.
 
 **What to look for:**
 
@@ -181,7 +183,9 @@ uv run launchkit memories harbor                   # Maya's rows from Part 1
 
 ### Run it again
 
-In the terminal, run `uv run launchkit forget harbor`, then restart `uv run launchkit ui`. The store is emptied on purpose: Part 1's rows went in with no rules, and you want to see only what your rules let through. Conversations stay.
+In the terminal, run `uv run launchkit forget harbor`. The store is emptied on purpose: Part 1's rows went in with no rules, and you want to see only what your rules let through. Conversations stay.
+
+Saving `main_agent.py` restarted the page by itself; reload the browser tab. `write_rules.md` is read on every run, so editing it needs no restart.
 
 On the chat page, sign in as Maya at Harbor and send the two Tidal messages from Part 1 again. Your conversation from Part 1 is fine, or press **New conversation**.
 
@@ -247,7 +251,7 @@ The obvious repair is to give everyone at Harbor the same id. It works on the Mo
 
 Carry on where you are: no need to empty the store or resend the Tidal messages. Maya shares the rule she already kept, in the conversation she has open.
 
-In the terminal, restart `uv run launchkit ui`, so the page runs your gate.
+Saving `write_gate.py` restarted the page by itself, so it runs your gate: check the terminal says `Reloading...`, then reload the browser tab.
 
 On the chat page:
 
