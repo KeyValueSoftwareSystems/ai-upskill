@@ -1,7 +1,10 @@
 import os
 import socket
+import threading
 import time
 from dataclasses import replace
+
+import httpx
 from urllib.parse import urlparse
 
 from agno.exceptions import ModelProviderError
@@ -36,6 +39,18 @@ def reach(url: str, seconds: float = 3.0):
         raise ModelProviderError(f"Cannot reach KeyValue's model proxy ({found.hostname}). Is the VPN on?", status_code=503) from None
 
 
+_proxy_cost = threading.local()  # the cost the proxy reported for this thread's last call
+
+
+def _remember_cost(response: httpx.Response):
+    """LiteLLM puts what it charged for a call in a response header, not in the body."""
+    value = response.headers.get("x-litellm-response-cost")
+    _proxy_cost.value = float(value) if value else None
+
+
+PROXY_HTTP = httpx.Client(event_hooks={"response": [_remember_cost]})
+
+
 class ProxyChat(OpenAIChat):
     """Through the proxy a 401 is usually its upstream key having a bad moment, not ours, so it is worth another try."""
 
@@ -55,12 +70,14 @@ class ProxyChat(OpenAIChat):
     def invoke(self, *args, **kwargs):
         """Every real model call, timed, so the scoreboard can say which job spent what. Agents, the memory manager
         and the summary all come through here."""
+        _proxy_cost.value = None
         started = time.perf_counter()
         response = super().invoke(*args, **kwargs)
         if getattr(self, "on_call", None):
             usage = response.response_usage
             self.on_call(time.perf_counter() - started, getattr(usage, "input_tokens", 0) or 0,
-                         getattr(usage, "cache_read_tokens", 0) or 0, getattr(usage, "output_tokens", 0) or 0)
+                         getattr(usage, "cache_read_tokens", 0) or 0, getattr(usage, "output_tokens", 0) or 0,
+                         getattr(_proxy_cost, "value", None))
         return response
 
 
@@ -86,6 +103,7 @@ def resolve_model(settings, trace: Trace, name: str | None = None):
         model = ProxyChat(
             # No retry inside the OpenAI client: it is silent. Agno's retries reach the trace and the Working line.
             id=model_id, api_key=key, base_url=url, timeout=settings.timeout, max_retries=0, retries=3, delay_between_retries=1,
+            http_client=PROXY_HTTP,  # reads what the proxy charged for each call
             extra_body={"cache": {"no-cache": True}},
             reasoning_effort=settings.effort or None,  # LAUNCHKIT_EFFORT or --effort; only reasoning models use it
         )
@@ -165,7 +183,7 @@ class Jobs:
         settings = self.settings if job in MAIN_JOBS else replace(self.settings, effort="")
         model = resolve_model(settings, self.trace, name)
         if isinstance(model, ProxyChat):
-            model.on_call = lambda seconds, sent, cached, got: self.trace.call(job, name, seconds, sent, cached, got)
+            model.on_call = lambda seconds, sent, cached, got, usd: self.trace.call(job, name, seconds, sent, cached, got, usd)
         return model
 
     def first(self, job: str, ask: str | None = None, skill=None):
@@ -201,9 +219,12 @@ def timed_vision_call(model, **request):
     if "api.openai.com" in str(client().base_url):
         request.pop("extra_body", None)  # the no-cache flag is the proxy's; OpenAI itself refuses it
     started = time.perf_counter()
-    reply = client().chat.completions.create(model=model.id, **request)
+    raw = client().chat.completions.with_raw_response.create(model=model.id, **request)
+    reply = raw.parse()
     if getattr(model, "on_call", None) and reply.usage:
-        model.on_call(time.perf_counter() - started, reply.usage.prompt_tokens or 0, 0, reply.usage.completion_tokens or 0)
+        cost = raw.headers.get("x-litellm-response-cost")
+        model.on_call(time.perf_counter() - started, reply.usage.prompt_tokens or 0, 0, reply.usage.completion_tokens or 0,
+                      float(cost) if cost else None)
     return reply
 
 

@@ -48,14 +48,15 @@ class Trace:
         """route()'s choice for one job: the model and why (pick, skill, rank N, fallback)."""
         self.add("route", job=job, model=model_id, reason=reason)
 
-    def call(self, job: str, model_id: str, seconds: float, input_tokens: int, cached_tokens: int, output_tokens: int):
-        """One real model call, timed: what the scoreboard adds up."""
-        self.add("call", job=job, model=model_id, seconds=seconds, input_tokens=input_tokens, cached_tokens=cached_tokens, output_tokens=output_tokens)
+    def call(self, job: str, model_id: str, seconds: float, input_tokens: int, cached_tokens: int, output_tokens: int, usd: float | None = None):
+        """One real model call, timed: what the scoreboard adds up. usd is what the proxy said it charged, when it said."""
+        self.add("call", job=job, model=model_id, seconds=seconds, input_tokens=input_tokens, cached_tokens=cached_tokens, output_tokens=output_tokens, usd=usd)
 
     def bill(self) -> list[dict]:
-        """The scoreboard: one row per model, with the jobs it did, its calls, tokens, seconds and dollars (when
-        launchkit/adapters/pricing.py has a price). Real calls are timed one by one; a run on a fake model counts as one
-        call. Reads the trace; adds no model call."""
+        """The scoreboard: one row per model, with the jobs it did, its calls, tokens, seconds and dollars. The dollars are
+        what the proxy said it charged; for a call it said nothing about, an estimate from launchkit/adapters/pricing.py,
+        and the row says so. Pictures and voice-overs are not on it. Real calls are timed one by one; a run on a fake model
+        counts as one call. Reads the trace; adds no model call."""
         from launchkit.adapters.pricing import cost_usd
 
         calls = [e.detail for e in self.events if e.kind == "call"]
@@ -63,14 +64,23 @@ class Trace:
             calls = [{**e.detail, "job": e.detail["phase"]} for e in self.events if e.kind == "model"]
         rows: dict[str, dict] = {}
         for c in calls:
-            row = rows.setdefault(c["model"], {"model": c["model"], "jobs": [], "calls": 0, "input_tokens": 0, "cached_tokens": 0, "output_tokens": 0, "seconds": 0.0})
+            row = rows.setdefault(c["model"], {"model": c["model"], "jobs": [], "calls": 0, "input_tokens": 0, "cached_tokens": 0, "output_tokens": 0, "seconds": 0.0, "usd": 0.0, "estimated": False, "unknown": False})
             if c["job"] not in row["jobs"]:
                 row["jobs"].append(c["job"])
             row["calls"] += 1
             for key in ("input_tokens", "cached_tokens", "output_tokens", "seconds"):
                 row[key] += c.get(key, 0) or 0
+            usd = c.get("usd")
+            if usd is None:
+                usd = cost_usd(c["model"], c.get("input_tokens", 0) or 0, c.get("cached_tokens", 0) or 0, c.get("output_tokens", 0) or 0)
+                row["estimated"] = True
+            if usd is None:
+                row["unknown"] = True
+            else:
+                row["usd"] += usd
         for row in rows.values():
-            row["usd"] = cost_usd(row["model"], row["input_tokens"], row["cached_tokens"], row["output_tokens"])
+            if row["unknown"] and not row["usd"]:
+                row["usd"] = None
         return list(rows.values())
 
     def checks(self) -> dict:
@@ -160,11 +170,18 @@ class Trace:
             case "call":
                 return f"call      {d['job']} · {d['model']} · {d['seconds']:.1f} s · sent {d['input_tokens']}, got back {d['output_tokens']}"
             case "score":
-                usd = f"${d['usd']:.4f}" if d.get("usd") is not None else "price unknown"
+                if d.get("usd") is None:
+                    usd = "price unknown"
+                elif d.get("estimated") or d.get("unknown"):
+                    usd = f"≈ ${d['usd']:.4f} (estimate from our price table)"
+                else:
+                    usd = f"${d['usd']:.4f} (charged by the proxy)"
                 return (f"score     {d['model']} · {', '.join(d['jobs'])} · {d['calls']} calls · {d['input_tokens']} tokens in, "
                         f"{d['output_tokens']} out · {d['seconds']:.1f} s · {usd}")
             case "quality":
                 photo = f" · photo check caught {d['photo_flags']}" if d["photo_flags"] else ""
+                if not d["passed"] and not d["failed"] and not d["photo_flags"]:
+                    return "quality   no check ran this turn"
                 return f"quality   checks passed {d['passed']}, failed {d['failed']}{photo}"
             case "chunk":
                 score = f" · score {d['score']:.3f}" if d.get("score") is not None else ""
