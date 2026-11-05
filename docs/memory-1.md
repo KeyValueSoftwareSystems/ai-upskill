@@ -15,9 +15,12 @@ This session starts a month after the Tidal launch, so everyone needs that conve
 In the terminal, start from an empty memory store and open the chat page:
 
 ```
+uv run launchkit index            # once, on a fresh clone with no data/ folder: puts the brand books in the brand store
 uv run launchkit forget harbor
 uv run launchkit ui
 ```
+
+Run `index` before `ui`: a page that is already running does not see a brand store made after it started.
 
 Leave the page running for the whole hands-on. When you save a change to the code, it restarts by itself: the terminal says `Reloading...`. Then reload the browser tab.
 
@@ -99,8 +102,10 @@ Save the file. The page restarts by itself (the terminal says `Reloading...`); r
 
 Memory starts now. It learns nothing from the Tidal chat, which ran before it was switched on. So on the chat page, signed in as Maya, press **New conversation** and run a short launch, two messages:
 
-1. "Tidal poster: the lakeside one. Use our shoot photo, not an AI one, and never call it unbreakable. Make this one wide, it's for the web banner."
+1. Press 📎 and attach `samples/shoot/tidal-shoot.jpg`. Then send: "Tidal poster: the lakeside one. Use our shoot photo, not an AI one, and never call it unbreakable. Make this one wide, it's for the web banner."
 2. "Yes, attach them and mark it ready. Thanks!"
+    - With your Notion board connected, **Allow** attaching and marking it ready.
+    - Without one, the agent has no board to write to and says so. Send it anyway: the thanks and the yes are there for the memory to read.
 
 After every run, a second model call (Agno's memory manager) read what was said and kept what looked worth keeping. Nobody asked it to keep anything. Read what it kept, in the terminal or in SQLite Viewer (`agno_memories`):
 
@@ -124,7 +129,7 @@ Attach `samples/shoot/breeze-shoot.jpg` with 📎 and send "Here it is." The pos
 
 Open `docs/memory-sort.html` in your browser: double-click it in your file manager, or run `xdg-open docs/memory-sort.html` (`open` on a Mac).
 
-- It holds nine sentences like the ones your store kept, one for each place a sentence can belong:
+- It holds nine sentences like the ones your store kept, and eight places a sentence can belong (two of the sentences belong in the conversation):
     - nowhere;
     - the conversation;
     - session state;
@@ -135,7 +140,7 @@ Open `docs/memory-sort.html` in your browser: double-click it in your file manag
     - the memory store.
 - Pick a place for every sentence, then press **Reveal answers** at the end. Each sentence shows the right place, the kind of memory it is (short-term, working, episodic, semantic, procedural, or not memory at all), and why, with your score.
 
-Then go back to your own dump: each of your rows is one of those nine kinds. How many of yours belonged in the memory store?
+Then go back to your own dump: each of your rows belongs in one of those eight places. How many of yours belonged in the memory store?
 
 It worked: Maya does not have to type the photo rule again. But only one row was a memory. Whatever your store kept about *wide* now argues with every square feed post, and nobody can point at the moment a decision was made to keep any of it.
 
@@ -177,7 +182,8 @@ uv run launchkit memories harbor                   # Maya's rows from Part 1
 3. Create launchkit/memory/write_rules.md, plain words. Say: keep only what changes how the agent
    works next time and is true beyond this conversation. Keep it only if it is one of four kinds,
    and put the kind first in its topics: preference, domain fact, workflow, correction, each with
-   one example. Then a "Never keep" list: thanks and small talk; a yes or no to one action (that
+   one example, and a second topic, in a word or two, for what it is about (photography,
+   headlines). Then a "Never keep" list: thanks and small talk; a yes or no to one action (that
    permission is for one run); the work itself (it lives on the board); a rule already in the brand
    files; one choice on one afternoon. Last line: when unsure, do not keep it.
 ```
@@ -192,13 +198,13 @@ On the chat page, sign in as Maya at Harbor and send the two Tidal messages from
 
 **What to look for:**
 
-- **The Trace tab:** one `update_user_memory(…)` line for each thing the agent offered to keep, followed by `note  memory kept · maya · …` for each row that got through.
+- **The Trace tab:** one `update_user_memory(…)` line for each time the agent offered something to keep. Just above it, one `note  memory kept · maya · …` for each row that got through: the rows are written while the call runs, and the call's own line is added when it returns.
     - How many it offers depends on the model.
     - Your rules decide how many get through: the photo rule should, and thanks, the yes to attaching, and the one-off "wide" should not.
 - **The store** (`uv run launchkit store agno_memories`, or SQLite Viewer):
     - one clean row, the photo rule;
     - `user_id` `maya`;
-    - `topics` carrying its kind (`preference`), `author:maya` and `source:conversation`.
+    - `topics` carrying its kind (`preference`), what it is about (such as `photography`), `author:maya` and `source:conversation`.
 - **Sometimes one more row gets through**, such as "keep the lakeside concept". Read it against your rules: it is one choice on one afternoon, and your "Never keep" list names it. Tighten `write_rules.md` and run it again.
 
 The row is right. It is Maya's, and Maya is not the only person at Harbor.
@@ -218,7 +224,7 @@ On the chat page, sign in as **Sam** at Harbor, press **New conversation**, and 
     - 0 tokens of memory in the Context tab;
     - Maya's clean row is filed under `maya`, so it never reaches Sam.
 - **The real model may ask for a photo anyway.** Read Sam's Context tab: at 0 tokens of memory, Maya's rule did not reach Sam, and the ask is the model's own caution.
-- **Sam's own message:** with agentic memory on, the agent decides whether Sam's message is worth an `update_user_memory` call. "Breeze launches next month…" is a request about a product, not a fact about Sam, so there is usually no call and no row.
+- **Sam's own message:** with agentic memory on, the agent decides whether Sam's message is worth an `update_user_memory` call. "Breeze launches next month…" is a request about a product, not a fact about Sam. The agent may call it anyway and keep a row under `sam`, such as "Breeze follows the same plan as Tidal". Read it against your rules: it is one choice on one afternoon.
     - To see Sam get a row of Sam's own, send: "I'm new at Harbor and I always start with the picture before the copy."
     - Then run `uv run launchkit memories harbor --user sam`. Sam's habit is kept under `sam`, and Maya's photo rule is still nowhere in Sam's list.
 
@@ -265,10 +271,10 @@ On the chat page:
 
 **What to look for:**
 
-- **The Trace tab, as Maya:** `update_user_memory(…)`, then `note  memory kept · everyone at harbor · …`. The rule was already kept, but who it is for is new, so the agent still calls the tool. If you pick **Just me**, the note says `maya`, and Sam never sees it.
+- **The Trace tab, as Maya:** `note  memory kept · everyone at harbor · …`, then the `update_user_memory(…)` line it came from. The rule was already kept, but who it is for is new, so the agent still calls the tool. If you pick **Just me**, the note says `maya`, and Sam never sees it.
 - **The store** (`uv run launchkit store agno_memories`):
     - the photo rule now has `user_id` `harbor:everyone`;
-    - `topics` carries `preference`, `author:maya` and `source:conversation`;
+    - `topics` carries `preference`, what it is about, `author:maya` and `source:conversation`;
     - Maya's own copy is gone. Agno never changes a row's `user_id`, so `MemoryDb` moves it: it deletes Maya's copy and writes everyone's new.
     - Sometimes the memory manager writes a fresh row instead of updating Maya's. Then Maya keeps her own copy as well; it does no harm, and Sam reads the shared one.
 - **Sam's run:** the agent asks for Harbor's shoot photo instead of buying a picture. Sam's Context tab shows memory in the prompt: the row everyone at Harbor shares.
