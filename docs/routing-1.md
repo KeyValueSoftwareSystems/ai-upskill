@@ -62,7 +62,7 @@ Two rounds on the chat page, one model for everything each time. Before `route()
 
 **Round 1 · The top model on every job.** Type `gpt-5.5` in **Model** and send the three asks.
 
-**What to look for** at the end of each turn in the Trace tab: one `score` line, for `gpt-5.5`, whatever the job. The research costs the most, because the helpers read whole pages at the top price; in our run it was about $0.15 to $0.25. The one-line answer about the size pays the same price per token as the launch copy. The seconds on a `score` line add up every call, so two research helpers working side by side count more than the time Maya waited.
+**What to look for** at the end of each turn in the Trace tab: one `score` line, for `gpt-5.5`, whatever the job. The research costs the most, because the helpers read whole pages at the top price. In our run: headlines about $0.03, research about $0.17, the size about $0.02. On the size question the agent may first load the competitor research skill, then find the brand guide: a few extra calls at the top price. The one-line answer about the size pays the same price per token as the launch copy. The seconds on a `score` line add up every call, so two research helpers working side by side count more than the time Maya waited.
 
 **Round 2 · The smallest model on every job.** Type `gpt-5-nano` in **Model** and send the same three asks.
 
