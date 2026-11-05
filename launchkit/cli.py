@@ -401,6 +401,7 @@ def cmd_check(args):
 def cmd_models(args):
     """Every job's rank list, best first: each model's scores, its total, whether it is enabled and whether the proxy
     serves it. One request to the proxy (its model list), no model call."""
+    from launchkit.adapters.pricing import PRICES_PER_MILLION
     from launchkit.adapters.ranking import JOBS, is_enabled, rank_list, ranking, total
 
     served: set[str] | None = None
@@ -415,9 +416,10 @@ def cmd_models(args):
         entry = entries[job]
         weights = " · ".join(f"{k} {v}" for k, v in entry["weights"].items())
         console.print(f"[bold]{job}[/bold]  {entry.get('about', '')}  (weights: {weights})", highlight=False)
-        table = Table(show_header=True, header_style="bold", box=None, padding=(0, 2))
-        for column in ("rank", "model", "eval", "latency", "cost", "total", "status"):
-            table.add_column(column, justify="right" if column in ("rank", "eval", "latency", "cost", "total") else "left")
+        table = Table(show_header=True, header_style="bold", box=None, padding=(0, 1))
+        for column in ("rank", "model", "eval", "latency", "cost", "total", "price", "status"):
+            table.add_column(column, justify="right" if column in ("rank", "eval", "latency", "cost", "total", "price") else "left",
+                             no_wrap=column in ("model", "status"), min_width=12 if column == "model" else None)
         for i, name in enumerate(rank_list(job, settings), 1):
             scores = entry["models"][name]
             if not is_enabled(name, settings):
@@ -426,9 +428,13 @@ def cmd_models(args):
                 status = "not enabled (the proxy does not serve it)"
             else:
                 status = "enabled" if served is not None else "enabled (proxy not asked)"
-            table.add_row(str(i), name, f"{scores['eval']:.2f}", f"{scores['latency']:.2f}", f"{scores['cost']:.2f}", f"{total(scores, entry['weights']):.3f}", status)
+            prices = PRICES_PER_MILLION.get(name)
+            price = f"${(prices[0] + prices[2]) / 2:.2f}" if prices else "?"
+            table.add_row(str(i), name, f"{scores['eval']:.2f}", f"{scores['latency']:.2f}", f"{scores['cost']:.2f}", f"{total(scores, entry['weights']):.3f}", price, status)
         console.print(table)
         console.print()
+    console.print("eval: 1 is the best work. latency: 1 is the slowest model here. cost: 1 is the most expensive model here, 0 the "
+                  f"cheapest (not free). price: the average of input and output, $ per million tokens, as of {PRICES_AS_OF}.", highlight=False)
     pick = settings.model or "none: the rank list decides once route() is built"
     console.print(f"Maya's pick (LAUNCHKIT_MODEL): {pick}", highlight=False)
     return 0

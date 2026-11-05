@@ -1,7 +1,8 @@
 """The rank list: launchkit/ranking.json, one list per job. Ready-made; route() reads it.
 
-Each model on a job's list has three scores from 0 to 1 (eval, latency, cost; higher is better) and each job has its
-own weights. A model's total is each score times its weight, added up. The highest total is rank 1, which is "Auto".
+Each model on a job's list has three scores from 0 to 1: eval (1 is the best work), latency (1 is the slowest) and cost
+(1 is the most expensive), and each job has its own weights. A model's total counts good work up and slowness and cost
+down: eval x weight + (1 - latency) x weight + (1 - cost) x weight. The highest total is rank 1, which is "Auto".
 """
 
 import json
@@ -22,8 +23,11 @@ def ranking(settings) -> dict:
     return _load(str(path), path.stat().st_mtime)
 
 
+LOWER_IS_BETTER = ("latency", "cost")  # 1 is the slowest or the most expensive, so they count as 1 - score
+
+
 def total(scores: dict, weights: dict) -> float:
-    return round(sum(scores[name] * weight for name, weight in weights.items()), 3)
+    return round(sum((1 - scores[name] if name in LOWER_IS_BETTER else scores[name]) * weight for name, weight in weights.items()), 3)
 
 
 def rank_list(job: str, settings) -> list[str]:
