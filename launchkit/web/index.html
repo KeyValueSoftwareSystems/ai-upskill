@@ -100,7 +100,8 @@ header button.quiet.on{color:var(--accent);border-color:var(--accent);background
   <label>Person <select id="person"></select></label>
   <label>Conversation <select id="session"></select></label>
   <label>Model <input id="model" list="models" placeholder="from .env" size="11"></label>
-  <datalist id="models"><option value="gpt-5.5"><option value="gpt-5.2"><option value="gpt-5.4-mini"><option value="gpt-4.1-mini"><option value="gpt-5-mini"><option value="gpt-5.4-nano"><option value="gpt-5-nano"><option value="fake:memory"><option value="fake:tools"><option value="fake:brief"></datalist>
+  <datalist id="models"></datalist>
+  <label>Switched off <input id="off" placeholder="none" size="22" title="Models to switch off, separated by commas. LaunchKit skips them, and the Model box stops offering them."></label>
   <button class="quiet" id="new">New conversation</button>
   <button class="quiet" id="onboardToggle">Onboard a brand</button>
   <button class="quiet" id="libraryToggle">Brand library</button>
@@ -198,6 +199,22 @@ function loadLogins(select){
     fillPeople(); showNotion(); if (!$("library").hidden) loadLibrary(); return loadConversation();
   });
 }
+// The Model box offers every ranked model except the switched-off ones, and never sends a switched-off model as the pick.
+let MODELS = [];
+const offList = () => $("off").value.split(",").map(s => s.trim()).filter(Boolean);
+function keepPickOn(){
+  const pick = $("model").value.trim();
+  if (pick && offList().includes(pick)) { $("model").value = ""; $("model").placeholder = `${pick} is off`; return false; }
+  return true;
+}
+function renderModels(){
+  const off = new Set(offList());
+  $("models").innerHTML = MODELS.filter(m => !off.has(m)).map(m => `<option value="${esc(m)}">`).join("");
+  keepPickOn();
+}
+fetch("/models").then(r => r.json()).then(data => { MODELS = data.models; $("off").value = data.off.join(", "); renderModels(); });
+$("off").oninput = renderModels;
+$("model").onchange = () => { if (keepPickOn()) $("model").placeholder = "from .env"; };
 loadLogins("harbor");
 $("brand").onchange = () => { fillPeople(); showNotion(); loadConversation(); if (!$("library").hidden) loadLibrary(); };
 $("person").onchange = () => { loadConversation(); showNotion(); };
@@ -349,7 +366,8 @@ $("form").onsubmit = async e => {
   const tick = setInterval(show, 1000);
   let answered = false;
   const finish = () => { clearInterval(tick); pending.remove(); $("send").disabled = false; };
-  const body = { ...w, text, session_id: session, model: $("model").value.trim() || null, attached };
+  keepPickOn();
+  const body = { ...w, text, session_id: session, model: $("model").value.trim() || null, off: offList(), attached };
   let run_id;
   try {
     ({ run_id } = await (await fetch("/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json());

@@ -40,7 +40,7 @@ Nothing in this list is new to build. It is here so nothing changes without you 
   Until `route()` is built, every job runs on Maya's pick, or on `gpt-4.1-mini` when she made none: the same as every session before this one. Once it is built, `Jobs` calls `route()`, writes one `route` line in the trace for each choice, and when a call fails, tries the next model on the list.
 - **The rank lists** (`launchkit/ranking.json`, read by `launchkit/adapters/ranking.py`). One list per job. Each model has three scores from 0 to 1: `eval`, how good its work is on Harbor's test asks (1 is the best); `latency`, how long it takes (1 is the slowest model in the file); and `cost`, what it costs (1 is the most expensive model in the file, 0 the cheapest, not free). Each job has weights. The total counts `eval` up and `latency` and `cost` down. `uv run launchkit models` shows the real price next to each model. `rank_list(job, settings)` gives the job's models by weighted total, best first. Edit the file and the next call reads it; no restart.
 - **The skill's pin.** `ingest_image`'s `skill.md` has a `Model:` line: `Model: vision = gpt-5.5`. The skill loader reads it into `skill.pins`.
-- **Switched-off models.** `LAUNCHKIT_DISABLED_MODELS` in `.env`, comma-separated. `is_enabled(name, settings)` says whether a model is on. It switches a model off inside LaunchKit only; the proxy would still answer. It stands in for an outage.
+- **Switched-off models.** The chat page's **Switched off** box, next to **Model**: model names separated by commas, sent with each message. It starts with `LAUNCHKIT_DISABLED_MODELS` from `.env`. A switched-off model disappears from the Model list and cannot be picked. `is_enabled(name, settings)` says whether a model is on. It switches a model off inside LaunchKit only; the proxy would still answer. It stands in for an outage.
 - **The scoreboard** (`Trace.bill()` and `Trace.scoreboard()` in `launchkit/trace.py`). At the end of every turn the trace gets one `score` line per model (the jobs it did, calls, tokens, seconds, and dollars: what the LiteLLM proxy says it charged, or, when it says nothing, an estimate from `launchkit/adapters/pricing.py`, marked ≈), one `total` line that adds up every model in the turn, and one `quality` line (Harbor's checks this turn: `check_copy`, the poster check, and whether the photo check caught words or a logo). Every real call is timed on its own `call` line.
 - **Not on the scoreboard:** pictures and voice-overs. Pictures come from the GPU service, which has no price per call, and there is one model for each.
 - **`uv run launchkit models`**: every job's rank list with scores, totals, and whether each model is enabled and served by the proxy.
@@ -117,6 +117,12 @@ Empty `LAUNCHKIT_MODEL` in `.env` (`LAUNCHKIT_MODEL=`), so no single model is se
 Each job now runs on its own model, and the `score` lines show three rows.
 
 **The skill's model.** Press **New conversation**, attach `samples/shoot/breeze-cap.jpg` with 📎 and send: "Breeze launches next month. Same as Tidal: concepts, then every size." The trace says `route  vision · gpt-5.5 · skill`: the `ingest_image` skill asked for that model. The photo check finds the cap's logo and stops before any sizes are made.
+
+**The outage.** As if the top research model went down this morning, type `gpt-4.1-mini` in the **Switched off** box at the top of the chat page. No restart is needed. Press **New conversation** and ask: "What are hikers talking about this week?"
+
+**What to look for:** `route  research · gpt-5-mini · fallback`. The helper still answers, and the launch carries on. `gpt-4.1-mini` is also gone from the Model list.
+
+Clear the **Switched off** box when you are done.
 
 ## What changes, and why
 

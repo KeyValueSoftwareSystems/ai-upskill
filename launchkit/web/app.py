@@ -43,6 +43,7 @@ class RunBody(BaseModel):
     user_id: str = Field(pattern=USER_ID)
     text: str
     model: str | None = None
+    off: list[str] | None = None  # models switched off for this message; None keeps LAUNCHKIT_DISABLED_MODELS
     session_id: str | None = None
     attached: list[str] = []
 
@@ -60,6 +61,16 @@ class Person(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 def index():
     return (HERE / "index.html").read_text(encoding="utf-8")
+
+
+@app.get("/models")
+def models():
+    """The models the Model box offers (every model in the rank lists, then the fakes) and the ones switched off in .env."""
+    from launchkit.adapters.models import FAKES
+    from launchkit.adapters.ranking import JOBS, rank_list
+
+    ranked = list(dict.fromkeys(name for job in JOBS for name in rank_list(job, settings)))
+    return {"models": ranked + [f"fake:{name}" for name in ("memory", "tools", "brief") if name in FAKES], "off": sorted(settings.disabled_models)}
 
 
 @app.get("/workspaces")
@@ -188,6 +199,10 @@ def _worker(body: RunBody, queue: Queue):
     trace.listeners.append(lambda event: queue.put({"type": "trace", "kind": event.kind, "detail": event.detail, "line": trace.line(event)}))
     _echo(trace, f'run · {body.workspace_id} · {body.user_id} · "{body.text}"')
     current = replace(settings, model=body.model) if body.model else settings
+    if body.off is not None:  # the chat page's Switched off box, for this message
+        current = replace(current, disabled_models=frozenset(name.strip() for name in body.off if name.strip()))
+    if current.disabled_models:
+        trace.note("switched off: " + ", ".join(sorted(current.disabled_models)))
     refusal = refuse_bad_workspace(body, current)
     if refusal:
         queue.put({"type": "error", "kind": "UnknownWorkspace", "message": refusal})
