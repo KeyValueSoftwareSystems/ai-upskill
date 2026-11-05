@@ -6,20 +6,24 @@ In this hands-on you write `route()`: one function that reads Maya's ask, names 
 
 ## Before you start
 
+In the terminal:
+
 ```
 git checkout session-03-routing
 uv sync
 uv run launchkit check routing0
+uv run launchkit models
 ```
 
-**It worked when** `check routing0` prints `7 passed`.
+**It worked when** `check routing0` prints `7 passed`, and `launchkit models` lists every job's rank list.
 
-Then, in `.env`:
+In `.env`, empty `LAUNCHKIT_MODEL` (`LAUNCHKIT_MODEL=`) and leave `LAUNCHKIT_DISABLED_MODELS` out. Then start the chat page:
 
-- set `LAUNCHKIT_MODEL=gpt-5.5`, the top of the `long_text` list. Step 0 runs every job on it;
-- leave `LAUNCHKIT_DISABLED_MODELS` empty, or leave it out.
+```
+uv run launchkit ui
+```
 
-Start the chat page with `uv run launchkit ui`, sign in as Maya at Harbor, and keep the **Trace** tab open. Run `uv run launchkit models` once to see the rank lists.
+Everything below happens on the chat page: sign in as Maya at Harbor and keep the **Trace** tab open. You pick a model by typing it in the **Model** field at the top; that is Maya's pick. Two things live in `.env` only, the outage and thinking effort: after changing `.env`, stop the chat page (Ctrl+C) and run `uv run launchkit ui` again, because the page reads `.env` when it starts.
 
 ## What is already there
 
@@ -48,13 +52,13 @@ Nothing in this list is new to build. It is here so nothing changes without you 
 
 ## Break it first
 
-Two runs, one model for everything each time.
+Two runs on the chat page, one model for everything each time. Before `route()` is built, the model in **Model** does every job.
 
-**1 · The top model on every job.** With `LAUNCHKIT_MODEL=gpt-5.5`, restart the page, press **New conversation**, attach `samples/shoot/breeze-shoot.jpg` and send: "Breeze launches next month. Same as Tidal: concepts, then every size." Then send: "How many ml is the Breeze?"
+**1 · The top model on every job.** Type `gpt-5.5` in **Model**, press **New conversation**, attach `samples/shoot/breeze-shoot.jpg` with 📎 and send: "Breeze launches next month. Same as Tidal: concepts, then every size." Then send: "How many ml is the Breeze?"
 
-**What to look for:** the `score` lines at the end of each turn. One model row carries every job. The quality is good. The one-line question waits seconds and pays the top price per token.
+**What to look for** in the Trace tab, at the end of each turn: the `score` lines. One model row carries every job. The `quality` line passes. The one-line question waits seconds and pays the top price per token.
 
-**2 · The smallest model on every job.** Set `LAUNCHKIT_MODEL=gpt-5-nano`, restart, press **New conversation**, attach `samples/shoot/breeze-cap.jpg` and send the Breeze ask again.
+**2 · The smallest model on every job.** Type `gpt-5-nano` in **Model**, press **New conversation**, attach `samples/shoot/breeze-cap.jpg` and send the Breeze ask again.
 
 **What to look for:** time and cost drop on the `score` lines. Then read the work. You may see any of these:
 
@@ -96,17 +100,17 @@ Done when `uv run launchkit check routing1` passes.
 
 ## Run it again
 
-Empty `LAUNCHKIT_MODEL` in `.env` (`LAUNCHKIT_MODEL=`), so the rank list decides, and restart the page. In one conversation:
+Saving `routing.py` restarts the chat page by itself; reload the browser tab. Clear the **Model** field, so the rank list decides, and press **New conversation**. In one conversation:
 
 1. Attach `samples/shoot/breeze-cap.jpg` and send the Breeze ask. The trace says `route  vision · gpt-5.5 · skill`, and `ingest_image` stops on the logo.
 2. "Write three headlines for the Breeze feed post." The trace says `route  long_text · gpt-5.5 · rank 1`. When the agent checks the copy, the `quality` line shows `check_copy` passing.
 3. "How many ml is the Breeze?" The trace says `route  short_text · gpt-5-nano · rank 1`, with one `get_brand_details` call. Its `score` line is a fraction of the launch copy's time and cost.
 
-**The outage.** Add `LAUNCHKIT_DISABLED_MODELS=gpt-4.1-mini` to `.env`, as if the top research model went down this morning, and restart. Ask: "What are hikers talking about this week?"
+**The outage.** Add `LAUNCHKIT_DISABLED_MODELS=gpt-4.1-mini` to `.env`, as if the top research model went down this morning. Stop the chat page (Ctrl+C), run `uv run launchkit ui` again and reload the tab. Ask: "What are hikers talking about this week?"
 
 **What to look for:** `route  research · gpt-5-mini · fallback`. The helper still answers, and the launch carries on. The `score` lines now show one row per model, the jobs split across them.
 
-Take `gpt-4.1-mini` out of `LAUNCHKIT_DISABLED_MODELS` when you are done.
+Take `gpt-4.1-mini` out of `LAUNCHKIT_DISABLED_MODELS` and restart the chat page when you are done.
 
 ## What changes, and why
 
@@ -138,18 +142,13 @@ Every model choice trades quality, time and cost. One setting makes that trade o
 
 ## See it
 
-The trainer shows these from their own machine; you do not build them:
+The trainer shows these on the chat page; you do not build them.
 
-- **Thinking effort:** the same model and two asks, effort low then high, read off the `score` lines:
-    ```
-    uv run launchkit main harbor "Plan the Breeze launch for the US, the UK and Germany, with the never-say list and the sizes for each market." --model gpt-5.5 --effort low
-    uv run launchkit main harbor "A shorter headline for the Breeze feed post." --model gpt-5.5 --effort high
-    ```
-    and the other two pairs. `--effort` reaches the main agent's reply only.
-- **One gateway:** one ask with `--model` set to four models from four providers, all through the proxy. One provider's models are in `LAUNCHKIT_DISABLED_MODELS` without warning, so that run's trace says `fallback`.
+- **Thinking effort.** Type `gpt-5.5` in **Model**. Set `LAUNCHKIT_EFFORT=low` in `.env` and restart the chat page; send "Plan the Breeze launch for the US, the UK and Germany, with the never-say list and the sizes for each market." and then "A shorter headline for the Breeze feed post.", each in a new conversation. Then `LAUNCHKIT_EFFORT=high`, restart, and the same two. Read time and cost off the `score` lines. Effort reaches the main agent's reply only.
+- **One gateway.** One provider's models go in `LAUNCHKIT_DISABLED_MODELS` without warning, and the chat page is restarted. Then the same ask four times, with **Model** set to four models from four providers. One run's trace says `fallback`: `route()` skipped the switched-off pick.
 
 ## Stuck?
 
 The answer is on the branch `session-03-routing-step1`.
 
-No model access (offline, or no key)? Set `LAUNCHKIT_FAKE_MODELS=1` in `.env` and restart. The routing and the trace lines still show; quality, time and cost do not.
+No model access (offline, or no key)? Set `LAUNCHKIT_FAKE_MODELS=1` in `.env` and restart the chat page. The routing and the trace lines still show; quality, time and cost do not.

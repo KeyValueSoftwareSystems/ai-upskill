@@ -209,7 +209,7 @@ In your editor: install the **SQLite Viewer** extension (`qwtel.sqlite-viewer`; 
 
 ## Session 3 · Model routing, one hands-on step
 
-Starts on `session-03-routing`. The same `.env`; set `LAUNCHKIT_MODEL=gpt-5.5` for the first run, then empty it. `uv run launchkit check routing0` proves the setup; `uv run launchkit models` prints every job's rank list.
+Starts on `session-03-routing`. The same `.env`, with `LAUNCHKIT_MODEL` empty: pick a model in the chat page's **Model** field. `uv run launchkit check routing0` proves the setup; `uv run launchkit models` prints every job's rank list.
 
 | Step | Slot | Check | Card |
 | --- | --- | --- | --- |
