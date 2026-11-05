@@ -104,7 +104,10 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
     summariser = memory_model or model  # before parallel_tool_calls is set: see the session summary below
     if catalogue.lookup and isinstance(model, OpenAIChat):
         # Several tool calls in one model message lose run_tool's name, so the agent with the doors calls one at a time.
+        hooks = {name: getattr(model, name) for name in ("on_call", "on_retry") if hasattr(model, name)}
         model = replace(model, request_params={**(model.request_params or {}), "parallel_tool_calls": False})
+        for name, hook in hooks.items():  # replace() copies the fields only: keep the scoreboard's timer and the retry note
+            setattr(model, name, hook)
     agent = Agent(
         model=model,
         system_message=ctx.render(),
