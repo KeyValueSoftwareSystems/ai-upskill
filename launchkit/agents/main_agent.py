@@ -181,7 +181,7 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     routing = jobs if model is None else None  # a model passed in (a check's fake) does every job, as before
     stand_in = model if model is not None else jobs.build(settings.model or DEFAULT_MODEL, "long_text")  # tells the tools fake from real
     catalogue = build_catalogue(settings, trace, approve, board, stand_in, ws, req.user_id, pictures, rows, routing)
-    memory_model = jobs.first("memory_write")[1] if routing else None
+    memory_model = jobs.first("memory_write", when_used=True)[1] if routing else None  # its route line comes with its first call
     conversation = conversation_text(db, session)
     started = time.perf_counter()
 

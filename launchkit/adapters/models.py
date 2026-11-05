@@ -186,15 +186,27 @@ class Jobs:
             model.on_call = lambda seconds, sent, cached, got, usd: self.trace.call(job, name, seconds, sent, cached, got, usd)
         return model
 
-    def first(self, job: str, ask: str | None = None, skill=None):
-        """The first choice for a job, as (job, model). For calls that are not retried on another model."""
+    def first(self, job: str, ask: str | None = None, skill=None, when_used: bool = False):
+        """The first choice for a job, as (job, model). For calls that are not retried on another model. when_used: the
+        route line is written at the model's first call, not now (the memory write may not happen this turn)."""
         job, options = self.options(job, ask, skill)
         if not options:
             raise ModelProviderError(f"No enabled model for {job}: every model on its list is switched off.", status_code=503)
         name, reason = options[0]
-        if self.routed:
+        model = self.build(name, job)
+        if self.routed and when_used and getattr(model, "on_call", None):
+            timed, said = model.on_call, []
+
+            def route_then_time(*args):
+                if not said:
+                    said.append(True)
+                    self.trace.route(job, name, reason)
+                timed(*args)
+
+            model.on_call = route_then_time
+        elif self.routed:
             self.trace.route(job, name, reason)
-        return job, self.build(name, job)
+        return job, model
 
     def in_order(self, job: str, call, ask: str | None = None, skill=None):
         """Run call(model) on the first choice; when the call fails, on the next one, and say so in the trace."""
