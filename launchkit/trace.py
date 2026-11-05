@@ -84,24 +84,25 @@ class Trace:
         return list(rows.values())
 
     def checks(self) -> dict:
-        """The quality column: Harbor's checks this turn. check_copy and the poster check pass or fail; describe_image
-        finding words or another brand's logo is the photo check catching something."""
-        passed = failed = 0
-        for e in self.events:
-            d = e.detail
-            if e.kind == "tool" and d["name"] == "check_copy" and isinstance(d["result"], dict) and "ok" in d["result"]:
-                passed, failed = passed + bool(d["result"]["ok"]), failed + (not d["result"]["ok"])
+        """The quality column: Harbor's checks this turn, in the order they ran. check_copy and the poster check pass or
+        fail; describe_image finding words or another brand's logo is the photo check catching something."""
+        copy = [bool(e.detail["result"]["ok"]) for e in self.events
+                if e.kind == "tool" and e.detail["name"] == "check_copy" and isinstance(e.detail["result"], dict) and "ok" in e.detail["result"]]
         validations = [e.detail for e in self.events if e.kind == "validation"]
-        if validations:
-            passed, failed = passed + (not validations[-1]["errors"]), failed + bool(validations[-1]["errors"])
         photos = [e.detail["result"] for e in self.events if e.kind == "tool" and e.detail["name"] == "describe_image" and isinstance(e.detail["result"], dict)]
-        caught = sum(1 for r in photos if r.get("other_brand") or r.get("text"))
-        return {"passed": passed, "failed": failed, "photo_flags": caught}
+        return {"copy": copy, "poster": (not validations[-1]["errors"]) if validations else None,
+                "photo_flags": sum(1 for r in photos if r.get("other_brand") or r.get("text"))}
 
     def scoreboard(self):
         """Add the scoreboard to the trace, so the chat page's Trace tab and the terminal both show it."""
-        for row in self.bill():
+        rows = self.bill()
+        for row in rows:
             self.add("score", **row)
+        if rows:
+            priced = [r["usd"] for r in rows if r["usd"] is not None]
+            self.add("total", calls=sum(r["calls"] for r in rows), seconds=sum(r["seconds"] for r in rows),
+                     usd=sum(priced) if priced else None, estimated=any(r["estimated"] or r["unknown"] for r in rows),
+                     unpriced=len(priced) < len(rows))
         self.add("quality", **self.checks())
 
     def tool(self, name: str, arguments: dict, result):
@@ -178,11 +179,27 @@ class Trace:
                     usd = f"${d['usd']:.4f} (charged by the proxy)"
                 return (f"score     {d['model']} · {', '.join(d['jobs'])} · {d['calls']} calls · {d['input_tokens']} tokens in, "
                         f"{d['output_tokens']} out · {d['seconds']:.1f} s · {usd}")
+            case "total":
+                if d["usd"] is None:
+                    usd = "price unknown"
+                else:
+                    usd = f"≈ ${d['usd']:.4f}" if d["estimated"] else f"${d['usd']:.4f}"
+                    usd += " (some calls not priced)" if d["unpriced"] else ""
+                return f"total     {usd} · {d['calls']} calls · {d['seconds']:.1f} s"
             case "quality":
-                photo = f" · photo check caught {d['photo_flags']}" if d["photo_flags"] else ""
-                if not d["passed"] and not d["failed"] and not d["photo_flags"]:
-                    return "quality   no check ran this turn"
-                return f"quality   checks passed {d['passed']}, failed {d['failed']}{photo}"
+                parts = []
+                copy = d["copy"]
+                if copy:
+                    failed = copy.count(False)
+                    if copy[-1]:
+                        parts.append(f"check_copy failed {failed}, then passed" if failed else "check_copy passed")
+                    else:
+                        parts.append("check_copy failed" + (f" {len(copy)} times" if len(copy) > 1 else ""))
+                if d["poster"] is not None:
+                    parts.append("poster check passed" if d["poster"] else "poster check failed")
+                if d["photo_flags"]:
+                    parts.append("photo check caught another brand's logo or words")
+                return "quality   " + (" · ".join(parts) if parts else "no check ran this turn")
             case "chunk":
                 score = f" · score {d['score']:.3f}" if d.get("score") is not None else ""
                 return f"chunk     #{d['rank']} {d['ref']}{score} · {_short(d['text'], 70)}"
