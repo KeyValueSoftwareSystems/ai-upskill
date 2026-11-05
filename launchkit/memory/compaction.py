@@ -6,18 +6,21 @@ must_keep is the hybrid: the rules Maya stated in this conversation, picked out 
 turn. A slot until memory hands-on 2, part B builds it.
 """
 
+import re
+
 from agno.db.base import SessionType
 
 
-def todo(fn):
-    """Marks a slot. The harness re-states nothing until it is built."""
-    fn.todo = True
-    return fn
+RULE_WORDS = re.compile(r"\b(never|always|don't|do not|must|only)\b", re.I)
 
 
-@todo
 def must_keep(said: list[str]) -> list[str]:
-    raise NotImplementedError("memory hands-on 2, part B builds this")
+    rules = []
+    for message in said:
+        for sentence in re.split(r"(?<=[.!?])\s+", message.strip()):
+            if RULE_WORDS.search(sentence) and not sentence.endswith("?") and sentence not in rules:
+                rules.append(sentence)
+    return rules
 
 
 def what_she_said(db, session_id: str) -> list[str]:
