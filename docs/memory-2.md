@@ -88,8 +88,16 @@ uv run launchkit memories harbor --prompt
 Kept from earlier conversations, one line per topic. Before work a topic touches, read it with run_tool("recall", …
 - review order: 1 fact · recall("review order")
 - headlines: 2 facts · recall("headlines")
+- placements: 3 facts · recall("placements")
+- research: 2 facts · recall("research")
+- colours: 1 fact · recall("colours")
 - photography: 3 facts · recall("photography")
-…
+- scheduling: 3 facts · recall("scheduling")
+- voice-over: 2 facts · recall("voice-over")
+- board: 2 facts · recall("board")
+- competitors: 3 facts · recall("competitors")
+- wording: 3 facts · recall("wording")
+- availability: 1 fact · recall("availability")
 ```
 
 Saving `index.py` restarted the page by itself; reload the browser tab. As Maya, press **New conversation** and send the Breeze message again.
@@ -126,7 +134,7 @@ Eight messages, sent one after another **in one conversation**:
 
 On the chat page, sign in as Maya at Harbor, press **New conversation**, leave **Model** empty, and send the eight messages in order.
 
-Or send the week from the terminal, as one new conversation. It prints each reply's first line, and saves the conversation for the chat page, where you can open it:
+Or send the week from the terminal, as one new conversation. It prints each reply's first line, so the headlines are not in the terminal: it saves the conversation for the chat page, where you open it to read them:
 
 ```
 uv run launchkit replay harbor samples/sessions/breeze_week.txt

@@ -2,7 +2,8 @@
 
 Keep only what changes how you work next time and is still true after this conversation ends.
 
-Keep it only if it is one of these four kinds. Put the kind first in its topics.
+Keep it only if it is one of these four kinds. Put the kind first in its topics, then a second topic, in a word or two,
+for what it is about: photography, headlines.
 
 - **preference**: how this marketer or brand likes things done.
   Example: "Maya wants headlines as three options to pick from, not one."

@@ -30,7 +30,7 @@ from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.chat_history import session_db
 from launchkit.memory.compaction import conversation_text
 from launchkit.memory.index import memory_index, recall
-from launchkit.memory.long_term import MEMORY_SHARE, MEMORY_TASK, memory_db, memories_for, memory_text, write_rules
+from launchkit.memory.long_term import MEMORY_SHARE, MEMORY_TASK, MemoryDb, memory_db, memories_for, memory_text, what_was_kept, write_rules
 from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, built, load_skills
 from launchkit.tools.check_copy import make_check_copy
 from launchkit.tools.describe_image import describe_image_entry
@@ -125,6 +125,8 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
         # The summary call sends no tools, and the proxy refuses parallel_tool_calls without tools, so the summary is
         # written by the model as given. Passed to Agent(...), a summary manager would switch summaries on by itself.
         agent.session_summary_manager = SessionSummaryManager(model=summariser)
+    if isinstance(db, MemoryDb):
+        agent.tool_hooks.append(what_was_kept(db))  # after the leash, so the trace line shows what the agent is told
     if agent.enable_agentic_memory:
         # Agno tells the model about update_user_memory in the system message it builds itself. LaunchKit writes its
         # own, so the harness says it: first in the Task section, as the one step before find_tool, and in the Memory
