@@ -18,7 +18,7 @@ uv run launchkit check routing0
 In `.env`, set these two lines:
 
 ```
-LAUNCHKIT_MODEL=gpt-4.1-mini
+LAUNCHKIT_MODEL=gpt-5.5
 LAUNCHKIT_SEARCH=saved
 ```
 
@@ -43,11 +43,11 @@ At the end of each answer:
 
 ## Break it first
 
-**Round 1: one model for every job.** `LAUNCHKIT_MODEL=gpt-4.1-mini` is already set, the same model as in Sessions 1 and 2. Send the three asks.
+**Round 1: the top model for every job.** `LAUNCHKIT_MODEL=gpt-5.5` is already set. Send the three asks.
 
-- Every `score` line is `gpt-4.1-mini`. Write down the cost and the time of each answer.
-- The launch copy and the one-line size answer run on the same model, at the same price per token.
-- Read the headlines. They are fine, but not the best a model can write.
+- Every `score` line is `gpt-5.5`.
+- The research costs the most (about $0.17), then the headlines (about $0.03), then the size (about $0.02).
+- The one-line size answer pays the top price.
 
 **Round 2: the smallest model for every job.** In `.env`, change the line to `LAUNCHKIT_MODEL=gpt-5-nano`. Stop the chat page (Ctrl+C), start it again, and send the three asks again.
 
@@ -119,7 +119,7 @@ Done when `uv run launchkit check routing1` passes.
    ```
 
    The research question is also a short question, so the main agent's own reply to it is `short_text` too.
-   Compare with round 1. The headlines now cost more: the best writer is worth it for launch copy. The research costs about the same. The size answer is cheaper, but it is **not** faster: `gpt-5-nano` thinks before it answers, so it can take close to a minute.
+   The size answer is now about 15 times cheaper than on `gpt-5.5`, but it is **not** faster: `gpt-5-nano` thinks before it answers, so it can take close to a minute.
 
 3. **The skill's model.** Attach `samples/shoot/breeze-cap.jpg` with 📎 and send: "Breeze launches next month. Same as Tidal: concepts, then every size." The trace shows `route  vision · gpt-5.5 · skill`. The photo check finds another brand's logo on the cap and stops.
 4. **The outage.** The top research model goes down: type `gpt-4.1-mini` in the **Switched off** box (no restart). Send the research ask again: "How are Hydro Flask and Stanley launching bottles this season?" The trace shows `route  research · gpt-5-mini · fallback` for each helper, and you still get an answer. Clear the box when you are done.
