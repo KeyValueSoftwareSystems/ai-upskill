@@ -209,7 +209,22 @@ In your editor: install the **SQLite Viewer** extension (`qwtel.sqlite-viewer`; 
 
 ## Session 3 · Model routing, one hands-on step
 
-Starts on `session-03-routing`. The same `.env`, with `LAUNCHKIT_MODEL` empty: pick a model in the chat page's **Model** field. `uv run launchkit check routing0` proves the setup; `uv run launchkit models` prints every job's rank list.
+Starts on `session-03-routing`. The same `.env`, with `LAUNCHKIT_SEARCH=saved`. `uv run launchkit check routing0` proves the setup (7 checks); `uv run launchkit models` prints every job's rank list.
+
+`LAUNCHKIT_MODEL` in `.env` is the team's one model. Before `route()` is built, it runs every job. After that, it is the first choice for the main agent's replies (`long_text`, `short_text`) only; empty, the rank lists decide every job. On the chat page, the **Model** box is the user's own pick, and the **Switched off** box turns models off for the next message, with no restart.
+
+| File | What it is |
+| --- | --- |
+| `launchkit/adapters/routing.py` | `route()`: the slot. Picks the models for one job, in order, each with a reason |
+| `launchkit/ranking.json` | One rank list per job: each model's eval, latency and cost scores, and each job's weights |
+| `launchkit/adapters/ranking.py` | Reads `ranking.json`: the totals, the rank lists, and which models are switched off |
+| `launchkit/adapters/models.py` | `Jobs`: every model call asks it for its job's model, and a failed call moves to the next one |
+| `launchkit/adapters/pricing.py` | Token prices, for the cost estimate when the proxy does not report one |
+| `launchkit/trace.py` | The `route`, `call`, `score`, `total` and `quality` lines in the Trace tab |
+| `launchkit/skills/ingest_image/skill.md` | The skill's model: `Model: vision = gpt-5.5` |
+| `launchkit/web/app.py`, `index.html` | The **Model** and **Switched off** boxes |
+| `samples/shoot/breeze-cap.jpg` | The cap photo for the skill's model and the photo check |
+| `checks/test_routing0.py`, `test_routing1.py` | `check routing0` (the setup) and `check routing1` (your `route()`) |
 
 | Step | Slot | Check | Card |
 | --- | --- | --- | --- |
@@ -268,8 +283,10 @@ launchkit/
     gpu_images.py                        our GPU picture service
     image_providers.py                   picks who makes the pictures
     llm.py                               one plain model call, used for vision
-    models.py                            which model a run uses
+    models.py                            which model a run uses: Jobs, one model per job
     pricing.py                           token prices
+    ranking.py                           reads ranking.json: the rank lists and which models are switched off
+    routing.py                           route(): the models for one job, in order
   web/                                   the chat page
     app.py                               the chat page's server
     index.html                           the chat page
@@ -281,6 +298,7 @@ launchkit/
     ui.py
   check_setup.py                         checks your machine before the session
   cli.py                                 the launchkit command
+  ranking.json                           one rank list of models per job
   settings.py                            .env, paths, limits
   trace.py                               what the Trace tab shows
 approach_llm/, approach_graph/   the opener's two approaches
