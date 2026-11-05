@@ -115,6 +115,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
         db=db if db is not None else session_db(settings),
         add_history_to_context=True,
         num_history_runs=5,
+        enable_session_summaries=True,
         enable_agentic_memory=True,
         memory_manager=MemoryManager(model=memory_model, memory_capture_instructions=write_rules(), delete_memories=False),
         tools=loose(catalogue.agent_tools()),
