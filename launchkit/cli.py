@@ -422,7 +422,7 @@ def cmd_models(args):
             scores = entry["models"][name]
             if not is_enabled(name, settings):
                 status = "not enabled (LAUNCHKIT_DISABLED_MODELS)"
-            elif served is not None and name not in served:
+            elif served is not None and name not in served and f"openai/{name}" not in served:  # the proxy lists OpenAI models as openai/<name>
                 status = "not enabled (the proxy does not serve it)"
             else:
                 status = "enabled" if served is not None else "enabled (proxy not asked)"
