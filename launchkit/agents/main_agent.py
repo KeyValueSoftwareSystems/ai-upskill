@@ -20,7 +20,7 @@ from agno.tools.function import Function
 
 from launchkit.adapters.fakes import FakeModel
 from launchkit.adapters.image_providers import FromPicture, make_images
-from launchkit.adapters.models import check_reachable, model_name, resolve_model
+from launchkit.adapters.models import Chooser, Jobs, check_reachable, model_name
 from launchkit.agents.prompt import ContextBuilder, approx_tokens
 from launchkit.brands.request import Request, resolve_workspace_id
 from launchkit.guardrails.limits import make_leash
@@ -43,7 +43,7 @@ from launchkit.agents.poster_flow import history_size, looked_up, raise_if_faile
 from launchkit.brands.workspace import Workspace, load_workspace
 from launchkit.guardrails.poster_check import PosterSpec, SpecError, repair_message, validate_spec
 from launchkit.orchestration.research_team import make_research_entries
-from launchkit.settings import settings as default_settings
+from launchkit.settings import DEFAULT_MODEL, settings as default_settings
 from launchkit.tools.generate_image import make_generate_image
 from launchkit.tools.search_web import search_entry
 from launchkit.trace import Trace
@@ -94,14 +94,14 @@ def placements_text(ws) -> str:
 
 
 def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue, pictures: Pictures | None = None,
-                     db=None, memory: str = "", conversation: str = "") -> Agent:
+                     db=None, memory: str = "", conversation: str = "", memory_model=None) -> Agent:
     ctx.set("rules", f"{ws.soul}\n\n{ws.agents}\n\n{placements_text(ws)}")
     ctx.set("memory", memory)
     ctx.set("conversation", conversation)
     warnings = " ".join(e.detail["text"] for e in trace.events if e.kind == "warning")
     ctx.set("facts", f"Today is {date.today():%-d %B %Y}. {warnings} {pictures.describe() if pictures else ''}".strip())
     ctx.set("task", MAIN_TASK if catalogue.lookup else "\n\n".join(part for part in (DIRECT_TASK, catalogue.skills_text()) if part))
-    summariser = model  # before parallel_tool_calls is set: see the session summary below
+    summariser = memory_model or model  # before parallel_tool_calls is set: see the session summary below
     if catalogue.lookup and isinstance(model, OpenAIChat):
         # Several tool calls in one model message lose run_tool's name, so the agent with the doors calls one at a time.
         model = replace(model, request_params={**(model.request_params or {}), "parallel_tool_calls": False})
@@ -113,7 +113,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
         add_history_to_context=True,
         num_history_runs=5,
         enable_agentic_memory=True,
-        memory_manager=MemoryManager(memory_capture_instructions=write_rules(), delete_memories=False),
+        memory_manager=MemoryManager(model=memory_model, memory_capture_instructions=write_rules(), delete_memories=False),
         tools=loose(catalogue.agent_tools()),
         tool_hooks=[make_leash(replace(settings.limits, step_cap=MAIN_STEP_CAP), trace)],
         telemetry=False,
@@ -133,22 +133,26 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
 
 
 def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya", pictures: Pictures | None = None,
-                    memories: list | None = None) -> Catalogue:
+                    memories: list | None = None, jobs: Jobs | None = None) -> Catalogue:
+    """Given jobs, the photo tools and the research agents ask for their own job's model; otherwise they use model."""
     ws = ws or load_workspace("harbor", settings, trace)
-    desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None)
+    vision = Chooser(jobs, "vision") if jobs is not None else model
+    desk = PictureDesk(settings, ws.colours, trace, vision, pictures.newest if pictures else None, pictures.size_made if pictures else None)
     entries: list[Entry] = [
         Entry("get_brand_details", "look up this brand's guide and product facts", "read", make_get_brand_details(ws, trace, settings)),
         Entry("generate_image", "make a new poster picture from a scene description, only when no photo is given", "read", make_generate_image(make_images(settings), ws.colours, trace, pictures.made if pictures else None)),
         *desk.entries(),
         Entry("check_copy", "check a headline, subheadline and body against the brand's word limits and banned claims", "read", make_check_copy(ws)),
         search_entry(settings),
-        describe_image_entry(settings, model, desk),
+        describe_image_entry(settings, vision, desk),
         text_to_speech_entry(settings, model),
         *(board.entries() if board else server_entries(settings, trace, user)),
-        *make_research_entries(model, settings, trace),
+        *make_research_entries(model, settings, trace, jobs),
         *recall_entries(memories or []),
     ]
     catalogue = Catalogue(entries, load_skills(), trace, approve)
+    if isinstance(vision, Chooser):
+        vision.catalogue = catalogue  # a skill loaded mid-turn pins the vision model from then on
     catalogue.leash = make_leash(replace(settings.limits, step_cap=10_000), trace)
     return catalogue
 
@@ -159,9 +163,8 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     wid = resolve_workspace_id(req, settings)
     ws = load_workspace(wid, settings, trace)
-    model = model if model is not None else resolve_model(settings, trace)
-    check_reachable(model)
-    if isinstance(model, FakeModel):
+    jobs = Jobs(settings, trace, given=model)
+    if isinstance(model, FakeModel) or (model is None and (settings.fake_models or settings.model.startswith("fake:"))):
         # The fakes are scripted against the saved pages and the local board, so a fake never reaches the live web or Notion.
         settings = replace(settings, search="saved", board="local")
     pictures = Pictures(settings, wid, req.user_id, req.session_id)
@@ -172,11 +175,22 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     rows = memories_for(db, wid, req.user_id)
     memory = memory_index(rows) if built(memory_index) else memory_text(rows)
     session = f"{wid}:{req.user_id}:{req.session_id}:main"
-    catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures, rows)
-    agent = build_main_agent(ws, ContextBuilder(settings.budgets), model, settings, trace, catalogue, pictures, db, memory, conversation_text(db, session))
+    routing = jobs if model is None else None  # a model passed in (a check's fake) does every job, as before
+    stand_in = model if model is not None else jobs.build(settings.model or DEFAULT_MODEL, "long_text")  # tells the tools fake from real
+    catalogue = build_catalogue(settings, trace, approve, board, stand_in, ws, req.user_id, pictures, rows, routing)
+    memory_model = jobs.first("memory_write")[1] if routing else None
+    conversation = conversation_text(db, session)
     started = time.perf_counter()
-    run = agent.run(req.text, session_id=session, user_id=req.user_id)
-    raise_if_failed(run)
+
+    def attempt(job: str, chosen):
+        check_reachable(chosen)
+        built_agent = build_main_agent(ws, ContextBuilder(settings.budgets), chosen, settings, trace, catalogue, pictures, db, memory, conversation, memory_model)
+        done = built_agent.run(req.text, session_id=session, user_id=req.user_id)
+        raise_if_failed(done)
+        return chosen, built_agent, done
+
+    # The reply is long_text; once route() is built, a short question becomes short_text. A failed call moves on.
+    model, agent, run = jobs.in_order("long_text", attempt, ask=req.text)
     trace.model("main", model_name(model), run.metrics)
     result = MainResult(trace=trace, runs=[run])
     turn = main_turn(run.content)
@@ -192,6 +206,7 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     result.view_tokens = tool_result_size(run)[0]
     result.history_tokens = history_size(run)[0]
     result.memory_tokens = approx_tokens(memory)
+    trace.scoreboard()
     return result
 
 

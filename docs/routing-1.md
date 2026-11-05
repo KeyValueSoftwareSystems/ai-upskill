@@ -1,0 +1,155 @@
+# Routing hands-on 1 · A model for each job
+
+Breeze launch week. Every job LaunchKit does runs on one model, picked by one setting: the launch copy, a quick question about the product, the research helper, the memory write, the photo check. On the top model the work is good, and a one-line question waits and pays like the launch copy. On a small model it is fast and cheap, and the work breaks. Maya wants the same quality, faster and cheaper.
+
+In this hands-on you write `route()`: one function that reads Maya's ask, names the job, and returns the models to try in order. At the end, each job has its own model, the scoreboard splits across them, and an outage of the top research model does not stop the launch.
+
+## Before you start
+
+```
+git checkout session-03-routing
+uv sync
+uv run launchkit check routing0
+```
+
+**It worked when** `check routing0` prints `7 passed`.
+
+Then, in `.env`:
+
+- set `LAUNCHKIT_MODEL=gpt-5.5`, the top of the `long_text` list. Step 0 runs every job on it;
+- leave `LAUNCHKIT_DISABLED_MODELS` empty, or leave it out.
+
+Start the chat page with `uv run launchkit ui`, sign in as Maya at Harbor, and keep the **Trace** tab open. Run `uv run launchkit models` once to see the rank lists.
+
+## What is already there
+
+Nothing in this list is new to build. It is here so nothing changes without you knowing.
+
+- **Jobs** (`launchkit/adapters/models.py`, `Jobs`). Every model call now asks for its job's model:
+    - the main agent's reply: `long_text`, with Maya's message as the ask;
+    - the onboarding agent: `long_text`;
+    - the research subagent: `research`;
+    - the memory write and the session summary: `memory_write`;
+    - `describe_image` and `detect_focal_point`: `vision`, chosen at the moment of the call, so a skill loaded earlier in the turn can pin it.
+
+  Until `route()` is built, every job runs on Maya's pick, or on `gpt-4.1-mini` when she made none: the same as every session before this one. Once it is built, `Jobs` calls `route()`, writes one `route` line in the trace for each choice, and when a call fails, tries the next model on the list.
+- **The rank lists** (`launchkit/ranking.json`, read by `launchkit/adapters/ranking.py`). One list per job. Each model has three scores from 0 to 1, higher is better: `eval` (quality on Harbor's test asks), `latency` (speed) and `cost` (cheapness). Each job has weights. `rank_list(job, settings)` gives the job's models by weighted total, best first. Edit the file and the next call reads it; no restart.
+- **The skill's pin.** `ingest_image`'s `skill.md` has a `Model:` line: `Model: vision = gpt-5.5`. The skill loader reads it into `skill.pins`.
+- **Switched-off models.** `LAUNCHKIT_DISABLED_MODELS` in `.env`, comma-separated. `is_enabled(name, settings)` says whether a model is on. It switches a model off inside LaunchKit only; the proxy would still answer. It stands in for an outage.
+- **The scoreboard** (`Trace.bill()` and `Trace.scoreboard()` in `launchkit/trace.py`). At the end of every turn the trace gets one `score` line per model (the jobs it did, calls, tokens, seconds, dollars when `launchkit/adapters/pricing.py` has a price) and one `quality` line (Harbor's checks this turn: `check_copy`, the poster check, and whether the photo check caught words or a logo). Every real call is timed on its own `call` line.
+- **`uv run launchkit models`**: every job's rank list with scores, totals, and whether each model is enabled and served by the proxy.
+- **`samples/shoot/breeze-cap.jpg`**: the Breeze shoot photo with a red cap in the background grass, carrying another brand's logo.
+- **`LAUNCHKIT_FAKE_MODELS=1`**: every job runs on a scripted model and the trace keeps the routed name. For when the proxy is down.
+- **Not routed:** `image_gen` and `tts` keep their own settings (`LAUNCHKIT_IMAGE_PROVIDER`, `LAUNCHKIT_TTS_MODEL`). There is one model for each today, so there is nothing to rank.
+
+## The slot
+
+`launchkit/adapters/routing.py`, `route()`. It is marked `@todo` and raises until you build it.
+
+## Break it first
+
+Two runs, one model for everything each time.
+
+**1 · The top model on every job.** With `LAUNCHKIT_MODEL=gpt-5.5`, restart the page, press **New conversation**, attach `samples/shoot/breeze-shoot.jpg` and send: "Breeze launches next month. Same as Tidal: concepts, then every size." Then send: "How many ml is the Breeze?"
+
+**What to look for:** the `score` lines at the end of each turn. One model row carries every job. The quality is good. The one-line question waits seconds and pays the top price per token.
+
+**2 · The smallest model on every job.** Set `LAUNCHKIT_MODEL=gpt-5-nano`, restart, press **New conversation**, attach `samples/shoot/breeze-cap.jpg` and send the Breeze ask again.
+
+**What to look for:** time and cost drop on the `score` lines. Then read the work. You may see any of these:
+
+- copy that is fine: some jobs never needed the top model;
+- copy with a never-say word in it, so `check_copy` fails on the `quality` line, or copy that is flatter;
+- `describe_image` that does not mention the cap's logo, so `ingest_image` does not stop and the photo goes into every size.
+
+One setting cannot fit every job.
+
+## Prompt card, for your coding agent
+
+```
+Implement route() in launchkit/adapters/routing.py. It's a stub right now: remove the @todo
+decorator and the NotImplementedError when you're done.
+
+Context: every model call in LaunchKit goes through Jobs in launchkit/adapters/models.py, and
+Jobs calls route() once it's built. The routed jobs are long_text, short_text, research,
+memory_write and vision. Rank lists live in launchkit/ranking.json; use rank_list(job, settings)
+and is_enabled(name, settings) from launchkit/adapters/ranking.py, don't read the JSON yourself.
+
+Keep the signature:
+    route(job, settings, ask=None, pick=None, skill=None) -> (job, [(model, reason), ...])
+
+Behaviour:
+1. If job is "long_text" and the ask ends with "?" and has 12 words or fewer, the job becomes
+   "short_text".
+2. Build the order to try: the pick first (reason "pick"); then the skill's pin for this job, if
+   it has one (skill.pins is a tuple of (job, model) pairs; reason "skill"); then rank_list(job)
+   with reasons "rank 1", "rank 2", and so on.
+3. Drop duplicates, keeping the first one.
+4. Leave out every model that is_enabled() says is off, the pick included. If anything was left
+   out before the first model you return, that model's reason is "fallback".
+
+Keep it a pure function: no I/O and no trace calls (Jobs writes the trace). Don't change Jobs,
+its callers or ranking.json.
+
+Done when `uv run launchkit check routing1` passes.
+```
+
+## Run it again
+
+Empty `LAUNCHKIT_MODEL` in `.env` (`LAUNCHKIT_MODEL=`), so the rank list decides, and restart the page. In one conversation:
+
+1. Attach `samples/shoot/breeze-cap.jpg` and send the Breeze ask. The trace says `route  vision · gpt-5.5 · skill`, and `ingest_image` stops on the logo.
+2. "Write three headlines for the Breeze feed post." The trace says `route  long_text · gpt-5.5 · rank 1`. When the agent checks the copy, the `quality` line shows `check_copy` passing.
+3. "How many ml is the Breeze?" The trace says `route  short_text · gpt-5-nano · rank 1`, with one `get_brand_details` call. Its `score` line is a fraction of the launch copy's time and cost.
+
+**The outage.** Add `LAUNCHKIT_DISABLED_MODELS=gpt-4.1-mini` to `.env`, as if the top research model went down this morning, and restart. Ask: "What are hikers talking about this week?"
+
+**What to look for:** `route  research · gpt-5-mini · fallback`. The helper still answers, and the launch carries on. The `score` lines now show one row per model, the jobs split across them.
+
+Take `gpt-4.1-mini` out of `LAUNCHKIT_DISABLED_MODELS` when you are done.
+
+## What changes, and why
+
+- **Before:** one setting, `LAUNCHKIT_MODEL`, chose the model for every text job, the memory write included.
+- **After:** every job asks `route()`. `LAUNCHKIT_MODEL` still works: it is now Maya's pick for the main agent's reply (`long_text` and `short_text`). The research helper, the memory write and the photo check follow their own lists.
+- The order is a policy: Maya's pick, then the skill's pin, then the rank list. With no pick and no pin, rank 1 is the choice. That is what "Auto" means here.
+- A switched-off model is skipped wherever it comes from, so a pick that is down never runs, and the trace says `fallback`.
+
+## Prove it
+
+```
+uv run launchkit check routing1
+```
+
+The check runs offline on scripted models, so it gives everyone the same result. All eight pass once `route()` is built.
+
+- A short question becomes `short_text`; "Write three headlines…" stays `long_text`; "Can you write three headlines…?" becomes `short_text`.
+- With no pick and no pin, the models come in rank order.
+- Maya's pick comes first.
+- A skill's pin beats the rank list.
+- A switched-off model is skipped, the pick included, and the next one's reason is `fallback`.
+- Every routed job gets a model.
+- A failed call moves to the next model, and the trace says `fallback`.
+- On the chat path, "How many ml is the Breeze?" runs as `short_text`, the memory write has its own model, and the scoreboard is in the trace.
+
+## Why it matters
+
+Every model choice trades quality, time and cost. One setting makes that trade once, for every job. A rank list per job makes it per job, and writes it down where the team can read and change it. The order (pick, pin, rank) is a policy someone chose. The fallback keeps a launch going when a model goes away.
+
+## See it
+
+The trainer shows these from their own machine; you do not build them:
+
+- **Thinking effort:** the same model and two asks, effort low then high, read off the `score` lines:
+    ```
+    uv run launchkit main harbor "Plan the Breeze launch for the US, the UK and Germany, with the never-say list and the sizes for each market." --model gpt-5.5 --effort low
+    uv run launchkit main harbor "A shorter headline for the Breeze feed post." --model gpt-5.5 --effort high
+    ```
+    and the other two pairs. `--effort` reaches the main agent's reply only.
+- **One gateway:** one ask with `--model` set to four models from four providers, all through the proxy. One provider's models are in `LAUNCHKIT_DISABLED_MODELS` without warning, so that run's trace says `fallback`.
+
+## Stuck?
+
+The answer is on the branch `session-03-routing-step1`.
+
+No model access (offline, or no key)? Set `LAUNCHKIT_FAKE_MODELS=1` in `.env` and restart. The routing and the trace lines still show; quality, time and cost do not.

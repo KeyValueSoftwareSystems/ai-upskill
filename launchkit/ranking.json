@@ -1,0 +1,50 @@
+{
+  "about": "One ranked list per job. Each model on a job's list has passed the first check (it can do the job at all) and has three scores from 0 to 1, higher is better: eval (quality on Harbor's own test asks), latency (speed) and cost (cheapness). Each job weighs the three; a model's total is each score times its weight, added up, and the highest total is rank 1. cost comes from launchkit/adapters/pricing.py (prices as of 2026-10-18). eval and latency are first estimates, to be re-measured on the live proxy before the session. image_gen and tts are not routed: one model each, set by LAUNCHKIT_IMAGE_PROVIDER and LAUNCHKIT_TTS_MODEL.",
+  "jobs": {
+    "long_text": {
+      "about": "launch copy in Harbor's voice: quality first",
+      "weights": { "eval": 0.8, "latency": 0.1, "cost": 0.1 },
+      "models": {
+        "gpt-5.5":      { "eval": 0.95, "latency": 0.30, "cost": 0.00 },
+        "gpt-5.2":      { "eval": 0.90, "latency": 0.45, "cost": 0.18 },
+        "gpt-5.4-mini": { "eval": 0.82, "latency": 0.70, "cost": 0.44 },
+        "gpt-4.1-mini": { "eval": 0.75, "latency": 0.85, "cost": 0.66 }
+      }
+    },
+    "short_text": {
+      "about": "a short answer to a short question, such as one product fact: cost first",
+      "weights": { "eval": 0.2, "latency": 0.2, "cost": 0.6 },
+      "models": {
+        "gpt-5-nano":   { "eval": 0.70, "latency": 0.80, "cost": 1.00 },
+        "gpt-5.4-nano": { "eval": 0.72, "latency": 0.85, "cost": 0.73 },
+        "gpt-4.1-mini": { "eval": 0.80, "latency": 0.85, "cost": 0.66 }
+      }
+    },
+    "research": {
+      "about": "the research subagent: reads saved pages, writes three lines",
+      "weights": { "eval": 0.5, "latency": 0.2, "cost": 0.3 },
+      "models": {
+        "gpt-4.1-mini": { "eval": 0.80, "latency": 0.85, "cost": 0.66 },
+        "gpt-5-mini":   { "eval": 0.82, "latency": 0.65, "cost": 0.63 },
+        "gpt-5.4-mini": { "eval": 0.85, "latency": 0.70, "cost": 0.44 }
+      }
+    },
+    "memory_write": {
+      "about": "the memory write and the session summary: short, typed, after every turn",
+      "weights": { "eval": 0.3, "latency": 0.2, "cost": 0.5 },
+      "models": {
+        "gpt-5-nano":   { "eval": 0.65, "latency": 0.80, "cost": 1.00 },
+        "gpt-4.1-mini": { "eval": 0.80, "latency": 0.85, "cost": 0.66 }
+      }
+    },
+    "vision": {
+      "about": "reads a photo: describe_image and detect_focal_point. Only models that read images are on this list",
+      "weights": { "eval": 0.7, "latency": 0.1, "cost": 0.2 },
+      "models": {
+        "gpt-4.1-mini": { "eval": 0.75, "latency": 0.85, "cost": 0.66 },
+        "gpt-5.4-mini": { "eval": 0.82, "latency": 0.70, "cost": 0.44 },
+        "gpt-5.5":      { "eval": 0.95, "latency": 0.30, "cost": 0.00 }
+      }
+    }
+  }
+}

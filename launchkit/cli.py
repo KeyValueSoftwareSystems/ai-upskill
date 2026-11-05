@@ -51,6 +51,7 @@ def cmd_main(args):
     from launchkit.agents.main_agent import run_main
 
     current = replace(settings, model=args.model) if args.model else settings
+    current = replace(current, effort=args.effort) if args.effort else current
     req = Request(workspace_id=args.workspace, user_id=args.user, session_id=args.session, text=args.text)
     trace = Trace()
     try:
@@ -364,6 +365,7 @@ RAG_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob(
 TOOLS_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_tools*.py"))
 ORCH_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_orch*.py"))
 MEM_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_mem*.py"))
+ROUTING_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_routing*.py"))
 ORCH_GATE = ORCH_STEPS + [name for name in TOOLS_STEPS if name in ("tools3", "tools4", "tools5")]
 
 
@@ -377,8 +379,10 @@ def cmd_check(args):
         names = ORCH_GATE
     elif args.step == "mem":
         names = MEM_STEPS
+    elif args.step == "routing":
+        names = ROUTING_STEPS
     else:
-        names = [args.step if args.step in extra + RAG_STEPS + TOOLS_STEPS + ORCH_STEPS + MEM_STEPS else f"step{args.step}"]
+        names = [args.step if args.step in extra + RAG_STEPS + TOOLS_STEPS + ORCH_STEPS + MEM_STEPS + ROUTING_STEPS else f"step{args.step}"]
     targets = [ROOT / "checks" / f"test_{name}.py" for name in names]
     command = [sys.executable, "-m", "pytest", "-q", "--tb=no", "-rN", "-p", "no:cacheprovider", *map(str, targets)]
     proc = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
@@ -392,6 +396,42 @@ def cmd_check(args):
     if proc.returncode not in (0, 1):
         console.print(proc.stderr[-2000:])
     return proc.returncode
+
+
+def cmd_models(args):
+    """Every job's rank list, best first: each model's scores, its total, whether it is enabled and whether the proxy
+    serves it. One request to the proxy (its model list), no model call."""
+    from launchkit.adapters.ranking import JOBS, is_enabled, rank_list, ranking, total
+
+    served: set[str] | None = None
+    try:
+        from launchkit.adapters.llm import client
+
+        served = {m.id for m in client().with_options(timeout=10).models.list().data}
+    except Exception as error:  # the proxy is down or out of reach: still show the lists
+        console.print(f"[yellow]Could not ask the proxy which models it serves ({type(error).__name__}). Is the VPN on?[/yellow]\n")
+    entries = ranking(settings)
+    for job in JOBS:
+        entry = entries[job]
+        weights = " · ".join(f"{k} {v}" for k, v in entry["weights"].items())
+        console.print(f"[bold]{job}[/bold]  {entry.get('about', '')}  (weights: {weights})", highlight=False)
+        table = Table(show_header=True, header_style="bold", box=None, padding=(0, 2))
+        for column in ("rank", "model", "eval", "latency", "cost", "total", "status"):
+            table.add_column(column, justify="right" if column in ("rank", "eval", "latency", "cost", "total") else "left")
+        for i, name in enumerate(rank_list(job, settings), 1):
+            scores = entry["models"][name]
+            if not is_enabled(name, settings):
+                status = "not enabled (LAUNCHKIT_DISABLED_MODELS)"
+            elif served is not None and name not in served:
+                status = "not enabled (the proxy does not serve it)"
+            else:
+                status = "enabled" if served is not None else "enabled (proxy not asked)"
+            table.add_row(str(i), name, f"{scores['eval']:.2f}", f"{scores['latency']:.2f}", f"{scores['cost']:.2f}", f"{total(scores, entry['weights']):.3f}", status)
+        console.print(table)
+        console.print()
+    pick = settings.model or "none: the rank list decides once route() is built"
+    console.print(f"Maya's pick (LAUNCHKIT_MODEL): {pick}", highlight=False)
+    return 0
 
 
 def cmd_ui(args):
@@ -425,6 +465,7 @@ def main(argv=None):
     main_agent.add_argument("--user", default="maya")
     main_agent.add_argument("--session", default="terminal")
     main_agent.add_argument("--model", help="override LAUNCHKIT_MODEL, e.g. fake:brief")
+    main_agent.add_argument("--effort", choices=["low", "medium", "high"], help="thinking effort for reasoning models (step 4's demo)")
     main_agent.add_argument("--attach", action="append", default=[], metavar="FILE", help="attach a picture to the conversation, e.g. samples/approved/tidal-poster.jpg")
     main_agent.set_defaults(func=cmd_main)
 
@@ -457,9 +498,12 @@ def main(argv=None):
     explain.add_argument("--show", action="store_true", help="print the system message as sent")
     explain.set_defaults(func=cmd_explain)
 
-    check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all; retrieval: check rag1.. or rag; orchestration: check orch0.. or orch; memory: check mem0.. or mem")
-    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch", *MEM_STEPS, "mem"])
+    check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all; retrieval: check rag1.. or rag; orchestration: check orch0.. or orch; memory: check mem0.. or mem; routing: check routing0.. or routing")
+    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch", *MEM_STEPS, "mem", *ROUTING_STEPS, "routing"])
     check.set_defaults(func=cmd_check)
+
+    models = sub.add_parser("models", help="every job's rank list, best first: scores, total, and whether each model is enabled and served by the proxy")
+    models.set_defaults(func=cmd_models)
 
     memories = sub.add_parser("memories", help="print what the memory store keeps for one person: their rows and the workspace's")
     memories.add_argument("workspace")

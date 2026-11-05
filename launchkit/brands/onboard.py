@@ -7,7 +7,7 @@ from agno.agent import Agent
 from pydantic import BaseModel, Field
 from pypdf import PdfReader
 
-from launchkit.adapters.models import model_name, resolve_model
+from launchkit.adapters.models import Jobs, model_name
 from launchkit.agents.prompt import approx_tokens
 from launchkit.brands.request import WORKSPACE_ID, UnknownWorkspace
 from launchkit.knowledge.brand_index import index_brand
@@ -116,7 +116,7 @@ def onboard_workspace(pdf_path: Path, *, workspace_id: str | None = None, settin
         raise ValueError(f"{pdf_path.name} has no text to read. A scanned PDF needs OCR first.")
     trace.note(f"read {pages} page{'s' if pages != 1 else ''} of {pdf_path.name}, about {approx_tokens(text)} tokens of text")
 
-    model = model if model is not None else resolve_model(settings, trace)
+    model = model if model is not None else Jobs(settings, trace).first("long_text")[1]  # the onboarding agent writes in the brand's voice
     agent = Agent(model=model, system_message=ONBOARD_TASK, output_schema=BrandProfile, retries=2, telemetry=False)
     run = agent.run(text)
     trace.model("onboard", model_name(model), run.metrics)

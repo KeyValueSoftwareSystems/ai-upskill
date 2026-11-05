@@ -25,14 +25,20 @@ def build_research_agent(model, settings, trace: Trace) -> Agent | None:
     )
 
 
-def make_research_entries(model, settings, trace: Trace) -> list[Entry]:
-    """Orchestration step 2: research and research_many, as read tools for the catalogue."""
+def make_research_entries(model, settings, trace: Trace, jobs=None) -> list[Entry]:
+    """Orchestration step 2: research and research_many, as read tools for the catalogue. Given jobs, each research
+    call asks for the research job's model, and a failed call moves to the next model on its list."""
+
+    def research_on(chosen, brief: str) -> str:
+        run = build_research_agent(chosen, settings, trace).run(brief)
+        raise_if_failed(run)
+        trace.model("research", model_name(chosen), run.metrics)
+        return str(run.content or "")
 
     def research(brief: str) -> str:
-        run = build_research_agent(model, settings, trace).run(brief)
-        raise_if_failed(run)
-        trace.model("research", model_name(model), run.metrics)
-        return str(run.content or "")
+        if jobs is None:
+            return research_on(model, brief)
+        return jobs.in_order("research", lambda job, chosen: research_on(chosen, brief))
 
     def research_many(briefs: list[str]) -> list[str]:
         with ThreadPoolExecutor(max_workers=max(len(briefs), 1)) as pool:

@@ -5,6 +5,7 @@ import base64
 import json
 from pathlib import Path
 
+from launchkit.adapters.models import now, timed_vision_call
 from launchkit.memory.attached_pictures import NoPicture, sidecar
 from launchkit.settings import ROOT
 from launchkit.tools.catalogue import Entry
@@ -27,13 +28,14 @@ def make_describe_image(settings, model, desk=None):
             photo = None
         if photo is None:
             return {"status": "no photo given", "reason": "Attach the photo to this conversation first."}
-        if is_fake(settings, model):
+        chosen = now(model)
+        if is_fake(settings, chosen):
             saved = sidecar(photo, ".describe.json")
             if saved is None:
                 return {"status": "unknown photo", "reason": "The fake model only knows the sample photos in samples/."}
             seen = json.loads(saved.read_text())
         else:
-            seen = look_at(photo, model)
+            seen = look_at(photo, chosen)
         if desk is not None and not seen.get("text") and not seen.get("other_brand"):
             desk.use_photo(photo)
             seen["now_working_on"] = "the marketer's photo"
@@ -44,14 +46,12 @@ def make_describe_image(settings, model, desk=None):
 
 def look_at(photo: Path, model) -> dict:
     """Ask a vision model what the photo shows."""
-    from launchkit.adapters.llm import client
-
     ask = 'Describe this photo in one sentence. Reply with JSON only: {"text": true|false, "other_brand": true|false, "description": "..."}. text means any visible words; other_brand means any logo or brand name.'
     image = base64.b64encode(photo.read_bytes()).decode()
-    reply = client().chat.completions.create(
-        model=model.id,
+    reply = timed_vision_call(
+        model,
         messages=[{"role": "user", "content": [{"type": "text", "text": ask}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image}"}}]}],
-        extra_body=None if "api.openai.com" in str(client().base_url) else {"cache": {"no-cache": True}},
+        extra_body={"cache": {"no-cache": True}},
     )
     text = reply.choices[0].message.content or ""
     return json.loads(text[text.find("{"): text.rfind("}") + 1])

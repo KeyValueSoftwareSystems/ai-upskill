@@ -14,8 +14,10 @@ A marketing assistant built in steps across the session. A marketer asks for a p
 | `session-02-tools-step1` … `step5` | each step's answer |
 | `session-02-orchestration` | agents and orchestration (Session 2, part 2): the main agent, the Tidal launch brief, saved competitor pages |
 | `session-02-orchestration-step1`, `step2` | each step's answer |
-| **`session-03-memory-step1`** (you are here) | agent memory (Session 3): Session 2's answer plus the memory setup; hands-on 1 (what goes in) starts here |
+| `session-03-memory-step1` | agent memory (Session 3): Session 2's answer plus the memory setup; hands-on 1 (what goes in) starts here |
 | `session-03-memory-step2` | hands-on 2 (what comes back, and for how long: the index, then compaction), with hands-on 1 answered |
+| **`session-03-routing`** (you are here) | model routing (Session 3): memory plus the routing setup (jobs, rank lists, the scoreboard); hands-on 1 (a model for each job) starts here |
+| `session-03-routing-step1` | routing hands-on 1 answered: `route()` |
 
 Each branch contains the previous branch's solution. Fall behind, check out the next one.
 
@@ -204,6 +206,14 @@ In your editor: install the **SQLite Viewer** extension (`qwtel.sqlite-viewer`; 
 | 2 · What comes back, and for how long (`session-03-memory-step2`) | A, read it back cheaply: `memory/index.py` `memory_index`, `recall`; B, one long conversation: `agents/main_agent.py` `build_main_agent`, `memory/compaction.py` `must_keep` | `check mem2` | `docs/memory-2.md` |
 
 `uv run launchkit check mem` runs every memory check on the branch.
+
+## Session 3 · Model routing, one hands-on step
+
+Starts on `session-03-routing`. The same `.env`; set `LAUNCHKIT_MODEL=gpt-5.5` for the first run, then empty it. `uv run launchkit check routing0` proves the setup; `uv run launchkit models` prints every job's rank list.
+
+| Step | Slot | Check | Card |
+| --- | --- | --- | --- |
+| 1 · A model for each job (`session-03-routing`) | `adapters/routing.py` `route` | `check routing1` | `docs/routing-1.md` |
 
 ## Layout
 

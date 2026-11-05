@@ -2,6 +2,7 @@
 
 Pick me when: the marketer gives a photo, e.g. "use our shoot photo", and wants it used for the poster.
 Uses: describe_image, detect_focal_point, crop, expand_canvas
+Model: vision = gpt-5.5
 
 ## Steps
 

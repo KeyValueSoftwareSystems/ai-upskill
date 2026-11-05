@@ -41,7 +41,58 @@ class Trace:
             input_tokens=getattr(metrics, "input_tokens", 0) or 0,
             output_tokens=getattr(metrics, "output_tokens", 0) or 0,
             cached_tokens=getattr(metrics, "cache_read_tokens", 0) or 0,
+            seconds=getattr(metrics, "duration", 0) or 0,
         )
+
+    def route(self, job: str, model_id: str, reason: str):
+        """route()'s choice for one job: the model and why (pick, skill, rank N, fallback)."""
+        self.add("route", job=job, model=model_id, reason=reason)
+
+    def call(self, job: str, model_id: str, seconds: float, input_tokens: int, cached_tokens: int, output_tokens: int):
+        """One real model call, timed: what the scoreboard adds up."""
+        self.add("call", job=job, model=model_id, seconds=seconds, input_tokens=input_tokens, cached_tokens=cached_tokens, output_tokens=output_tokens)
+
+    def bill(self) -> list[dict]:
+        """The scoreboard: one row per model, with the jobs it did, its calls, tokens, seconds and dollars (when
+        launchkit/adapters/pricing.py has a price). Real calls are timed one by one; a run on a fake model counts as one
+        call. Reads the trace; adds no model call."""
+        from launchkit.adapters.pricing import cost_usd
+
+        calls = [e.detail for e in self.events if e.kind == "call"]
+        if not calls:
+            calls = [{**e.detail, "job": e.detail["phase"]} for e in self.events if e.kind == "model"]
+        rows: dict[str, dict] = {}
+        for c in calls:
+            row = rows.setdefault(c["model"], {"model": c["model"], "jobs": [], "calls": 0, "input_tokens": 0, "cached_tokens": 0, "output_tokens": 0, "seconds": 0.0})
+            if c["job"] not in row["jobs"]:
+                row["jobs"].append(c["job"])
+            row["calls"] += 1
+            for key in ("input_tokens", "cached_tokens", "output_tokens", "seconds"):
+                row[key] += c.get(key, 0) or 0
+        for row in rows.values():
+            row["usd"] = cost_usd(row["model"], row["input_tokens"], row["cached_tokens"], row["output_tokens"])
+        return list(rows.values())
+
+    def checks(self) -> dict:
+        """The quality column: Harbor's checks this turn. check_copy and the poster check pass or fail; describe_image
+        finding words or another brand's logo is the photo check catching something."""
+        passed = failed = 0
+        for e in self.events:
+            d = e.detail
+            if e.kind == "tool" and d["name"] == "check_copy" and isinstance(d["result"], dict) and "ok" in d["result"]:
+                passed, failed = passed + bool(d["result"]["ok"]), failed + (not d["result"]["ok"])
+        validations = [e.detail for e in self.events if e.kind == "validation"]
+        if validations:
+            passed, failed = passed + (not validations[-1]["errors"]), failed + bool(validations[-1]["errors"])
+        photos = [e.detail["result"] for e in self.events if e.kind == "tool" and e.detail["name"] == "describe_image" and isinstance(e.detail["result"], dict)]
+        caught = sum(1 for r in photos if r.get("other_brand") or r.get("text"))
+        return {"passed": passed, "failed": failed, "photo_flags": caught}
+
+    def scoreboard(self):
+        """Add the scoreboard to the trace, so the chat page's Trace tab and the terminal both show it."""
+        for row in self.bill():
+            self.add("score", **row)
+        self.add("quality", **self.checks())
 
     def tool(self, name: str, arguments: dict, result):
         self.add("tool", name=name, arguments=arguments, result=result, result_tokens=round(len(str(result)) / 4))
@@ -104,6 +155,17 @@ class Trace:
                 return f"model     {d['phase']} phase · {d['model']} · sent {d['input_tokens']} tokens{cached}, got back {d['output_tokens']}"
             case "tool":
                 return f"tool      {d['name']}({_short(_args(d['arguments']), 60)}) → {_short(_result(d['result']), 60)} · {d.get('result_tokens', 0)} tokens back"
+            case "route":
+                return f"route     {d['job']} · {d['model']} · {d['reason']}"
+            case "call":
+                return f"call      {d['job']} · {d['model']} · {d['seconds']:.1f} s · sent {d['input_tokens']}, got back {d['output_tokens']}"
+            case "score":
+                usd = f"${d['usd']:.4f}" if d.get("usd") is not None else "price unknown"
+                return (f"score     {d['model']} · {', '.join(d['jobs'])} · {d['calls']} calls · {d['input_tokens']} tokens in, "
+                        f"{d['output_tokens']} out · {d['seconds']:.1f} s · {usd}")
+            case "quality":
+                photo = f" · photo check caught {d['photo_flags']}" if d["photo_flags"] else ""
+                return f"quality   checks passed {d['passed']}, failed {d['failed']}{photo}"
             case "chunk":
                 score = f" · score {d['score']:.3f}" if d.get("score") is not None else ""
                 return f"chunk     #{d['rank']} {d['ref']}{score} · {_short(d['text'], 70)}"

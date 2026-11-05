@@ -60,23 +60,24 @@ def colour_of(name: str, colours: dict) -> str:
 
 def find_subject(picture: Path, model) -> list[int]:
     """Ask a vision model for the main subject's box. With a fake model, read the box saved next to the picture."""
+    from launchkit.adapters.models import now, timed_vision_call
+
+    model = now(model)
     if model is None or getattr(model, "provider", "") == "fake" or not hasattr(model, "id"):
         saved = sidecar(picture, ".bottle.json")
         if saved is None:
             raise NoPicture("The fake model only knows the sample pictures in samples/; use the real model for this one.")
         return json.loads(saved.read_text())["box"]
-    from launchkit.adapters.llm import client
-
     image = base64.b64encode(picture.read_bytes()).decode()
     w, h = Image.open(picture).size
     ask = (
         f"This poster is {w}x{h} pixels. Find the product, the main subject. Reply with JSON only: "
         '{"box": [left, top, right, bottom]} in pixels, tight around the whole product.'
     )
-    reply = client().chat.completions.create(
-        model=model.id,
+    reply = timed_vision_call(
+        model,
         messages=[{"role": "user", "content": [{"type": "text", "text": ask}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image}"}}]}],
-        extra_body=None if "api.openai.com" in str(client().base_url) else {"cache": {"no-cache": True}},
+        extra_body={"cache": {"no-cache": True}},
     )
     text = reply.choices[0].message.content or ""
     return json.loads(text[text.find("{"): text.rfind("}") + 1])["box"]

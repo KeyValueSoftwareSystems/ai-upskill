@@ -32,6 +32,7 @@ class Skill:
     note: str
     text: str
     hides: tuple[str, ...] = ()
+    pins: tuple[tuple[str, str], ...] = ()  # its 'Model:' line: (job, model) pairs, e.g. Model: vision = gpt-5.5
 
 
 def built(fn: Callable) -> bool:
@@ -48,7 +49,8 @@ def load_skills(folder: Path = SKILLS_DIR) -> dict[str, Skill]:
     for path in sorted(folder.glob("*/skill.md")):
         text = path.read_text(encoding="utf-8")
         hides = tuple(t.strip(" `") for t in field_of(text, "hides").split("(")[0].split(",") if t.strip(" `"))
-        skills[path.parent.name] = Skill(path.parent.name, field_of(text, "pick me when"), text, hides)
+        pins = tuple((job.strip(), model.strip()) for pair in field_of(text, "model").split(",") if "=" in pair for job, model in [pair.split("=", 1)])
+        skills[path.parent.name] = Skill(path.parent.name, field_of(text, "pick me when"), text, hides, pins)
     return skills
 
 
@@ -71,6 +73,11 @@ class Catalogue:
         self.trace = trace
         self.approve = approve
         self.leash: Callable | None = None
+        self.loaded: list[Skill] = []  # skills run_skill loaded this turn, newest last: their Model: lines pin models
+
+    def pinning(self, job: str) -> Skill | None:
+        """The newest skill loaded this turn that pins a model for this job."""
+        return next((s for s in reversed(self.loaded) if job in dict(s.pins)), None)
 
     @property
     def lookup(self) -> bool:
@@ -92,6 +99,7 @@ class Catalogue:
             skill = self.skills.get(name)
             if skill is None:
                 return f"No skill named {name}."
+            self.loaded.append(skill)
             if not self.lookup:
                 return skill.text
             uses = [self.entries[t] for t in re.split(r"[,\s]+", field_of(skill.text, "uses")) if t in self.entries]
