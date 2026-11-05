@@ -156,12 +156,17 @@ uv run launchkit ui
 
 Then recreate Maya's Tidal launch, the conversation this session starts from: on the chat page, or with `uv run launchkit replay harbor samples/sessions/tidal_launch.txt`. `docs/memory-1.md` walks through it.
 
-Every branch here is the **start** of a hands-on. The one before it is already answered, so if you fall behind, check out the next branch.
+Every branch here is the **start** of a hands-on. The one before it is already answered, so if you fall behind, check out the next branch. Your own edits and new files would block the checkout, so set them aside first:
+
+```
+git stash -u                                   # your changes and new files, kept aside
+git checkout session-03-memory-step2
+```
 
 How each step runs:
 
 1. Start on the step's branch and keep `uv run launchkit ui` running. It restarts by itself when a `.py` file under `launchkit/` changes, including after a checkout: the terminal says `Reloading...`, and you reload the browser tab. `uv run launchkit ui --no-reload` turns that off.
-2. Everything Maya types goes on the chat page: sign in as Maya (or Sam) at Harbor, press **New conversation**, leave **Model** empty for the real model, and send the message on the card. Asks to keep a memory come up as **Allow** or **Deny** in the chat.
+2. Everything Maya types goes on the chat page: sign in as Maya (or Sam) at Harbor, press **New conversation**, leave **Model** empty for the real model, and send the message on the card. An ask to keep a memory comes up in the chat with three buttons: **Just me**, **Everyone at the brand** and **Don't keep**.
 3. The terminal is for what Maya would not do on the page: `uv run launchkit forget harbor` to start a step again from an empty store (conversations stay), `uv run launchkit seed-memories harbor` for hands-on 2's month of rows, `uv run launchkit replay` to send a file of Maya's messages as one conversation, `uv run launchkit store …` and `uv run launchkit memories …` to read the store, and `uv run launchkit check mem1` or `mem2` to prove a hands-on.
 4. `fake:memory` is the fallback: a scripted model that gives the same answer every time. Type it in **Model** when you are offline, without a key, or want the card's exact output. The checks always run on it.
 
