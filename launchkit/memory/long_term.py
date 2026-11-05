@@ -48,18 +48,22 @@ class MemoryDb(SqliteDb):
     is hers or everyone's at the workspace. The door sits inside the database because Agno's memory manager writes
     straight to whatever db it is given."""
 
-    def __init__(self, db_file: str, workspace_id: str, user_id: str, trace: Trace | None = None, approve=None):
+    def __init__(self, db_file: str, workspace_id: str, user_id: str, trace: Trace | None = None, approve=None, name: str | None = None):
         super().__init__(db_file=db_file, memory_table=MEMORY_TABLE)
         self.workspace_id, self.user_id = workspace_id, user_id
+        self.name = name or user_id.capitalize()
         self.trace = trace if trace is not None else Trace()
         self.approve = approve
+        self.kept: list[str] = []
+        self.refused: list[str] = []
 
     def upsert_user_memory(self, memory: UserMemory, deserialize: bool | None = True):
         scope = "user"
         if self.approve is not None and built(ask_before_keeping):
             scope = ask_before_keeping(memory.memory, list(memory.topics or []), self.approve)
             if scope is None:
-                self.trace.refused("keep a memory", f"Maya said no to: {memory.memory}")
+                self.trace.refused("keep a memory", f"{self.name} said no to: {memory.memory}")
+                self.refused.append(memory.memory)
                 return None
         memory.topics = [t for t in (memory.topics or []) if not t.startswith(OWNED)] + [f"author:{self.user_id}", "source:conversation"]
         if scope == "workspace" and memory.user_id != everyone(self.workspace_id):
@@ -68,7 +72,25 @@ class MemoryDb(SqliteDb):
             self.delete_user_memory(memory.memory_id)
             memory.memory_id, memory.user_id = None, everyone(self.workspace_id)
         self.trace.note(f"memory kept · {'everyone at ' + self.workspace_id if scope == 'workspace' else memory.user_id} · {memory.memory}")
+        self.kept.append(memory.memory)
         return super().upsert_user_memory(memory, deserialize)
+
+
+def what_was_kept(db: MemoryDb):
+    """A tool hook for update_user_memory. Agno's memory manager hears "Memory added" from the database whatever the
+    door decided, so its answer to the agent says a row was kept even when the marketer said no. When the door refused
+    a row during the call, the agent gets what really happened instead."""
+
+    def hook(function_name: str, function_call, arguments: dict):
+        kept, refused = len(db.kept), len(db.refused)
+        result = function_call(**arguments)
+        if function_name != "update_user_memory" or len(db.refused) == refused:
+            return result
+        lines = [f"Kept: {memory}" for memory in db.kept[kept:]]
+        lines += [f"Not kept, {db.name} said no: {memory}" for memory in db.refused[refused:]]
+        return "\n".join(lines + ["Do not say a row was kept unless it is listed as kept here."])
+
+    return hook
 
 
 def write_rules() -> str | None:
@@ -79,7 +101,10 @@ def write_rules() -> str | None:
 
 def memory_db(settings, workspace_id: str, user_id: str, trace: Trace | None = None, approve=None) -> MemoryDb:
     settings.data_dir.mkdir(parents=True, exist_ok=True)
-    return MemoryDb(str(settings.data_dir / "sessions.db"), workspace_id, user_id, trace, approve)
+    from launchkit.brands.users import list_logins
+
+    name = next((login["name"] for login in list_logins(settings) if login["workspace_id"] == workspace_id and login["user_id"] == user_id), None)
+    return MemoryDb(str(settings.data_dir / "sessions.db"), workspace_id, user_id, trace, approve, name)
 
 
 def memories_for(db: SqliteDb, workspace_id: str, user_id: str) -> list[UserMemory]:
