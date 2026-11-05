@@ -38,6 +38,17 @@ def rank_list(job: str, settings) -> list[str]:
     return sorted(entry["models"], key=lambda name: total(entry["models"][name], entry["weights"]), reverse=True)
 
 
+def page_off_file(settings) -> Path:
+    """Where the chat page saves its Switched off box, so `launchkit models` can show it too."""
+    return Path(settings.data_dir) / "switched-off.json"
+
+
+def page_off(settings) -> set[str]:
+    """The models the chat page's Switched off box holds, or none if the page has not saved the box."""
+    path = page_off_file(settings)
+    return set(json.loads(path.read_text(encoding="utf-8"))) if path.exists() else set()
+
+
 def is_enabled(name: str, settings) -> bool:
     """A model is enabled unless LAUNCHKIT_DISABLED_MODELS switches it off."""
     return name not in settings.disabled_models

@@ -73,6 +73,17 @@ def models():
     return {"models": ranked + [f"fake:{name}" for name in ("memory", "tools", "brief") if name in FAKES], "off": sorted(settings.disabled_models)}
 
 
+@app.post("/off")
+def save_off(names: list[str]):
+    """The chat page saves its Switched off box here on every change. Routing still uses what each message sends."""
+    from launchkit.adapters.ranking import page_off_file
+
+    path = page_off_file(settings)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(sorted({name.strip() for name in names if name.strip()})), encoding="utf-8")
+    return {"ok": True}
+
+
 @app.get("/workspaces")
 def workspaces():
     return sorted(p.name for p in settings.workspaces_dir.iterdir() if p.is_dir())
