@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 from agno.exceptions import ModelProviderError
 from agno.models.openai import OpenAIChat
 
-from launchkit.adapters.fakes import BriefModel, EchoModel, EndlessModel, GoodModel, LookupModel, MalformedModel, MemoryModel, ProfileModel
+from launchkit.adapters.fakes import BriefModel, EchoModel, EndlessModel, FakeModel, GoodModel, LookupModel, MalformedModel, MemoryModel, ProfileModel
 from launchkit.adapters.routing import route
 from launchkit.settings import DEFAULT_MODEL
 from launchkit.trace import Trace
@@ -130,12 +130,11 @@ from launchkit.adapters.fakes import ToolsModel  # noqa: E402  Session 2's fake 
 FAKES["tools"] = ToolsModel
 
 
-class DownModel(EchoModel):
+class DownModel(FakeModel):
     """A model whose provider is down: every call fails, as a real outage does. The routing check uses it."""
 
     def __init__(self):
-        super().__init__()
-        self.id = self.name = "down"
+        super().__init__("down")
 
     def respond(self, messages, tools):
         raise ModelProviderError("fake:down is down", status_code=503)
@@ -150,7 +149,7 @@ class Jobs:
     """Which model does each job.
 
     - Given one model (a fake in the checks), every job uses it, as in every session before this one.
-    - Before route() is built, every job runs on Maya's pick, or on DEFAULT_MODEL when she made none.
+    - Before route() is built, every job runs on one model: LAUNCHKIT_MODEL (or the Model box), else DEFAULT_MODEL.
     - Once route() is built, it decides per job: Maya's pick, the skill's pin, then the job's rank list. Each choice
       is one route line in the trace, and a failed call moves to the next model on the list.
     """
@@ -175,8 +174,6 @@ class Jobs:
             return self.given
         offline = self.settings.fake_models or self.settings.model.startswith("fake:")
         if offline and not name.startswith("fake:"):
-            from launchkit.adapters.fakes import MemoryModel
-
             # LAUNCHKIT_FAKE_MODELS, or a fake picked in Model: every job stays offline. The trace keeps the routed name.
             return MemoryModel()
         # Thinking effort is for the main agent's reply only: the other jobs run on models that may not take it.
@@ -186,33 +183,36 @@ class Jobs:
             model.on_call = lambda seconds, sent, cached, got, usd: self.trace.call(job, name, seconds, sent, cached, got, usd)
         return model
 
-    def first(self, job: str, ask: str | None = None, skill=None, when_used: bool = False):
-        """The first choice for a job, as (job, model). For calls that are not retried on another model. when_used: the
-        route line is written at the model's first call, not now (the memory write may not happen this turn)."""
+    def enabled_options(self, job: str, ask: str | None = None, skill=None) -> tuple[str, list[tuple[str, str]]]:
         job, options = self.options(job, ask, skill)
         if not options:
             raise ModelProviderError(f"No enabled model for {job}: every model on its list is switched off.", status_code=503)
+        return job, options
+
+    def first(self, job: str, ask: str | None = None, skill=None, when_used: bool = False):
+        """The first choice for a job, as (job, model). For calls that are not retried on another model. when_used: the
+        route line is written at the model's first call, not now (the memory write may not happen this turn)."""
+        job, options = self.enabled_options(job, ask, skill)
         name, reason = options[0]
         model = self.build(name, job)
-        if self.routed and when_used and getattr(model, "on_call", None):
-            timed, said = model.on_call, []
-
-            def route_then_time(*args):
-                if not said:
-                    said.append(True)
-                    self.trace.route(job, name, reason)
-                timed(*args)
-
-            model.on_call = route_then_time
-        elif self.routed:
+        if not self.routed:
+            return job, model
+        timed = getattr(model, "on_call", None)
+        if not (when_used and timed):
             self.trace.route(job, name, reason)
+            return job, model
+
+        def route_then_time(*args):
+            model.on_call = timed  # the route line once, at the first call; then the plain timer
+            self.trace.route(job, name, reason)
+            timed(*args)
+
+        model.on_call = route_then_time
         return job, model
 
     def in_order(self, job: str, call, ask: str | None = None, skill=None):
         """Run call(model) on the first choice; when the call fails, on the next one, and say so in the trace."""
-        job, options = self.options(job, ask, skill)
-        if not options:
-            raise ModelProviderError(f"No enabled model for {job}: every model on its list is switched off.", status_code=503)
+        job, options = self.enabled_options(job, ask, skill)
         for i, (name, reason) in enumerate(options):
             if self.routed:
                 self.trace.route(job, name, "fallback" if i else reason)

@@ -114,12 +114,15 @@ Done when `uv run launchkit check routing1` passes.
 
    ```
    route  long_text  · gpt-5.5      · rank 1   the headlines
-   route  research   · gpt-4.1-mini · rank 1   the research
+   route  research   · gpt-4.1-mini · rank 1   the research helpers
    route  short_text · gpt-5-nano   · rank 1   the size
    ```
 
+   The research question is also a short question, so the main agent's own reply to it is `short_text` too.
+   The size answer is now about 15 times cheaper than on `gpt-5.5`, but it is **not** faster: `gpt-5-nano` thinks before it answers, so it can take close to a minute.
+
 3. **The skill's model.** Attach `samples/shoot/breeze-cap.jpg` with 📎 and send: "Breeze launches next month. Same as Tidal: concepts, then every size." The trace shows `route  vision · gpt-5.5 · skill`. The photo check finds another brand's logo on the cap and stops.
-4. **The outage.** Type `gpt-4.1-mini` in the **Switched off** box (no restart). Ask: "What are hikers talking about this week?" The trace shows `route  research · gpt-5-mini · fallback`, and you still get an answer. Clear the box when you are done.
+4. **The outage.** The top research model goes down: type `gpt-4.1-mini` in the **Switched off** box (no restart). Send the research ask again: "How are Hydro Flask and Stanley launching bottles this season?" The trace shows `route  research · gpt-5-mini · fallback` for each helper, and you still get an answer. Clear the box when you are done.
 
 ## Prove it
 
