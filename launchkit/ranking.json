@@ -1,5 +1,5 @@
 {
-  "about": "One ranked list per job. Each model on a job's list has passed the first check (it can do the job at all) and has three scores from 0 to 1, higher is better: eval (quality on Harbor's own test asks), latency (speed) and cost (cheapness). Each job weighs the three; a model's total is each score times its weight, added up, and the highest total is rank 1. cost comes from launchkit/adapters/pricing.py (prices as of 2026-10-18). eval and latency are first estimates, to be re-measured on the live proxy before the session. image_gen and tts are not routed: one model each, set by LAUNCHKIT_IMAGE_PROVIDER and LAUNCHKIT_TTS_MODEL.",
+  "about": "One ranked list per job. Each model on a job's list has passed the first check (it can do the job at all) and has three scores from 0 to 1, higher is better: eval (quality on Harbor's own test asks), latency (speed) and cost (cheapness). Each job weighs the three; a model's total is each score times its weight, added up, and the highest total is rank 1. cost comes from launchkit/adapters/pricing.py (prices as of 2026-10-18). eval and latency are first estimates, to be re-measured on the live proxy before the session; gpt-5-nano's latency is from one live run (2026-11-05), where it thought for about 8,000 tokens and took longer than gpt-5.5. image_gen and tts are not routed: one model each, set by LAUNCHKIT_IMAGE_PROVIDER and LAUNCHKIT_TTS_MODEL.",
   "jobs": {
     "long_text": {
       "about": "launch copy in Harbor's voice: quality first",
@@ -15,7 +15,7 @@
       "about": "a short answer to a short question, such as one product fact: cost first",
       "weights": { "eval": 0.2, "latency": 0.2, "cost": 0.6 },
       "models": {
-        "gpt-5-nano":   { "eval": 0.70, "latency": 0.80, "cost": 1.00 },
+        "gpt-5-nano":   { "eval": 0.70, "latency": 0.40, "cost": 1.00 },
         "gpt-5.4-nano": { "eval": 0.72, "latency": 0.85, "cost": 0.73 },
         "gpt-4.1-mini": { "eval": 0.80, "latency": 0.85, "cost": 0.66 }
       }
@@ -33,7 +33,7 @@
       "about": "the memory write and the session summary: short, typed, after every turn",
       "weights": { "eval": 0.3, "latency": 0.2, "cost": 0.5 },
       "models": {
-        "gpt-5-nano":   { "eval": 0.65, "latency": 0.80, "cost": 1.00 },
+        "gpt-5-nano":   { "eval": 0.65, "latency": 0.40, "cost": 1.00 },
         "gpt-4.1-mini": { "eval": 0.80, "latency": 0.85, "cost": 0.66 }
       }
     },

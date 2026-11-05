@@ -11,11 +11,12 @@ In the terminal:
 ```
 git checkout session-03-routing
 uv sync
+uv run launchkit index harbor
 uv run launchkit check routing0
 uv run launchkit models
 ```
 
-**It worked when** `check routing0` prints `7 passed`, and `launchkit models` lists every job's rank list.
+**It worked when** `index harbor` says the chunks are in the brand store (once per clone: Session 1 did it, so it may say they are unchanged), `check routing0` prints `7 passed`, and `launchkit models` shows every model `enabled`.
 
 In `.env`, empty `LAUNCHKIT_MODEL` (`LAUNCHKIT_MODEL=`) and leave `LAUNCHKIT_DISABLED_MODELS` out. Then start the chat page:
 
@@ -64,7 +65,10 @@ Two runs on the chat page, one model for everything each time. Before `route()` 
 
 - copy that is fine: some jobs never needed the top model;
 - copy with a never-say word in it, so `check_copy` fails on the `quality` line, or copy that is flatter;
-- `describe_image` that does not mention the cap's logo, so `ingest_image` does not stop and the photo goes into every size.
+- copy about the wrong product: the small model can take the cap in the photo for the thing being launched;
+- the wrong skill picked, or no photo check at all, so `ingest_image` never stops and the photo with the logo goes into every size;
+- `describe_image` that runs but does not mention the cap's logo;
+- a turn that takes **longer** than on the top model: a small reasoning model can think for thousands of tokens. Cheaper is not always faster.
 
 One setting cannot fit every job.
 
