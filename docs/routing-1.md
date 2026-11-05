@@ -18,7 +18,7 @@ uv run launchkit models
 
 **It worked when** `index harbor` says the chunks are in the brand store (once per clone: Session 1 did it, so it may say they are unchanged), `check routing0` prints `7 passed`, and `launchkit models` shows every model `enabled`.
 
-In `.env`, empty `LAUNCHKIT_MODEL` (`LAUNCHKIT_MODEL=`) and leave `LAUNCHKIT_DISABLED_MODELS` out. Then start the chat page:
+In `.env`, empty `LAUNCHKIT_MODEL` (`LAUNCHKIT_MODEL=`), set `LAUNCHKIT_SEARCH=saved` so research reads the saved competitor pages and gives the same pages every time, and leave `LAUNCHKIT_DISABLED_MODELS` out. Then start the chat page:
 
 ```
 uv run launchkit ui
@@ -54,21 +54,24 @@ Nothing in this list is new to build. It is here so nothing changes without you 
 
 ## Break it first
 
-Two runs on the chat page, one model for everything each time. Before `route()` is built, the model in **Model** does every job.
+Two rounds on the chat page, one model for everything each time. Before `route()` is built, the model in **Model** does every job. Each round sends the same three asks, each in its own new conversation. They need three very different models: launch copy needs the best writer, research needs a solid reader, and a product fact needs almost nothing.
 
-**1 · The top model on every job.** Type `gpt-5.5` in **Model**, press **New conversation**, attach `samples/shoot/breeze-shoot.jpg` with 📎 and send: "Breeze launches next month. Same as Tidal: concepts, then every size." Then send: "How many ml is the Breeze?"
+1. "Write three headlines for the Breeze feed post."
+2. "How are Hydro Flask and Stanley launching bottles this season?" The main agent hands this to two research helpers, one per brand.
+3. "How many ml is the Breeze?"
 
-**What to look for** in the Trace tab, at the end of each turn: the `score` lines. One model row carries every job. The `quality` line passes. The one-line question waits seconds and pays the top price per token.
+**Round 1 · The top model on every job.** Type `gpt-5.5` in **Model** and send the three asks.
 
-**2 · The smallest model on every job.** Type `gpt-5-nano` in **Model**, press **New conversation**, attach `samples/shoot/breeze-cap.jpg` and send the Breeze ask again.
+**What to look for** at the end of each turn in the Trace tab: one `score` line, for `gpt-5.5`, whatever the job. The research costs the most, because the helpers read whole pages at the top price; in our run it was about $0.15 to $0.25. The one-line answer about the size pays the same price per token as the launch copy. The seconds on a `score` line add up every call, so two research helpers working side by side count more than the time Maya waited.
 
-**What to look for:** time and cost drop on the `score` lines. Then read the work. You may see any of these:
+**Round 2 · The smallest model on every job.** Type `gpt-5-nano` in **Model** and send the same three asks.
 
-- copy that is fine: some jobs never needed the top model;
-- copy with a never-say word in it, so `check_copy` fails on the `quality` line, or copy that is flatter;
-- copy about the wrong product: the small model can take the cap in the photo for the thing being launched;
-- the wrong skill picked, or no photo check at all, so `ingest_image` never stops and the photo with the logo goes into every size;
-- `describe_image` that runs but does not mention the cap's logo;
+**What to look for:** the cost drops on every `score` line. Then read the work. You may see any of these:
+
+- headlines that are fine: some jobs never needed the top model;
+- headlines with a never-say word in them, so `check_copy` fails on the `quality` line, or headlines that are flatter;
+- a research summary that is thin, or that misses a brand;
+- the wrong skill picked, or a tool called that does not exist;
 - a turn that takes **longer** than on the top model: a small reasoning model can think for thousands of tokens. Cheaper is not always faster.
 
 One setting cannot fit every job.
@@ -105,17 +108,15 @@ Done when `uv run launchkit check routing1` passes.
 
 ## Run it again
 
-Saving `routing.py` restarts the chat page by itself; reload the browser tab. Clear the **Model** field, so the rank list decides, and press **New conversation**. In one conversation:
+Saving `routing.py` restarts the chat page by itself; reload the browser tab. Clear the **Model** field, so the rank list decides. Send the same three asks, each in a new conversation:
 
-1. Attach `samples/shoot/breeze-cap.jpg` and send the Breeze ask. The trace says `route  vision · gpt-5.5 · skill`, and `ingest_image` stops on the logo.
-2. "Write three headlines for the Breeze feed post." The trace says `route  long_text · gpt-5.5 · rank 1`. When the agent checks the copy, the `quality` line shows `check_copy` passing.
-3. "How many ml is the Breeze?" The trace says `route  short_text · gpt-5-nano · rank 1`, with one `get_brand_details` call. Its `score` line is a fraction of the launch copy's time and cost.
+1. "Write three headlines for the Breeze feed post." The trace says `route  long_text · gpt-5.5 · rank 1`. When the agent checks the copy, the `quality` line shows `check_copy` passing.
+2. "How are Hydro Flask and Stanley launching bottles this season?" The trace says `route  research · gpt-4.1-mini · rank 1` for each helper. Its `score` line is a fraction of round 1's research cost.
+3. "How many ml is the Breeze?" The trace says `route  short_text · gpt-5-nano · rank 1`, with one `get_brand_details` call.
 
-**The outage.** Add `LAUNCHKIT_DISABLED_MODELS=gpt-4.1-mini` to `.env`, as if the top research model went down this morning. Stop the chat page (Ctrl+C), run `uv run launchkit ui` again and reload the tab. Ask: "What are hikers talking about this week?"
+Each job now runs on its own model, and the `score` lines show three rows.
 
-**What to look for:** `route  research · gpt-5-mini · fallback`. The helper still answers, and the launch carries on. The `score` lines now show one row per model, the jobs split across them.
-
-Take `gpt-4.1-mini` out of `LAUNCHKIT_DISABLED_MODELS` and restart the chat page when you are done.
+**The skill's model.** Press **New conversation**, attach `samples/shoot/breeze-cap.jpg` with 📎 and send: "Breeze launches next month. Same as Tidal: concepts, then every size." The trace says `route  vision · gpt-5.5 · skill`: the `ingest_image` skill asked for that model. The photo check finds the cap's logo and stops before any sizes are made.
 
 ## What changes, and why
 
