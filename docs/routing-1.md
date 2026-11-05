@@ -1,82 +1,83 @@
 # Routing hands-on 1 · A model for each job
 
-Breeze launch week. Every job LaunchKit does runs on one model, picked by one setting: the launch copy, a quick question about the product, the research helper, the memory write, the photo check. On the top model the work is good, and a one-line question waits and pays like the launch copy. On a small model it is fast and cheap, and the work breaks. Maya wants the same quality, faster and cheaper.
+Every job in LaunchKit runs on one model, set once in `.env` as `LAUNCHKIT_MODEL`. A big model does good work but is slow and expensive for small jobs. A small model is cheap, but the work breaks.
 
-In this hands-on you write `route()`: one function that reads Maya's ask, names the job, and returns the models to try in order. At the end, each job has its own model, the scoreboard splits across them, and an outage of the top research model does not stop the launch.
+In this hands-on you write **`route()`**: one function that picks a model for each job. At the end, launch copy runs on the best writer, research on a mid model, and a quick question on the cheapest one.
 
 ## Before you start
-
-In the terminal:
 
 ```
 git checkout session-03-routing
 uv sync
 uv run launchkit index harbor
 uv run launchkit check routing0
-uv run launchkit models
 ```
 
-**It worked when** `index harbor` says the chunks are in the brand store (once per clone: Session 1 did it, so it may say they are unchanged), `check routing0` prints `7 passed`, and `launchkit models` shows every model `enabled`.
+`check routing0` must say `7 passed`.
 
-In `.env`, set `LAUNCHKIT_MODEL=gpt-5.5` (the one setting LaunchKit has had so far: one model for every job), set `LAUNCHKIT_SEARCH=saved` so research reads the saved competitor pages and gives the same pages every time, and leave `LAUNCHKIT_DISABLED_MODELS` out. Then start the chat page:
+In `.env`, set these two lines:
 
 ```
-uv run launchkit ui
+LAUNCHKIT_MODEL=gpt-5.5
+LAUNCHKIT_SEARCH=saved
 ```
 
-Everything below happens on the chat page: sign in as Maya at Harbor and keep the **Trace** tab open. Leave the **Model** box at the top empty: it is Maya's own choice, and she does not pick a model in this hands-on. The team's settings live in `.env`: the one model (`LAUNCHKIT_MODEL`), the outage and thinking effort. After changing `.env`, stop the chat page (Ctrl+C) and run `uv run launchkit ui` again, because the page reads `.env` when it starts.
+Start the chat page with `uv run launchkit ui`. Sign in as Maya at Harbor and open the **Trace** tab. Leave the **Model** box empty.
 
-## What is already there
+## The three asks
 
-Nothing in this list is new to build. It is here so nothing changes without you knowing.
+You send these three asks several times. Send each one in a **new conversation**.
 
-- **Jobs** (`launchkit/adapters/models.py`, `Jobs`). Every model call now asks for its job's model:
-    - the main agent's reply: `long_text`, with Maya's message as the ask;
-    - the onboarding agent: `long_text`;
-    - the research subagent: `research`;
-    - the memory write and the session summary: `memory_write`;
-    - `describe_image` and `detect_focal_point`: `vision`, chosen at the moment of the call, so a skill loaded earlier in the turn can pin it.
+1. "Write three headlines for the Breeze feed post." (launch copy)
+2. "How are Hydro Flask and Stanley launching bottles this season?" (research)
+3. "How many ml is the Breeze?" (one product fact)
 
-  Until `route()` is built, every job runs on Maya's pick, or on `gpt-4.1-mini` when she made none: the same as every session before this one. Once it is built, `Jobs` calls `route()`, writes one `route` line in the trace for each choice, and when a call fails, tries the next model on the list.
-- **The rank lists** (`launchkit/ranking.json`, read by `launchkit/adapters/ranking.py`). One list per job. Each model has three scores from 0 to 1: `eval`, how good its work is on Harbor's test asks (1 is the best); `latency`, how long it takes (1 is the slowest model in the file); and `cost`, what it costs (1 is the most expensive model in the file, 0 the cheapest, not free). Each job has weights. The total counts `eval` up and `latency` and `cost` down. `uv run launchkit models` shows the real price next to each model. `rank_list(job, settings)` gives the job's models by weighted total, best first. Edit the file and the next call reads it; no restart.
-- **The skill's pin.** `ingest_image`'s `skill.md` has a `Model:` line: `Model: vision = gpt-5.5`. The skill loader reads it into `skill.pins`.
-- **Switched-off models.** The chat page's **Switched off** box, next to **Model**: model names separated by commas, sent with each message. It starts with `LAUNCHKIT_DISABLED_MODELS` from `.env`. A switched-off model disappears from the Model list and cannot be picked. `is_enabled(name, settings)` says whether a model is on. It switches a model off inside LaunchKit only; the proxy would still answer. It stands in for an outage.
-- **The scoreboard** (`Trace.bill()` and `Trace.scoreboard()` in `launchkit/trace.py`). At the end of every turn the trace gets one `score` line per model (the jobs it did, calls, tokens, seconds, and dollars: what the LiteLLM proxy says it charged, or, when it says nothing, an estimate from `launchkit/adapters/pricing.py`, marked ≈), one `total` line that adds up every model in the turn, and one `quality` line (Harbor's checks this turn: `check_copy`, the poster check, and whether the photo check caught words or a logo). Every real call is timed on its own `call` line.
-- **Not on the scoreboard:** pictures and voice-overs. Pictures come from the GPU service, which has no price per call, and there is one model for each.
-- **`uv run launchkit models`**: every job's rank list with scores, totals, and whether each model is enabled and served by the proxy.
-- **`samples/shoot/breeze-cap.jpg`**: the Breeze shoot photo with a red cap in the background grass, carrying another brand's logo.
-- **`LAUNCHKIT_FAKE_MODELS=1`**: every job runs on a scripted model and the trace keeps the routed name. For when the proxy is down.
-- **Not routed:** `image_gen` and `tts` keep their own settings (`LAUNCHKIT_IMAGE_PROVIDER`, `LAUNCHKIT_TTS_MODEL`). There is one model for each today, so there is nothing to rank.
+## How to read the Trace tab
 
-## The slot
+At the end of each answer:
 
-`launchkit/adapters/routing.py`, `route()`. It is marked `@todo` and raises until you build it.
+- `route` says which model did a job, and why. Example: `route  short_text · gpt-5-nano · rank 1`.
+- `score` says, for one model, how many calls it made, how long they took, and what they cost.
+- `total` adds up the whole answer.
+- `quality` says how Harbor's checks ended.
 
 ## Break it first
 
-Two rounds on the chat page, one model for everything each time. Before `route()` is built, the one model in `LAUNCHKIT_MODEL` does every job. Each round sends the same three asks, each in its own new conversation. They need three very different models: launch copy needs the best writer, research needs a solid reader, and a product fact needs almost nothing.
+**Round 1: the top model for every job.** `LAUNCHKIT_MODEL=gpt-5.5` is already set. Send the three asks.
 
-1. "Write three headlines for the Breeze feed post."
-2. "How are Hydro Flask and Stanley launching bottles this season?" The main agent hands this to two research helpers, one per brand.
-3. "How many ml is the Breeze?"
+- Every `score` line is `gpt-5.5`.
+- The research costs the most (about $0.17), then the headlines (about $0.03), then the size (about $0.02).
+- The one-line size answer pays the top price.
 
-**Round 1 · The top model on every job.** `LAUNCHKIT_MODEL=gpt-5.5` is already set. Send the three asks.
+**Round 2: the smallest model for every job.** In `.env`, change the line to `LAUNCHKIT_MODEL=gpt-5-nano`. Stop the chat page (Ctrl+C), start it again, and send the three asks again.
 
-**What to look for** at the end of each turn in the Trace tab: one `score` line, for `gpt-5.5`, whatever the job. The research costs the most, because the helpers read whole pages at the top price. In our run: headlines about $0.03, research about $0.17, the size about $0.02. On the size question the agent may first load the competitor research skill, then find the brand guide: a few extra calls at the top price. The one-line answer about the size pays the same price per token as the launch copy. The seconds on a `score` line add up every call, so two research helpers working side by side count more than the time Maya waited.
+- The cost drops a lot.
+- The work gets worse: weaker headlines, a thin research summary, sometimes the wrong skill.
+- It can even be slower: a small model can think for thousands of tokens.
 
-**Round 2 · The smallest model on every job.** The team tries the cheapest model to cut the bill: set `LAUNCHKIT_MODEL=gpt-5-nano` in `.env`, restart the chat page, and send the same three asks.
+One model cannot be right for every job.
 
-**What to look for:** the cost drops on every `score` line. Then read the work. You may see any of these:
+## What is already there
 
-- headlines that are fine: some jobs never needed the top model;
-- headlines with a never-say word in them, so `check_copy` fails on the `quality` line, or headlines that are flatter;
-- a research summary that is thin, or that misses a brand;
-- the wrong skill picked, or a tool called that does not exist;
-- a turn that takes **longer** than on the top model: a small reasoning model can think for thousands of tokens. Cheaper is not always faster.
+You do not build these. They are listed so you know what changed.
 
-One setting cannot fit every job.
+- **Jobs.** Every model call now asks for a model for its job:
 
-## Prompt card, for your coding agent
+  | Job | What it is |
+  | --- | --- |
+  | `long_text` | the main agent's reply, such as launch copy |
+  | `short_text` | the main agent's reply to a short question |
+  | `research` | the research helpers |
+  | `memory_write` | the memory write |
+  | `vision` | the photo checks |
+
+  Pictures and voice-overs are not routed: there is one model for each.
+- **The rank lists:** `launchkit/ranking.json`. One list of models per job, best first. Run `uv run launchkit models` to see them, with their prices.
+- **The skill's model:** the `ingest_image` skill asks for `gpt-5.5` to read photos, in one line of its `skill.md`.
+- **The Model box** is Maya's own choice. **The Switched off box** turns models off for an outage. A switched-off model is not offered in the Model box.
+- **The scoreboard:** the `route`, `score`, `total` and `quality` lines. The cost is what the LiteLLM proxy charged.
+
+## Prompt for your coding agent
 
 ```
 Implement route() in launchkit/adapters/routing.py. It's a stub right now: remove the @todo
@@ -108,28 +109,17 @@ Done when `uv run launchkit check routing1` passes.
 
 ## Run it again
 
-Empty `LAUNCHKIT_MODEL` in `.env` (`LAUNCHKIT_MODEL=`), so no single model is set any more, and restart the chat page. The rank list now decides. Send the same three asks, each in a new conversation:
+1. In `.env`, empty the line: `LAUNCHKIT_MODEL=`. Stop the chat page and start it again.
+2. Send the three asks. Each one now runs on its own model:
 
-1. "Write three headlines for the Breeze feed post." The trace says `route  long_text · gpt-5.5 · rank 1`. When the agent checks the copy, the `quality` line shows `check_copy` passing.
-2. "How are Hydro Flask and Stanley launching bottles this season?" The trace says `route  research · gpt-4.1-mini · rank 1` for each helper. Its `score` line is a fraction of round 1's research cost.
-3. "How many ml is the Breeze?" The trace says `route  short_text · gpt-5-nano · rank 1`, with one `get_brand_details` call.
+   ```
+   route  long_text  · gpt-5.5      · rank 1   the headlines
+   route  research   · gpt-4.1-mini · rank 1   the research
+   route  short_text · gpt-5-nano   · rank 1   the size
+   ```
 
-Each job now runs on its own model, and the `score` lines show three rows.
-
-**The skill's model.** Press **New conversation**, attach `samples/shoot/breeze-cap.jpg` with 📎 and send: "Breeze launches next month. Same as Tidal: concepts, then every size." The trace says `route  vision · gpt-5.5 · skill`: the `ingest_image` skill asked for that model. The photo check finds the cap's logo and stops before any sizes are made.
-
-**The outage.** As if the top research model went down this morning, type `gpt-4.1-mini` in the **Switched off** box at the top of the chat page. No restart is needed. Press **New conversation** and ask: "What are hikers talking about this week?"
-
-**What to look for:** `route  research · gpt-5-mini · fallback`. The helper still answers, and the launch carries on. `gpt-4.1-mini` is also gone from the Model list.
-
-Clear the **Switched off** box when you are done.
-
-## What changes, and why
-
-- **Before:** one setting, `LAUNCHKIT_MODEL`, chose the model for every text job, the memory write included.
-- **After:** every job asks `route()`. `LAUNCHKIT_MODEL` still works: if the team sets it, it fixes the model for the main agent's reply (`long_text` and `short_text`) and goes first, like Maya's own choice in the **Model** box. The research helper, the memory write and the photo check follow their own lists.
-- The order is a policy: Maya's pick, then the skill's pin, then the rank list. With no pick and no pin, rank 1 is the choice. That is what "Auto" means here.
-- A switched-off model is skipped wherever it comes from, so a pick that is down never runs, and the trace says `fallback`.
+3. **The skill's model.** Attach `samples/shoot/breeze-cap.jpg` with 📎 and send: "Breeze launches next month. Same as Tidal: concepts, then every size." The trace shows `route  vision · gpt-5.5 · skill`. The photo check finds another brand's logo on the cap and stops.
+4. **The outage.** Type `gpt-4.1-mini` in the **Switched off** box (no restart). Ask: "What are hikers talking about this week?" The trace shows `route  research · gpt-5-mini · fallback`, and you still get an answer. Clear the box when you are done.
 
 ## Prove it
 
@@ -137,30 +127,21 @@ Clear the **Switched off** box when you are done.
 uv run launchkit check routing1
 ```
 
-The check runs offline on scripted models, so it gives everyone the same result. All eight pass once `route()` is built.
-
-- A short question becomes `short_text`; "Write three headlines…" stays `long_text`; "Can you write three headlines…?" becomes `short_text`.
-- With no pick and no pin, the models come in rank order.
-- Maya's pick comes first.
-- A skill's pin beats the rank list.
-- A switched-off model is skipped, the pick included, and the next one's reason is `fallback`.
-- Every routed job gets a model.
-- A failed call moves to the next model, and the trace says `fallback`.
-- On the chat path, "How many ml is the Breeze?" runs as `short_text`, the memory write has its own model, and the scoreboard is in the trace.
+It must say `8 passed`. The check runs on scripted models, so everyone gets the same result.
 
 ## Why it matters
 
-Every model choice trades quality, time and cost. One setting makes that trade once, for every job. A rank list per job makes it per job, and writes it down where the team can read and change it. The order (pick, pin, rank) is a policy someone chose. The fallback keeps a launch going when a model goes away.
+Every model choice trades quality, time and cost. One setting makes that trade once for every job. A rank list per job makes it per job, and the fallback keeps the launch going when a model goes away.
 
 ## See it
 
-The trainer shows these on the chat page; you do not build them.
+The trainer shows these; you do not build them:
 
-- **Thinking effort.** Type `gpt-5.5` in **Model**. Set `LAUNCHKIT_EFFORT=low` in `.env` and restart the chat page; send "Plan the Breeze launch for the US, the UK and Germany, with the never-say list and the sizes for each market." and then "A shorter headline for the Breeze feed post.", each in a new conversation. Then `LAUNCHKIT_EFFORT=high`, restart, and the same two. Read time and cost off the `score` lines. Effort reaches the main agent's reply only.
-- **One gateway.** One provider's models go in `LAUNCHKIT_DISABLED_MODELS` without warning, and the chat page is restarted. Then the same ask four times, with **Model** set to four models from four providers. One run's trace says `fallback`: `route()` skipped the switched-off pick.
+- **Thinking effort:** the same model thinks a little or a lot (`LAUNCHKIT_EFFORT=low` or `high` in `.env`). A big plan gets better; a short headline only gets slower and dearer.
+- **One gateway:** with OpenAI's models switched off, the headlines go to Claude, through the same proxy, with no code change. Gemini and DeepSeek, picked in the Model box, refuse LaunchKit's fixed answer shape, so LaunchKit falls back to `gpt-5.5`.
 
 ## Stuck?
 
 The answer is on the branch `session-03-routing-step1`.
 
-No model access (offline, or no key)? Set `LAUNCHKIT_FAKE_MODELS=1` in `.env` and restart the chat page. The routing and the trace lines still show; quality, time and cost do not.
+No model access? Set `LAUNCHKIT_FAKE_MODELS=1` in `.env` and restart. The `route` lines still show, but the costs and the quality mean nothing.
