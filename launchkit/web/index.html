@@ -212,8 +212,10 @@ function renderModels(){
   $("models").innerHTML = MODELS.filter(m => !off.has(m)).map(m => `<option value="${esc(m)}">`).join("");
   keepPickOn();
 }
-fetch("/models").then(r => r.json()).then(data => { MODELS = data.models; $("off").value = data.off.join(", "); renderModels(); });
+const saveOff = () => fetch("/off", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(offList()) });
+fetch("/models").then(r => r.json()).then(data => { MODELS = data.models; $("off").value = data.off.join(", "); renderModels(); saveOff(); });
 $("off").oninput = renderModels;
+$("off").onchange = saveOff;
 $("model").onchange = () => { if (keepPickOn()) $("model").placeholder = "from .env"; };
 loadLogins("harbor");
 $("brand").onchange = () => { fillPeople(); showNotion(); loadConversation(); if (!$("library").hidden) loadLibrary(); };

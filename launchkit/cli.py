@@ -402,7 +402,7 @@ def cmd_models(args):
     """Every job's rank list, best first: each model's scores, its total, whether it is enabled and whether the proxy
     serves it. One request to the proxy (its model list), no model call."""
     from launchkit.adapters.pricing import PRICES_PER_MILLION
-    from launchkit.adapters.ranking import JOBS, is_enabled, rank_list, ranking, total
+    from launchkit.adapters.ranking import JOBS, is_enabled, page_off, rank_list, ranking, total
 
     served: set[str] | None = None
     try:
@@ -411,6 +411,7 @@ def cmd_models(args):
         served = {m.id for m in client().with_options(timeout=10).models.list().data}
     except Exception as error:  # the proxy is down or out of reach: still show the lists
         console.print(f"[yellow]Could not ask the proxy which models it serves ({type(error).__name__}). Is the VPN on?[/yellow]\n")
+    switched_off = page_off(settings)
     entries = ranking(settings)
     for job in JOBS:
         entry = entries[job]
@@ -424,6 +425,8 @@ def cmd_models(args):
             scores = entry["models"][name]
             if not is_enabled(name, settings):
                 status = "not enabled (LAUNCHKIT_DISABLED_MODELS)"
+            elif name in switched_off:
+                status = "not enabled (switched off on the chat page)"
             elif served is not None and name not in served and f"openai/{name}" not in served:  # the proxy lists OpenAI models as openai/<name>
                 status = "not enabled (the proxy does not serve it)"
             else:
@@ -436,7 +439,7 @@ def cmd_models(args):
     console.print("eval: 1 is the best work. latency: 1 is the slowest model here. cost: 1 is the most expensive model here, 0 the "
                   f"cheapest (not free). price: the average of input and output, $ per million tokens, as of {PRICES_AS_OF}.", highlight=False)
     pick = settings.model or "none: the rank list decides once route() is built"
-    console.print(f"Maya's pick (LAUNCHKIT_MODEL): {pick}", highlight=False)
+    console.print(f"The one model for every job (LAUNCHKIT_MODEL): {pick}", highlight=False)
     return 0
 
 
