@@ -50,7 +50,7 @@ def test_the_confidence_door_keeps_a_row_at_point_seven(monkeypatch):
     """build b, fork 1 path B: a row the model is at least 0.7 sure of is kept without asking; a less sure one is not"""
     from launchkit.memory import write_door
 
-    monkeypatch.setattr(write_door, "confidence", lambda text, settings: 0.9 if "never" in text or "prefer" in text else 0.4)
+    monkeypatch.setattr(write_door, "confidence", lambda text, settings, trace=None: 0.9 if "never" in text or "prefer" in text else 0.4)
     never_asked = lambda name, inputs: pytest.fail("the confidence door must not ask")  # noqa: E731
     assert decide_save("prefers own photos", ["kind:preference"], never_asked, settings).keep is True
     assert decide_save("yes, attach them", ["kind:fact"], never_asked, settings).keep is False
