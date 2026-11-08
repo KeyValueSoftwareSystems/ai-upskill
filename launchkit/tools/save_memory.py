@@ -64,5 +64,6 @@ def memory_entries(settings, make_manager, user_id: str, namespace: str = "globa
               plan=lambda i: {"store": "learned knowledge", "namespace": namespace, "source": user_id, **i}),
         Entry("search_learnings", "look up what the team has learned before", "read", search_learnings),
         Entry("propose_brand_fact", "change one of this brand's dated facts, such as the warranty, from today", "write", propose_brand_fact,
-              plan=lambda i: {"store": "brand facts", "brand": namespace, "subject": i.get("subject"), "from": current(i.get("subject", "")), "to": i.get("value"), "source": user_id}),
+              plan=lambda i: (f"Not changed: {namespace}'s {i.get('subject')} is already {i.get('value')}." if current(i.get("subject", "")).lower() == str(i.get("value", "")).strip().lower()
+                              else {"store": "brand facts", "brand": namespace, "subject": i.get("subject"), "from": current(i.get("subject", "")), "to": i.get("value"), "source": user_id})),
     ]

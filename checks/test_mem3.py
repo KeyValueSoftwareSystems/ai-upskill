@@ -57,3 +57,12 @@ def test_learnings_are_shared_within_one_brand(settings):
     alder = build_catalogue(settings, Trace(), NO, ws=load_workspace("alder", settings, Trace()), user="agency-manager")
     assert "Tuesdays" in harbor.entries["search_learnings"].fn("posting days")
     assert "Tuesdays" not in alder.entries["search_learnings"].fn("posting days")
+
+
+def test_proposing_the_value_that_is_already_true_changes_nothing(settings):
+    """Seen on the real model: "5 years" proposed when 5 years is true. Nothing is asked and no row is closed."""
+    from launchkit.knowledge.brand_facts import all_brand_facts
+
+    asked = []
+    reply = build_catalogue(settings, Trace(), lambda name, plan: asked.append(plan) or True).make_run_tool()("propose_brand_fact", {"subject": "warranty", "value": "5 years"})
+    assert asked == [] and "already" in reply and len(all_brand_facts(settings, "harbor")) == 2
