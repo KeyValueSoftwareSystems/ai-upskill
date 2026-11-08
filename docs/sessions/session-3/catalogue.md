@@ -77,6 +77,7 @@ All in the project database, `data/sessions.db`, except the two vector folders. 
 | `scripts/consolidate_memories.py <user> [--match] [--apply]` | Agno's Summarize on one person's rows, before and after | 1 |
 | `scripts/retention_job.py --days N [--apply]` | prune by age, Summarize the rest; scheduled | 4 |
 | `scripts/delete_user.py <id> [--name] [--apply]` | the cascade, and what still names them | 5 |
+| `scripts/memory_evidence.py <pain> --label …` | prep: runs a live pain three times from the snapshot and saves every outcome to `docs/sessions/session-3/evidence/` | prep |
 
 ## The code at the end
 

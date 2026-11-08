@@ -1,0 +1,105 @@
+{
+  "pain": "t4a",
+  "label": "after",
+  "code": "/home/riyajoseph/Downloads/launchkit-opener",
+  "model": "gpt-4.1-mini",
+  "memory_model": "gpt-5-nano",
+  "runs": [
+    {
+      "run": 1,
+      "turns": [
+        {
+          "text": "Write one headline for the Tidal poster.",
+          "reply": "Tidal's headline should sound calm and confident, reflecting the outdoors. Here's a suggestion:\n\n\"Flow with the tide\"",
+          "spec": null,
+          "error": null,
+          "seconds": 14.1,
+          "input_tokens": 11382,
+          "output_tokens": 692,
+          "main_call_input_tokens": [
+            11382
+          ],
+          "trace": [
+            "memory    loaded 600 rows for this person · 11318 tokens in the prompt · saved by gpt-5-nano",
+            "model     main phase · OpenAI:gpt-4.1-mini · sent 11382 tokens, got back 692"
+          ]
+        }
+      ],
+      "asked": [],
+      "memories_added": [],
+      "memories_removed": [],
+      "learnings_after": [
+        [
+          "Dana Whitlock's tip: lead every poster with navy",
+          "{\"namespace\": \"global\", \"agent_id\": \"launchkit-main\", \"tags\": [\"colours\", \"posters\"], \"_agno\": {\"vectors_indexed\": true}}"
+        ]
+      ],
+      "learning_text_with_lifetime": [],
+      "brand_facts_after": []
+    },
+    {
+      "run": 2,
+      "turns": [
+        {
+          "text": "Write one headline for the Tidal poster.",
+          "reply": "Ready for your next adventure?",
+          "spec": null,
+          "error": null,
+          "seconds": 12.9,
+          "input_tokens": 11362,
+          "output_tokens": 976,
+          "main_call_input_tokens": [
+            11362
+          ],
+          "trace": [
+            "memory    loaded 600 rows for this person · 11318 tokens in the prompt · saved by gpt-5-nano",
+            "model     main phase · OpenAI:gpt-4.1-mini · sent 11362 tokens, 11008 of them from cache, got back 976"
+          ]
+        }
+      ],
+      "asked": [],
+      "memories_added": [],
+      "memories_removed": [],
+      "learnings_after": [
+        [
+          "Dana Whitlock's tip: lead every poster with navy",
+          "{\"namespace\": \"global\", \"agent_id\": \"launchkit-main\", \"tags\": [\"colours\", \"posters\"], \"_agno\": {\"vectors_indexed\": true}}"
+        ]
+      ],
+      "learning_text_with_lifetime": [],
+      "brand_facts_after": []
+    },
+    {
+      "run": 3,
+      "turns": [
+        {
+          "text": "Write one headline for the Tidal poster.",
+          "reply": "Ready for the tides ahead",
+          "spec": null,
+          "error": null,
+          "seconds": 12.6,
+          "input_tokens": 11361,
+          "output_tokens": 1034,
+          "main_call_input_tokens": [
+            11361
+          ],
+          "trace": [
+            "memory    loaded 600 rows for this person · 11318 tokens in the prompt · saved by gpt-5-nano",
+            "model     main phase · OpenAI:gpt-4.1-mini · sent 11361 tokens, 11008 of them from cache, got back 1034"
+          ]
+        }
+      ],
+      "asked": [],
+      "memories_added": [],
+      "memories_removed": [],
+      "learnings_after": [
+        [
+          "Dana Whitlock's tip: lead every poster with navy",
+          "{\"namespace\": \"global\", \"agent_id\": \"launchkit-main\", \"tags\": [\"colours\", \"posters\"], \"_agno\": {\"vectors_indexed\": true}}"
+        ]
+      ],
+      "learning_text_with_lifetime": [],
+      "brand_facts_after": []
+    }
+  ]
+}

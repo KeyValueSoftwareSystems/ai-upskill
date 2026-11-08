@@ -1,0 +1,134 @@
+{
+  "pain": "t4a",
+  "label": "after",
+  "code": "/home/riyajoseph/Downloads/launchkit-opener",
+  "model": "gpt-4.1-mini",
+  "memory_model": "gpt-5-nano",
+  "runs": [
+    {
+      "run": 1,
+      "turns": [
+        {
+          "text": "Write one headline for the Tidal poster.",
+          "reply": "How does the tide move you?",
+          "spec": null,
+          "error": null,
+          "seconds": 13.8,
+          "input_tokens": 2361,
+          "output_tokens": 1300,
+          "main_call_input_tokens": [
+            2361
+          ],
+          "trace": [
+            "memory    loaded 1 rows for this person · 1206 tokens in the prompt · saved by gpt-5-nano",
+            "model     main phase · OpenAI:gpt-4.1-mini · sent 2361 tokens, got back 1300"
+          ]
+        }
+      ],
+      "asked": [],
+      "memories_added": [],
+      "memories_removed": [],
+      "learnings_after": [
+        [
+          "Dana Whitlock's tip: lead every poster with navy",
+          "{\"namespace\": \"global\", \"agent_id\": \"launchkit-main\", \"tags\": [\"colours\", \"posters\"], \"_agno\": {\"vectors_indexed\": true}}"
+        ]
+      ],
+      "learning_text_with_lifetime": [],
+      "brand_facts_after": []
+    },
+    {
+      "run": 2,
+      "turns": [
+        {
+          "text": "Write one headline for the Tidal poster.",
+          "reply": "Where does your next trail lead?",
+          "spec": null,
+          "error": null,
+          "seconds": 12.8,
+          "input_tokens": 2361,
+          "output_tokens": 1235,
+          "main_call_input_tokens": [
+            2361
+          ],
+          "trace": [
+            "memory    loaded 1 rows for this person · 1206 tokens in the prompt · saved by gpt-5-nano",
+            "model     main phase · OpenAI:gpt-4.1-mini · sent 2361 tokens, 1920 of them from cache, got back 1235"
+          ]
+        }
+      ],
+      "asked": [],
+      "memories_added": [],
+      "memories_removed": [],
+      "learnings_after": [
+        [
+          "Dana Whitlock's tip: lead every poster with navy",
+          "{\"namespace\": \"global\", \"agent_id\": \"launchkit-main\", \"tags\": [\"colours\", \"posters\"], \"_agno\": {\"vectors_indexed\": true}}"
+        ]
+      ],
+      "learning_text_with_lifetime": [],
+      "brand_facts_after": []
+    },
+    {
+      "run": 3,
+      "turns": [
+        {
+          "text": "Write one headline for the Tidal poster.",
+          "reply": "Ready for your next trail or commute?",
+          "spec": null,
+          "error": null,
+          "seconds": 13.9,
+          "input_tokens": 2362,
+          "output_tokens": 1169,
+          "main_call_input_tokens": [
+            2362
+          ],
+          "trace": [
+            "memory    loaded 1 rows for this person · 1206 tokens in the prompt · saved by gpt-5-nano",
+            "model     main phase · OpenAI:gpt-4.1-mini · sent 2362 tokens, got back 1169"
+          ]
+        }
+      ],
+      "asked": [],
+      "memories_added": [],
+      "memories_removed": [],
+      "learnings_after": [
+        [
+          "Dana Whitlock's tip: lead every poster with navy",
+          "{\"namespace\": \"global\", \"agent_id\": \"launchkit-main\", \"tags\": [\"colours\", \"posters\"], \"_agno\": {\"vectors_indexed\": true}}"
+        ]
+      ],
+      "learning_text_with_lifetime": [],
+      "brand_facts_after": []
+    }
+  ],
+  "retention": [
+    {
+      "user": "agency-manager",
+      "before": 18,
+      "tokens_before": 236,
+      "pruned": 8,
+      "after": 10,
+      "tokens_after": 116
+    },
+    {
+      "user": "maya",
+      "before": 39,
+      "tokens_before": 472,
+      "pruned": 18,
+      "after": 21,
+      "tokens_after": 256
+    },
+    {
+      "user": "power-user",
+      "before": 600,
+      "tokens_before": 10980,
+      "pruned": 309,
+      "after": 1,
+      "tokens_after": 1167
+    }
+  ],
+  "retention_rows_after": [
+    "\"The user demonstrates a highly consistent and granular set of preferences that span tone, visual style, formatting, and content across a wide range of campaign assets and briefs. Across agencies, launches, newsletters, weeklong briefs, and weekend posts, they favor concise, understated, and legible presentation coupled with branded consistency and controlled content elements. Key patterns include a strong emphasis on brevity, standardized formatting, and a preference for specific visual and tonal cues that recur across multiple channels, briefs, and timelines.\\n\\nCopy, tone, and opening lines\\n- Prefers a quiet, plain voice across many asset types, including hand-offs, trend reports, web banners, display ads, newsletters, and season-specific posts.\\n- Favors one-line summaries placed first in many formats (trend reports, story ads, display ads, feed posts, etc.), including after Monday stand-up in several contexts.\\n- Often requests a question as the opening line in several formats (voice-overs, web banners, story ads, competitor notes) and in some cases as the opening line when the brief is short.\\n- Requires emoji-free lines under headlines in many contexts (story ads, web banners, competitor notes, email headers) and, in some cases, for short briefs.\\n- Uses sentence case for headlines in numerous briefs (shoot briefs, web banners, trend reports, etc.).\\n- Shows a tendency toward British spelling in multiple contexts (launch decks, trend reports, shoot briefs, newsletters, display ads).\\n\\nVisuals, branding, and imagery\\n- Routinely prefers trail photos over city photos across email headers, story ads, web banners, display ads, feed posts, and trend reports, including for seasonal campaigns (summer recap, autumn push, Breeze week, Tidal launch, etc.).\\n- Consistently places the logo top left across many asset types (story ads, feed posts, display ads, web banners, email headers, trend reports).\\n- Prefers a sunrise palette in many contexts (web banners, trend reports, story ads, display ads, newsletters) and across weekends, summers, and other campaigns.\\n- Consistently places the product in the lower third in several formats (feed posts, trend reports, competitor notes, newsletters) and avoids stock models in many contexts (email headers, story ads, display ads, trend reports, competitor notes).\\n- Demonstrates a strong avoidance of stock models across several asset types and briefs.\\n\\nFormatting, structure, and technical preferences\\n- Routinely requires the date to be in the file name for many asset types (voice-overs, display ads, web banners, email headers, launch decks, trend reports) and often in conjunction with specific briefs (agency hand-off, autumn push, Breeze week, Tidal launch).\\n- Prefers sources listed at the end in many asset types (shoot briefs, web banners, trend reports, launch decks, email headers), and sometimes in competitor notes.\\n- Often asks for a word count beside each line in several briefs (agency hand-off, competitor notes, trend reports, newsletters).\\n- Files commonly include three options to choose from in many contexts (voice-overs, display ads, trend reports, launch decks, season-specific briefs).\\n- Requests a draft by Wednesday in multiple contexts (launch decks, display ads, trend reports, shoot briefs) and in several combinations after stand-up meetings.\\n- Uses a numbered list in some briefs (web banners, email headers) and values a date in the file name across many contexts.\\n\\nContent and strategic preferences\\n- Prefers price kept out in several formats (voice-overs, story ads, competitor notes, web banners) and often in relation to the brief\\u2019s length or context.\\n- Seeks \\u201chikers\\u2019 angle\\u201d over \\u201ccommuters\\u2019 angle\\u201d in multiple formats (story ads, display ads, voice-overs, trend reports, competitor notes) across different campaigns including summer recap, autumn push, Breeze week, and Tidal launch.\\n- Emphasizes the use of sources at end and the product in the lower third, indicating a balance between citation, branding, and product positioning across assets.\\n- Appears to prefer the date in the file name and the logo top left as stable, cross-context branding anchors, and to keep stock models out in several high-visibility formats.\\n\\nOverall, the user\\u2019s preferences reflect a strong demand for visual consistency (logo top left, sunrise palettes, trail imagery, no stock models), concise and uniform copy treatment (quiet voice, emoji-free lines, one-line summaries, question openings where specified), and rigorous formatting standards (date in file names, sources at end, word counts, three-option drafts, Wednesday drafts) across a broad spectrum of campaigns and channels.\""
+  ]
+}

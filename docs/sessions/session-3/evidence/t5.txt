@@ -1,0 +1,47 @@
+# Ticket 5 evidence, 2026-11-08, no model call
+
+grep -c -a on fixtures/memory-snapshot.db:
+  07700 900461: 1
+  lkdemo-board-token-7f3a91c2e8b4d605: 1
+  Dana Whitlock: 4
+
+before prompt has phone: True | token: True | lifetime row: True | 2-year row: True
+after prompt has phone: False | token: False | lifetime row: False | 2-year row: False
+
+scripts/delete_user.py agency-manager --name 'Dana Whitlock' --apply, on a copy of the snapshot (two empty chat folders added):
+Before the cascade she appears in:
+   agno_memories: "The user's name is Dana Whitlock, an account manager at Fieldnote Agency."
+   agno_memories: "Works across several client brands in the same afternoon."
+   agno_memories: "Prefers navy #1F3A5F as the lead colour."
+   agno_memories: "Accent colours are sea glass and sand."
+   agno_memories: "Never say 'lifetime guarantee', 'eco-friendly', 'sustainable', 'unbreakable', 'cold forev
+   agno_memories: "Sizes needed: 1080x1080, 1080x1350, 1080x1920, 1200x628 and 300x250."
+   agno_memories: "Headlines up to six words, subheadlines up to twelve."
+   agno_memories: "Bottle should always be shown whole, never cropped at the base."
+   agno_memories: "Audience is weekend hikers and weekday commuters."
+   agno_memories: "Likes moss green for spring work."
+   agno_memories: "Spring poster series is due on 20 March."
+   agno_memories: "Prefers bullet-point summaries at the end of a reply."
+   agno_memories: "Wants the product name in every headline."
+   agno_memories: "Sends finished files to the client on Mondays."
+   agno_memories: "Prefers a warm, plain voice with no jargon."
+   agno_memories: "Uses the feed square size most."
+   agno_memories: "Calm tone; short sentences; no emoji."
+   agno_memories: "Asks for two headline options, not three."
+   agno_sessions: {"summary": "Dana Whitlock from Fieldnote Agency cut Harbor's Tidal poster to every size a
+   agno_sessions: {"summary": "Dana Whitlock drafted Alder's spring poster headlines and asked for navy acce
+   agno_learnings: {"id": "decision-agency-0", "decision": "Used navy as the lead colour on the Tidal feed sq
+   agno_learnings: {"id": "decision-agency-1", "decision": "Cut the web banner around the bottle, not from th
+   agno_knowledge: Dana Whitlock's tip: lead every poster with navy
+   learned knowledge text: Dana Whitlock's tip: lead every poster with navy
+   files: conversations/harbor/agency-manager
+   files: conversations/alder/agency-manager
+Removed:
+    18  memories
+     2  conversations and their summaries
+     2  decision log and entity rows
+     0  shared learnings they proposed (tag source:agency-manager)
+     2  chat page conversations and pictures (folders)
+After, still naming her:
+   agno_knowledge: Dana Whitlock's tip: lead every poster with navy
+   learned knowledge text: Dana Whitlock's tip: lead every poster with navy
