@@ -54,3 +54,31 @@ def test_the_confidence_door_keeps_a_row_at_point_seven(monkeypatch):
     never_asked = lambda name, inputs: pytest.fail("the confidence door must not ask")  # noqa: E731
     assert decide_save("prefers own photos", ["kind:preference"], never_asked, settings).keep is True
     assert decide_save("yes, attach them", ["kind:fact"], never_asked, settings).keep is False
+
+
+def test_the_index_has_one_line_per_topic_and_is_shorter(tmp_path):
+    """build b, ticket 5: the index names each topic once with its count and recall call, and costs less than the full list"""
+    from launchkit.memory.index import memory_index
+    from launchkit.memory.store import memory_section, memory_tokens, rows_for
+
+    store = MemoryStore(str(tmp_path / "s.db"), "harbor", "maya", Trace())
+    for n in range(6):
+        store.insert_raw(UserMemory(memory=f"navy background for size {n}", user_id="maya", topics=["kind:preference", "topic:navy", "valid_from:2026-05-01"]))
+    store.insert_raw(UserMemory(memory="prefers own shoot photos", user_id="maya", topics=["kind:preference", "topic:photography", "valid_from:2026-04-22"]))
+    rows = rows_for(store, "harbor", "maya")
+    index = memory_index(rows)
+    assert index.splitlines() == ['- navy: 6 rows · recall("navy")', '- photography: 1 row · recall("photography")']
+    assert all(len(line) <= 80 for line in index.splitlines())
+    assert memory_tokens(index) < memory_tokens(memory_section(rows))
+
+
+def test_recall_returns_one_topics_rows_in_full(tmp_path):
+    """build b, ticket 5: recall("photography") returns only that topic's rows, and an unknown topic lists the topics that exist"""
+    from launchkit.memory.index import recall
+
+    store = MemoryStore(str(tmp_path / "s.db"), "harbor", "maya", Trace())
+    store.insert_raw(UserMemory(memory="prefers own shoot photos", user_id="maya", topics=["kind:preference", "topic:photography"]))
+    store.insert_raw(UserMemory(memory="navy backgrounds", user_id="maya", topics=["kind:preference", "topic:navy"]))
+    rows = store.get_user_memories(user_id="maya")
+    assert recall(rows, "photography") == "- prefers own shoot photos  (preference)"
+    assert recall(rows, "lids") == "No rows about lids. Topics that exist: navy, photography."

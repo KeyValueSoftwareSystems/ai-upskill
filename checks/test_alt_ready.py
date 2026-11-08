@@ -194,3 +194,24 @@ def test_the_research_helper_can_save_a_learning_everyone_reads(tmp_path):
     row = store.get_user_memories(user_id="harbor:brand")[0]
     assert row.memory == "a lifetime guarantee sells"
     assert {"scope:brand:harbor", "source:web", "author:research-helper"} <= set(row.topics)
+
+
+def test_the_placeholder_index_is_every_row_in_full(store_for):
+    """ready: on the participant branch the memory index is the full list of rows, so the prompt grows with every save"""
+    from launchkit.memory.index import memory_index
+
+    store = store_for()
+    for n in range(3):
+        store.insert_raw(UserMemory(memory=f"row {n}", user_id="maya", topics=["kind:fact", "topic:navy", "valid_from:2026-05-01"]))
+    rows = rows_for(store, "harbor", "maya")
+    assert memory_index(rows) == memory_section(rows)
+
+
+def test_recall_is_a_read_tool_in_the_catalogue(tmp_path):
+    """ready: the main agent can call recall(topic) through run_tool; it is a read, so nobody is asked"""
+    from launchkit.memory.index import recall_entry
+
+    store = MemoryStore(str(tmp_path / "s.db"), "harbor", "maya", Trace())
+    entry = recall_entry(store, "harbor", "maya")
+    assert entry.name == "recall" and entry.kind == "read"
+    assert "no rows" in entry.fn("photography").lower()
