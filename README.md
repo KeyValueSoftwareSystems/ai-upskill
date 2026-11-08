@@ -12,8 +12,10 @@ A marketing assistant built in steps across the session. A marketer asks for a p
 | `session-01-rag-step1` … `step4` | retrieval (CP1.2): one `get_brand_details` tool, rebuilt four times |
 | `session-02-tools` | tools, skills, lookup, MCP and permissions (Session 2, part 1): the main agent and Maya's "every size" |
 | `session-02-tools-step1` … `step5` | each step's answer |
-| **`session-02-orchestration`** (you are here) | agents and orchestration (Session 2, part 2): the main agent, the Tidal launch brief, saved competitor pages |
+| `session-02-orchestration` | agents and orchestration (Session 2, part 2): the main agent, the Tidal launch brief, saved competitor pages |
 | `session-02-orchestration-step1`, `step2` | each step's answer |
+| **`session-3-memory-start`** | agent memory (Session 3): the morning the support queue filled; the room builds the six fixes here |
+| `session-3-memory` | every Session 3 fix built: the answer |
 
 Each branch contains the previous branch's solution. Fall behind, check out the next one.
 
@@ -140,6 +142,31 @@ Cards: `docs/tools-1.md` … `docs/tools-5.md`.
 | 2 · Hand the digging to subagents | `orchestration/research_team.py` `build_research_agent`, `orchestration/research_team.py`, the skill | `check orch2` | `session-02-orchestration-step2` |
 
 Cards: `docs/orch-1.md`, `docs/orch-2.md`.
+
+## Session 3 · Agent memory, six tickets
+
+Memory went on six months earlier in one line, and the support queue filled. The room works the tickets in two checkpoints on `session-3-memory-start`; every answer is on `session-3-memory`. The story and the queue: `docs/sessions/session-3/problem.md`. Measured outcomes from prep: `docs/sessions/session-3/ledger.md`.
+
+```
+git checkout session-3-memory-start
+uv sync
+uv run launchkit index          # once: Alder is a new brand
+uv run launchkit memory reset   # the checked-in snapshot: the memory database the morning the queue filled
+uv run launchkit ui             # restart it after every reset
+```
+
+Prompts go on the chat page with the real model (Model empty). The **Memory** tab shows what is stored for the person signed in; the Trace's `memory` line shows what a turn loaded and saved. The terminal is for the reset, the scripts and the checks.
+
+| Checkpoint | Ticket | Slot | Check | Card |
+| --- | --- | --- | --- | --- |
+| A · what one fact holds | 1 · what one row may hold | `memory/long_term.py` `CAPTURE`, `memory_manager` | `check mem1` | `docs/mem-1.md` |
+| | 2a · a fact carries when it was true | `knowledge/brand_facts.py` `get_brand_facts`, `set_brand_fact`; the `on_brand_copy` skill | `check mem2a` | `docs/mem-2a.md` |
+| | 3 · a brand is a namespace | `memory/scope.py` `brand_fact`; the main agent's namespace | `check mem3` | `docs/mem-3.md` |
+| B · who writes, reads, how long | 2b · who may write | `tools/catalogue.py` `run_tool`; the research helper; the main agent's writers | `check mem2b` | `docs/mem-2b.md` |
+| | 4 · how much is read, for how long | `memory/retention.py` `retain`; history runs and the session summary | `check mem4` | `docs/mem-4.md` |
+| | 5 · personal data, and forgetting | `memory/scope.py` `personal_data`; `memory/forget.py` `delete_user` | `check mem5` | `docs/mem-5.md` |
+
+`uv run launchkit check mem` runs all six. Ticket 6, "prove it's better now", is a discussion: the store choice, tested on tickets 1 to 5.
 
 ## Layout
 
