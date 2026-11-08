@@ -62,8 +62,8 @@ class BrandFacts:
         with self._connect() as db:
             # The new value ends the old one on the day it became true. The old row stays, so the history can be read.
             db.execute(
-                "UPDATE brand_facts SET valid_to = ? WHERE workspace_id = ? AND subject = ? AND valid_to IS NULL",
-                (valid_from.isoformat(), workspace_id, subject),
+                "UPDATE brand_facts SET valid_to = ? WHERE workspace_id = ? AND subject = ? AND valid_to IS NULL AND valid_from <= ?",
+                (valid_from.isoformat(), workspace_id, subject, valid_from.isoformat()),
             )
             db.execute(
                 "INSERT INTO brand_facts (workspace_id, subject, value, scope, source, valid_from, valid_to) VALUES (?, ?, ?, ?, ?, ?, NULL)",
@@ -76,7 +76,14 @@ class BrandFacts:
         Build A, ticket 2, fills this in: a fact is current when valid_from is on or before the day and
         valid_to is empty or after it. The placeholder returns every row of the brand.
         """
-        return [f for f in self.history(workspace_id) if f.valid_from <= today and (f.valid_to is None or f.valid_to > today)]
+        valid = [f for f in self.history(workspace_id) if f.valid_from <= today and (f.valid_to is None or f.valid_to > today)]
+        # Rows written before record() closed old values can both be open; the newest start wins, so the
+        # database the room inherits reads right without a repair.
+        latest: dict[str, Fact] = {}
+        for fact in valid:
+            if fact.subject not in latest or fact.valid_from >= latest[fact.subject].valid_from:
+                latest[fact.subject] = fact
+        return [f for f in valid if latest[f.subject] is f]
 
     def history(self, workspace_id: str, subject: str | None = None) -> list[Fact]:
         """Every row ever recorded for a brand, oldest first; one subject when given."""

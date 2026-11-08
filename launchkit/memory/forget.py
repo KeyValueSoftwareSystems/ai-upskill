@@ -48,8 +48,14 @@ def forget(store: MemoryStore, workspace_id: str, user_id: str, text: str) -> di
     if learning_hits:
         store.delete_user_memories(learning_hits, user_id=brand_owner(workspace_id))
 
-    # SQLite keeps deleted bytes in free pages until the file is compacted. Forgotten means gone from the file.
-    with sqlite3.connect(store.db_file) as db:
+    # SQLite keeps deleted bytes in old pages and in the write-ahead log until the file is compacted.
+    # Forgotten means gone from the file, so compact it now, outside any transaction.
+    db = sqlite3.connect(store.db_file, isolation_level=None)
+    try:
+        db.execute("PRAGMA secure_delete = ON")
+        db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
         db.execute("VACUUM")
+    finally:
+        db.close()
 
     return {"memories": len(hits), "summaries": summaries, "learnings": len(learning_hits)}
