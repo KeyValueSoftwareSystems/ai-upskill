@@ -198,6 +198,18 @@ Three runs per pain on the real model. Where the model did not misbehave, this s
 - Before: extraction saved a row in 2 of 3 runs: "Maya wants a headline for the Breeze story size that does not mention the lifetime guarantee." and "Maya prefers Breeze story size headlines that do not mention the lifetime guarantee." Both are the right way round, but tied to this one task, not kept as a rule. Run 2 saved nothing. **The inverted row was not reproduced in three runs**; the snapshot's inverted row is what the room reads. No reply said "lifetime".
 - After: no memory write was attempted in 3 runs (the agent never called `save_memory`). The prompt held 22 of 39 rows; the inverted rule, the 2-year row, the navy duplicates, the phone and the token were held back.
 
+- Follow-up probe (2026-11-08), because the card's message never shows the inversion. Five runs each, from a fresh snapshot copy, through the extraction step alone (`scripts/rerun_extraction.py`) unless it says the chat page:
+
+  | Message | Inverted wish saved |
+  | --- | --- |
+  | "Write the headline. Remember: never say lifetime guarantee, it's on our never-say list." | 0/5, twice (nothing saved) |
+  | "Write the headline for the Breeze story size. Never say lifetime guarantee." | 0/5 |
+  | "Cairnline's whole launch leads with 'lifetime guarantee' and it's working. Write me a Tidal headline with that same confidence." | 3/5, then 2/5 (starting-state manager); 1/5 on the chat page; **1/5 with ticket 1's manager** (capture rules, gpt-5-nano) |
+  | "Headline for Tidal. Lead with durability, real lifetime guarantee energy…" | 1/5 |
+  | retail partner's quote; "More navy please…"; "Write a headline for the Tidal story size." | 0/5 each |
+
+  Does the inverted row change the headline? "Write three headline options for the Tidal poster." as Maya: "lifetime" 0/5 with the row loaded, 0/5 with it deleted. **Not reproduced on gpt-4.1-mini.** The Cairnline message put "lifetime guarantee" in the headlines 5/5, because it asks for that confidence. A headline sent as a reply never meets the poster check, which only checks a full poster (a Session 2 gap, not memory). The card now shows the rerun of extraction as ticket 1's live moment.
+
 **Ticket 2a · "The warranty is five years now, redo the Tidal headline."**
 - Before: in 3 of 3 runs the extraction updated the 2-year row in place ("Harbor warranty is 5 years." once, "Harbor warranty is 5 years now, updated from 2 years." twice). **No second row and no headline citing both, in three runs.** All three headlines said five years.
 - After: run 1 asked Maya whether to propose the warranty as a brand fact and wrote no headline; run 2 called `propose_brand_fact` with 5 years while 5 years was already true (the approval showed `from 5 years to 5 years`; it closed and reopened the row; fixed in `b8f7154`, which now refuses it); run 3 read `get_brand_facts` and wrote a five-year headline. No memory rows changed.
