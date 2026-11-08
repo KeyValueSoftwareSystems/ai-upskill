@@ -50,6 +50,12 @@ class Trace:
         """One chunk a search returned, so the trace shows what the model is about to read and why it ranked."""
         self.add("chunk", rank=rank, ref=ref, score=score, text=text)
 
+    def memory_kept(self, scope: str, text: str):
+        self.add("memory_kept", scope=scope, text=text)
+
+    def memory_refused(self, text: str, reason: str):
+        self.add("memory_refused", text=text, reason=reason)
+
     def refused(self, name: str, reason: str):
         self.add("refused", name=name, reason=reason)
 
@@ -109,6 +115,10 @@ class Trace:
                 return f"chunk     #{d['rank']} {d['ref']}{score} · {_short(d['text'], 70)}"
             case "refused":
                 return f"refused   {d['name']}: {d['reason']}"
+            case "memory_kept":
+                return f"memory    kept · {d['scope']} · {_short(d['text'], 70)}"
+            case "memory_refused":
+                return f"memory    not kept · {d['reason']} · {_short(d['text'], 70)}"
             case "draft":
                 return f'draft     headline "{d["headline"]}" ({_words(d["headline"])} words) · subheadline {_words(d["subheadline"])} words · body {_words(d["body"])} words'
             case "validation":

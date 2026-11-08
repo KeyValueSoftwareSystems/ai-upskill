@@ -1,5 +1,5 @@
-ORDER = ("rules", "task", "facts")
-HEADERS = {"rules": "# Rules", "task": "# Task", "facts": "# Facts"}
+ORDER = ("rules", "task", "brand_facts", "memory", "facts")
+HEADERS = {"rules": "# Rules", "task": "# Task", "brand_facts": "# Brand facts", "memory": "# Memory", "facts": "# Facts"}
 
 
 def approx_tokens(text: str) -> int:

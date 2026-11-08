@@ -28,7 +28,7 @@ class Settings:
     workspaces_dir: Path = field(default_factory=lambda: Path(_env("LAUNCHKIT_WORKSPACES_DIR", str(ROOT / "workspaces"))))
     data_dir: Path = ROOT / "data"
     limits: Limits = Limits()
-    budgets: dict = field(default_factory=lambda: {"rules": 1500, "task": 400, "facts": 1500, "history": 2000})
+    budgets: dict = field(default_factory=lambda: {"rules": 1500, "task": 400, "brand_facts": 400, "memory": 1500, "facts": 1500, "history": 2000})
 
 
 settings = Settings()

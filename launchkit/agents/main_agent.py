@@ -13,6 +13,7 @@ from datetime import date
 from typing import Literal
 
 from agno.agent import Agent
+from agno.memory import MemoryManager
 from agno.models.openai import OpenAIChat
 from agno.tools.function import Function
 
@@ -26,6 +27,7 @@ from launchkit.mcp.client import closes_its_mcp_links
 from launchkit.mcp.servers import server_entries
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.chat_history import session_db
+from launchkit.memory.store import MemoryStore, capture_rules, memory_section, memory_tokens, open_store, rows_for
 from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
 from launchkit.tools.check_copy import make_check_copy
 from launchkit.tools.describe_image import describe_image_entry
@@ -79,6 +81,7 @@ class MainResult:
     seconds: float = 0.0
     view_tokens: int = 0
     history_tokens: int = 0
+    memory_tokens: int = 0
     kept: list[Path] = field(default_factory=list)
 
 
@@ -87,11 +90,13 @@ def placements_text(ws) -> str:
     return "This brand's placements (every size): " + ", ".join(sizes) + "." if sizes else ""
 
 
-def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue, pictures: Pictures | None = None) -> Agent:
+def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue, pictures: Pictures | None = None, store: MemoryStore | None = None) -> Agent:
     ctx.set("rules", f"{ws.soul}\n\n{ws.agents}\n\n{placements_text(ws)}")
     warnings = " ".join(e.detail["text"] for e in trace.events if e.kind == "warning")
     ctx.set("facts", f"Today is {date.today():%-d %B %Y}. {warnings} {pictures.describe() if pictures else ''}".strip())
     ctx.set("task", MAIN_TASK if catalogue.lookup else "\n\n".join(part for part in (DIRECT_TASK, catalogue.skills_text()) if part))
+    if store is not None:
+        ctx.set("memory", memory_section(rows_for(store, ws.id, store.user_id)))
     if catalogue.lookup and isinstance(model, OpenAIChat):
         # Several tool calls in one model message lose run_tool's name, so the agent with the doors calls one at a time.
         model = replace(model, request_params={**(model.request_params or {}), "parallel_tool_calls": False})
@@ -99,9 +104,14 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
         model=model,
         system_message=ctx.render(),
         output_schema=MainTurn,
-        db=session_db(settings),
+        db=store if store is not None else session_db(settings),
         add_history_to_context=True,
         num_history_runs=5,
+        # Long-term memory, as it shipped: after every reply an extra model call (the extractor) reads the
+        # chat and saves what it finds, following capture_rules.md. The fakes cannot play the extractor,
+        # so it stays off when a fake model drives the agent.
+        update_memory_on_run=store is not None and not isinstance(model, FakeModel),
+        memory_manager=MemoryManager(memory_capture_instructions=capture_rules()) if store is not None else None,
         tools=loose(catalogue.agent_tools()),
         tool_hooks=[make_leash(replace(settings.limits, step_cap=MAIN_STEP_CAP), trace)],
         telemetry=False,
@@ -143,7 +153,9 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
         trace.note(f"attached {Path(picture).name} to this conversation")
         pictures.attach(Path(picture))
     catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures)
-    agent = build_main_agent(ws, ContextBuilder(settings.budgets), model, settings, trace, catalogue, pictures)
+    store = open_store(settings, wid, req.user_id, trace)
+    ctx = ContextBuilder(settings.budgets)
+    agent = build_main_agent(ws, ctx, model, settings, trace, catalogue, pictures, store)
     started = time.perf_counter()
     session = f"{wid}:{req.user_id}:{req.session_id}:main"
     run = agent.run(req.text, session_id=session, user_id=req.user_id)
@@ -162,6 +174,7 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     result.seconds = time.perf_counter() - started
     result.view_tokens = tool_result_size(run)[0]
     result.history_tokens = history_size(run)[0]
+    result.memory_tokens = memory_tokens(ctx.sections.get("memory", ""))
     return result
 
 

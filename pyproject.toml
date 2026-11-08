@@ -64,3 +64,4 @@ packages = ["launchkit"]
 [tool.pytest.ini_options]
 testpaths = ["checks"]
 addopts = "-p no:cacheprovider"
+markers = ["answer: passes only once a participant slot is built; run on the answer branches"]
