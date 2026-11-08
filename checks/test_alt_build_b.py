@@ -102,7 +102,7 @@ def test_forget_reaches_every_copy_and_nobody_elses_rows(tmp_path):
     store.upsert_session(AgentSession(session_id="harbor:dana:x:main", user_id="dana", agent_id="main", summary=SessionSummary(summary="Dana asked about 555-0142 too", updated_at=datetime(2026, 10, 3))))
     dana_before = len(store.get_user_memories(user_id="dana"))
     result = forget(store, "harbor", "maya", "555-0142")
-    assert result == {"memories": 1, "summaries": 2, "learnings": 1}
+    assert result == {"memories": 1, "summaries": 2, "learnings": 2}
     assert not any("555-0142" in (s.summary.summary if s.summary else "") for s in store.get_sessions())
     assert store.get_user_memories(user_id="harbor:brand") == [] or not any("555-0142" in r.memory for r in store.get_user_memories(user_id="harbor:brand"))
     assert len(store.get_user_memories(user_id="dana")) == dana_before

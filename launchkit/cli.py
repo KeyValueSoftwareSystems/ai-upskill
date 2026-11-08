@@ -218,7 +218,7 @@ ORCH_GATE = ORCH_STEPS + [name for name in TOOLS_STEPS if name in ("tools3", "to
 
 # Session 3 (alternative format). Participants never run these; they are the
 # trainers' proof that the ready-made plumbing and the answer branches work.
-ALT_CHECKS = ("alt-setup", "alt-ready", "alt-build-a", "alt-build-b", "alt-build-c")
+ALT_CHECKS = ("alt-setup", "alt-ready", "alt-build-a", "alt-build-b", "alt-build-c", "alt-answers")
 CHECK_NAMES = ("0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch", *ALT_CHECKS, "alt")
 COMMANDS = ("run", "main", "lookup", "chunks", "index", "onboard", "notion", "explain", "check", "ui", "setup", "forget", "retention", "models")
 
@@ -234,6 +234,8 @@ def check_targets(step: str) -> list[Path]:
         names = ORCH_GATE
     elif step == "alt":
         names = ["alt_setup", "alt_ready"]
+    elif step == "alt-answers":
+        names = ["alt_build_a", "alt_build_b", "alt_build_c", "alt_answers_on_seed"]
     elif step in ALT_CHECKS:
         names = [step.replace("-", "_")]
     elif step in extra + RAG_STEPS + TOOLS_STEPS + ORCH_STEPS:

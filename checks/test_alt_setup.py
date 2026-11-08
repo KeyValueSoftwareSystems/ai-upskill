@@ -56,7 +56,7 @@ def test_the_seeded_database_holds_the_story(tmp_path):
     assert any("555-0142" in r.memory for r in learning)
     assert all("brand:harbor" in (r.topics or []) for r in maya + store.get_user_memories(user_id="dana"))
     assert any("topic:photography" in (r.topics or []) for r in maya)
-    warranties = [f for f in BrandFacts(str(copy)).current("harbor", date(2026, 11, 1)) if f.subject == "warranty"]
-    assert sorted(f.value for f in warranties) == ["2 years", "5 years"]
+    warranties = [f for f in BrandFacts(str(copy)).history("harbor", "warranty")]
+    assert [(f.value, f.valid_to) for f in warranties] == [("2 years", None), ("5 years", None)]
     sessions = store.get_sessions(user_id="maya")
     assert any(s.summary and "555-0142" in s.summary.summary for s in sessions)
