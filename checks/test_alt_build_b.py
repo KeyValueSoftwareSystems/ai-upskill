@@ -82,3 +82,42 @@ def test_recall_returns_one_topics_rows_in_full(tmp_path):
     rows = store.get_user_memories(user_id="maya")
     assert recall(rows, "photography") == "- prefers own shoot photos  (preference)"
     assert recall(rows, "lids") == "No rows about lids. Topics that exist: navy, photography."
+
+
+def test_forget_reaches_every_copy_and_nobody_elses_rows(tmp_path):
+    """build b, ticket 6: forgetting a customer's number clears the row, the chat summary and the shared learning that hold it, and leaves other people's rows alone"""
+    import shutil
+    from datetime import datetime
+
+    from agno.session.agent import AgentSession
+    from agno.session.summary import SessionSummary
+
+    from launchkit.memory.forget import forget
+    from launchkit.settings import ROOT
+
+    copy = tmp_path / "s.db"
+    shutil.copyfile(ROOT / "samples" / "memory" / "seed.db", copy)
+    store = MemoryStore(str(copy), "harbor", "maya", Trace())
+    store.insert_raw(UserMemory(memory="the launch customer, 555-0142, prefers mornings", user_id="harbor:brand", topics=["scope:brand:harbor", "source:chat"]))
+    store.upsert_session(AgentSession(session_id="harbor:dana:x:main", user_id="dana", agent_id="main", summary=SessionSummary(summary="Dana asked about 555-0142 too", updated_at=datetime(2026, 10, 3))))
+    dana_before = len(store.get_user_memories(user_id="dana"))
+    result = forget(store, "harbor", "maya", "555-0142")
+    assert result == {"memories": 1, "summaries": 2, "learnings": 1}
+    assert not any("555-0142" in (s.summary.summary if s.summary else "") for s in store.get_sessions())
+    assert store.get_user_memories(user_id="harbor:brand") == [] or not any("555-0142" in r.memory for r in store.get_user_memories(user_id="harbor:brand"))
+    assert len(store.get_user_memories(user_id="dana")) == dana_before
+
+
+def test_retention_prunes_rows_older_than_the_limit(tmp_path):
+    """build b, ticket 5: rows older than the limit go; newer rows and brand rows stay"""
+    from datetime import date
+
+    from launchkit.memory.retention import prune
+
+    store = MemoryStore(str(tmp_path / "s.db"), "harbor", "maya", Trace())
+    store.insert_raw(UserMemory(memory="old", user_id="maya", topics=["valid_from:2025-01-01", "scope:user:maya"]))
+    store.insert_raw(UserMemory(memory="new", user_id="maya", topics=["valid_from:2026-10-01", "scope:user:maya"]))
+    store.insert_raw(UserMemory(memory="brand rule", user_id="harbor:brand", topics=["valid_from:2025-01-01", "scope:brand:harbor"]))
+    assert prune(store, "harbor", date(2026, 11, 1), max_age_days=180) == 1
+    assert [r.memory for r in store.get_user_memories(user_id="maya")] == ["new"]
+    assert len(store.get_user_memories(user_id="harbor:brand")) == 1

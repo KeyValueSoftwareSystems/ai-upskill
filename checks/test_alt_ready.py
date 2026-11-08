@@ -215,3 +215,28 @@ def test_recall_is_a_read_tool_in_the_catalogue(tmp_path):
     entry = recall_entry(store, "harbor", "maya")
     assert entry.name == "recall" and entry.kind == "read"
     assert "no rows" in entry.fn("photography").lower()
+
+
+def test_the_placeholder_retention_prunes_nothing(store_for):
+    """ready: on the participant branch retention removes no row, however old"""
+    from datetime import date
+
+    from launchkit.memory.retention import prune
+
+    store = store_for()
+    store.insert_raw(UserMemory(memory="old row", user_id="maya", topics=["valid_from:2025-01-01"]))
+    assert prune(store, "harbor", date(2026, 11, 1), max_age_days=180) == 0
+    assert len(store.get_user_memories(user_id="maya")) == 1
+
+
+def test_the_placeholder_forget_misses_the_copies(page, tmp_path):
+    """ready: on the participant branch forgetting a phone number removes Maya's row and leaves the copy in the chat summary"""
+    from launchkit.memory.forget import forget
+    from launchkit.memory.store import MemoryStore
+    from launchkit.web import app as web
+
+    store = MemoryStore(str(web.settings.data_dir / "sessions.db"), "harbor", "maya", Trace())
+    result = forget(store, "harbor", "maya", "555-0142")
+    assert result["memories"] == 1 and result["summaries"] == 0
+    assert not any("555-0142" in r.memory for r in store.get_user_memories(user_id="maya"))
+    assert any(s.summary and "555-0142" in s.summary.summary for s in store.get_sessions(user_id="maya"))

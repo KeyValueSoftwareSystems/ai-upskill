@@ -215,7 +215,7 @@ ORCH_GATE = ORCH_STEPS + [name for name in TOOLS_STEPS if name in ("tools3", "to
 # trainers' proof that the ready-made plumbing and the answer branches work.
 ALT_CHECKS = ("alt-setup", "alt-ready", "alt-build-a", "alt-build-b", "alt-build-c")
 CHECK_NAMES = ("0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch", *ALT_CHECKS, "alt")
-COMMANDS = ("run", "main", "lookup", "chunks", "index", "onboard", "notion", "explain", "check", "ui", "setup")
+COMMANDS = ("run", "main", "lookup", "chunks", "index", "onboard", "notion", "explain", "check", "ui", "setup", "forget", "retention")
 
 
 def check_targets(step: str) -> list[Path]:
@@ -308,6 +308,30 @@ def cmd_setup(args):
     return 0
 
 
+def cmd_forget(args):
+    """Remove everything memory holds about some text for one person at one brand: `launchkit forget harbor maya "555-0142"`."""
+    from launchkit.memory.forget import forget
+    from launchkit.memory.store import open_store
+
+    store = open_store(settings, args.workspace, args.user, Trace())
+    result = forget(store, args.workspace, args.user, args.text)
+    console.print(f"memories {result['memories']} · summaries {result['summaries']} · learnings {result['learnings']}")
+    return 0
+
+
+def cmd_retention(args):
+    """Remove rows older than the limit for one brand: `launchkit retention harbor --days 180`."""
+    from datetime import date
+
+    from launchkit.memory.retention import prune
+    from launchkit.memory.store import open_store
+
+    store = open_store(settings, args.workspace, "retention", Trace())
+    gone = prune(store, args.workspace, date.today(), max_age_days=args.days)
+    console.print(f"removed {gone} rows older than {args.days} days")
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="launchkit", description="LaunchKit harness commands")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -370,6 +394,17 @@ def main(argv=None):
 
     setup = sub.add_parser("setup", help="prepare a fresh clone for Session 3: the seeded database, the brands, the rank file")
     setup.set_defaults(func=cmd_setup)
+
+    forget = sub.add_parser("forget", help="remove everything memory holds about some text, for one person at one brand")
+    forget.add_argument("workspace")
+    forget.add_argument("user")
+    forget.add_argument("text")
+    forget.set_defaults(func=cmd_forget)
+
+    retention = sub.add_parser("retention", help="remove a brand's rows older than a number of days")
+    retention.add_argument("workspace")
+    retention.add_argument("--days", type=int, default=180)
+    retention.set_defaults(func=cmd_retention)
 
     args = parser.parse_args(argv)
     return args.func(args)
