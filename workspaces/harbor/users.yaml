@@ -6,3 +6,6 @@ users:
   - id: sam
     name: Sam
     role: intern
+  - id: dana
+    name: Dana
+    role: agency manager

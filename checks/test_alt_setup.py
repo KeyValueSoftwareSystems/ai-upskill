@@ -18,3 +18,14 @@ def test_check_maps_an_alt_name_to_its_test_file():
     """setup: check alt-build-a runs checks/test_alt_build_a.py"""
     assert cli.check_targets("alt-build-a") == [cli.ROOT / "checks" / "test_alt_build_a.py"]
     assert cli.check_targets("alt") == [cli.ROOT / "checks" / "test_alt_setup.py", cli.ROOT / "checks" / "test_alt_ready.py"]
+
+
+def test_alder_exists_with_the_agency_manager():
+    """setup: the Alder brand exists, and Dana the agency manager works at Alder and at Harbor"""
+    from launchkit.brands.users import list_logins
+    from launchkit.settings import settings
+
+    logins = {(l["workspace_id"], l["user_id"]): l for l in list_logins(settings)}
+    assert ("alder", "dana") in logins and logins[("alder", "dana")]["role"] == "agency manager"
+    assert ("harbor", "dana") in logins
+    assert logins[("alder", "dana")]["label"] == "Dana · Alder"

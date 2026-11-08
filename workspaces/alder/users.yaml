@@ -1,0 +1,8 @@
+brand: Alder
+users:
+  - id: dana
+    name: Dana
+    role: agency manager
+  - id: ravi
+    name: Ravi
+    role: marketer

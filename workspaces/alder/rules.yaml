@@ -1,0 +1,13 @@
+banned_claims:
+  - indestructible
+  - lifetime guarantee
+  - waterproof forever
+  - cheap
+colours:
+  forest: "#2F4A3A"
+  bone: "#EDE7DA"
+placements:
+  feed: ["1080x1080", "1080x1350"]
+  story: ["1080x1920"]
+  web: ["1200x628"]
+  display: ["300x250"]

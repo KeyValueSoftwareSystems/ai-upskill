@@ -1,0 +1,28 @@
+{
+  "workspace": "alder",
+  "name": "Alder",
+  "product": "Ridgeline boot, Forest colourway",
+  "voice": "Grounded, plain-spoken, a little dry. Short sentences. No exclamation marks, no emoji.",
+  "colours": {"forest": "#2F4A3A", "bone": "#EDE7DA"},
+  "facts": [
+    "Full-grain leather upper",
+    "Resoleable; soles replaced at cost",
+    "Three-year warranty on the upper and the stitching",
+    "Made in Portugal",
+    "Sizes 36 to 48, in half sizes"
+  ],
+  "banned_claims": [
+    "indestructible",
+    "lifetime guarantee",
+    "waterproof forever",
+    "cheap"
+  ],
+  "copy_limits": {"headline": 6, "subheadline": 12, "body": 25},
+  "placements": {
+    "feed_square": [1080, 1080],
+    "feed_portrait": [1080, 1350],
+    "story": [1080, 1920],
+    "web_banner": [1200, 628],
+    "display": [300, 250]
+  }
+}
