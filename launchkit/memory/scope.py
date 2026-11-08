@@ -14,6 +14,8 @@ from pathlib import Path
 
 import yaml
 
+from launchkit.tools.catalogue import todo
+
 FACT_SUBJECTS = ("warranty",)  # subjects the brand_facts table owns
 
 
@@ -35,11 +37,9 @@ def brand_words(workspaces_dir: Path) -> tuple[str, ...]:
     return tuple(sorted(words))
 
 
+@todo
 def brand_fact(text: str, settings) -> str | None:
-    """Ticket 3: the reason, when the text names a word from any brand's files; else None."""
-    for word in brand_words(settings.workspaces_dir):
-        if re.search(rf"(?<![\w#]){re.escape(word)}(?!\w)", text.lower()):
-            return f'a brand fact ("{word}"): it belongs to the brand, not the person'
+    """Ticket 3: not built yet. The reason, when the text names a word from any brand's files; else None."""
     return None
 
 
@@ -50,10 +50,8 @@ PERSONAL = [
 ]
 
 
+@todo
 def personal_data(text: str) -> str | None:
-    """Ticket 5: the reason, when the text holds a phone number (10 digits or more, so a date is not one), an email
-    address or a token; else None."""
-    for kind, pattern in PERSONAL:
-        if any(kind != "a phone number" or sum(c.isdigit() for c in m.group()) >= 10 for m in pattern.finditer(text)):
-            return f"personal data ({kind}): never kept in memory"
+    """Ticket 5: not built yet. The reason, when the text holds a phone number (10 digits or more, so a date is not
+    one), an email address or a token; else None."""
     return None

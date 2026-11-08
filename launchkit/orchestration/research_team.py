@@ -5,6 +5,8 @@ from agno.agent import Agent
 from launchkit.adapters.models import model_name
 from launchkit.agents.poster_flow import raise_if_failed
 from launchkit.guardrails.limits import make_leash
+from launchkit.memory.chat_history import session_db
+from launchkit.memory.long_term import learning_machine
 from launchkit.tools.catalogue import Entry
 from launchkit.tools.search_web import make_search_web
 from launchkit.trace import Trace
@@ -15,12 +17,14 @@ then the addresses of the pages you used."""
 
 
 def build_research_agent(model, settings, trace: Trace) -> Agent | None:
-    """Orchestration step 2: the research subagent. RESEARCH_TASK, search_web only, no session store and no chat history.
-    Session 3, ticket 2b: no memory and no learnings either. The agent that reads the web holds no tool that writes."""
+    """Orchestration step 2: the research subagent. RESEARCH_TASK, search_web only, no session store and no chat history."""
     return Agent(
         model=model,
         system_message=RESEARCH_TASK,
         tools=[make_search_web(settings)],
+        # Since memory went on: the research helper shares the main agent's learnings, so what it reads can be saved for everyone.
+        db=session_db(settings),
+        learning=learning_machine(settings),
         tool_hooks=[make_leash(settings.limits, trace)],
         telemetry=False,
     )

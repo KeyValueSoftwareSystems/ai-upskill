@@ -10,6 +10,7 @@ from contextlib import closing
 import lancedb
 
 from launchkit.memory.long_term import learnings
+from launchkit.tools.catalogue import todo
 
 TABLES = [  # (what, table, the column that holds the person)
     ("memories", "agno_memories", "user_id"),
@@ -42,36 +43,7 @@ def still_naming(settings, user_id: str, names: list[str]) -> list[str]:
     return found + [f"files: {p.relative_to(settings.data_dir)}" for p in _files(settings, user_id)]
 
 
+@todo
 def delete_user(settings, user_id: str, apply: bool) -> list[tuple[str, int]]:
-    """What the cascade removes (or would remove, without apply), one line per store."""
-    removed = []
-    with closing(sqlite3.connect(settings.data_dir / "sessions.db")) as con, con:
-        for what, table, column in TABLES:
-            try:
-                count = con.execute(f"select count(*) from {table} where {column} = ?", (user_id,)).fetchone()[0]
-            except sqlite3.OperationalError:
-                continue
-            if apply:
-                con.execute(f"delete from {table} where {column} = ?", (user_id,))
-            removed.append((what, count))
-        try:
-            seeded = [cid for cid, meta in con.execute("select id, metadata from agno_knowledge") if f"source:{user_id}" in json.loads(meta or "{}").get("tags", [])]
-        except sqlite3.OperationalError:
-            seeded = []
-        try:
-            proposed = con.execute("select count(*) from brand_facts where source = ?", (user_id,)).fetchone()[0]
-            if apply:  # the fact is the brand's now; only who proposed it is removed
-                con.execute("update brand_facts set source = 'removed user' where source = ?", (user_id,))
-            removed.append(("brand facts they proposed (kept, source removed)", proposed))
-        except sqlite3.OperationalError:
-            pass
-    if apply:
-        for content_id in seeded:
-            learnings(settings).remove_content_by_id(content_id)
-    removed.append(("shared learnings they proposed (tag source:" + user_id + ")", len(seeded)))
-    files = _files(settings, user_id)
-    if apply:
-        for folder in files:
-            shutil.rmtree(folder)
-    removed.append(("chat page conversations and pictures (folders)", len(files)))
-    return removed
+    """Ticket 5: not built yet. What the cascade removes (or would remove, without apply), one line per store."""
+    return []
