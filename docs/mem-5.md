@@ -49,6 +49,8 @@ session_summary_manager=summary_manager(settings, trace, model) if model is not 
 isinstance(model, FakeModel) else None. The fakes are scripted for the conversation only.
 ```
 
+
+
 ## Prove it
 
 ```
@@ -60,6 +62,8 @@ uv run launchkit check mem5
 - Retention prunes by age, and writes nothing without `--apply`.
 - Retention never runs in a turn.
 
+
+
 ## Run it again
 
 The retention job, in the terminal: it runs on a schedule, never in a turn.
@@ -69,9 +73,9 @@ uv run python scripts/retention_job.py --days 90           # what it would do; n
 uv run python scripts/retention_job.py --days 90 --apply   # prune, then Summarize whoever still has more than 100 rows
 ```
 
-In prep: Tomas 600 rows → 309 pruned → 291 left → Summarize → one row of about 1,170 tokens. Restart the page and ask Tomas's headline again: `memory loaded 1 rows · about 1,200 tokens`. In prep that turn sent **2,361 tokens**, but took **about 13 s, not less**. The session summary runs after every turn on `gpt-5-nano`, a reasoning model, and Agno counts its tokens in the turn. Point at the tokens, not the clock: the small model is cheaper, not faster.
+Tomas 600 rows → 309 pruned → 291 left → Summarize → one row of about 1,170 tokens. Restart the page and ask Tomas's headline again: `memory loaded 1 rows · about 1,200 tokens`. The session summary runs after every turn on `gpt-5-nano`, a reasoning model, and Agno counts its tokens in the turn. Point at the tokens, not the clock: the small model is cheaper, not faster.
 
-The long job again, in a new conversation: the **Memory** tab's session summaries show the running summary, and turn 8 reads from it. In prep, on the finished branch, the brief came back in full in 1 run of 3; twice the summary dropped the deadline or the lid rule. A summary is short because it leaves things out.
+The long job again, in a new conversation: the **Memory** tab's session summaries show the running summary, and turn 8 reads from it. A summary is short because it leaves things out.
 
 ## Why it matters
 
