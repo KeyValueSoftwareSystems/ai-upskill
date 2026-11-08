@@ -27,11 +27,20 @@ from launchkit.adapters.fakes import FakeModel
 from launchkit.adapters.models import resolve_model
 from launchkit.knowledge.brand_search import EMBED_MODEL
 from launchkit.memory.chat_history import session_db
-from launchkit.tools.catalogue import todo
 
 
 # Ticket 1: what one saved row may hold. Agno puts this in the manager's prompt as <memories_to_capture>.
-CAPTURE = ""  # Ticket 1 builds it: what one saved row may hold. See docs/mem-1.md.
+CAPTURE = """\
+One fact per memory: one short sentence in the third person. Never put two facts in one row.
+Save only the person's own preferences and ways of working. Facts about a brand or a product, such as colours, sizes, \
+warranty, prices, claims or launch dates, are not memories about the person: save nothing for them.
+When the person quotes a phrase and tells you never to use it, that is a rule, not a wish. Save it as \
+Never use "<phrase>", never as something they want.
+Never save another person's name or contact details, a phone number, an email address, a token, a password or a key, \
+or text pasted from a document, a page or a board card.
+Before adding a memory, read the existing memories. If one already says the same thing, update it instead of adding a new one. If the new fact \
+replaces an old one, update the old row. Never keep both.
+If nothing is worth keeping, change nothing."""
 
 
 def cheap_model(settings, trace, main_model):
@@ -39,10 +48,9 @@ def cheap_model(settings, trace, main_model):
     return main_model if isinstance(main_model, FakeModel) else resolve_model(replace(settings, model=settings.memory_model), trace)
 
 
-@todo
-def memory_manager(settings, trace, main_model) -> MemoryManager | None:
-    """Ticket 1: not built yet. None means Agno builds its default manager, on the main model, with its default rules."""
-    return None
+def memory_manager(settings, trace, main_model) -> MemoryManager:
+    """Ticket 1: the manager that sorts a message into memory rows, on the cheaper model, with CAPTURE as its rules."""
+    return MemoryManager(model=cheap_model(settings, trace, main_model), memory_capture_instructions=CAPTURE, db=session_db(settings))
 
 
 def summary_manager(settings, trace, main_model) -> SessionSummaryManager:

@@ -36,9 +36,13 @@ def brand_words(workspaces_dir: Path) -> tuple[str, ...]:
     return tuple(sorted(words))
 
 
-@todo
 def brand_fact(text: str, settings) -> str | None:
-    """Ticket 3: not built yet. The reason, when the text names a word from any brand's files; else None."""
+    """The reason, when the text names a word from any brand's files as a whole word; else None."""
+    lowered = text.lower()
+    for word in brand_words(settings.workspaces_dir):
+        # Not inside a longer word ("sand" in "thousand"), and a colour code not after another # ("##1f3a5f").
+        if re.search(rf"(?<![\w#]){re.escape(word)}(?!\w)", lowered):
+            return f'a brand fact ("{word}"): it belongs to the brand, not the person'
     return None
 
 

@@ -12,7 +12,6 @@ from datetime import date, timedelta
 
 import yaml
 
-from launchkit.tools.catalogue import todo
 
 
 def _open(settings) -> sqlite3.Connection:
@@ -35,16 +34,28 @@ def brand_file_facts(settings, brand: str) -> list[dict]:
             for subject, entries in facts.items() for e in sorted(entries, key=lambda e: str(e["from"]))]
 
 
-@todo
 def load_brand_facts(settings, brand: str) -> int:
-    """Ticket 2: not built yet. Copy the brand's file entries into the table, skipping any already there; how many were added."""
-    return 0
+    """Copy the brand's file entries into the table, skipping any already there (same brand, subject and valid_from),
+    so loading twice adds nothing and a row closed later stays closed. How many rows were added."""
+    added = 0
+    with closing(_open(settings)) as con, con:
+        for e in brand_file_facts(settings, brand):
+            if con.execute("select 1 from brand_facts where brand = ? and subject = ? and valid_from = ?", (e["brand"], e["subject"], e["valid_from"])).fetchone():
+                continue
+            con.execute("insert into brand_facts (brand, subject, value, scope, source, valid_from, valid_to) values (?, ?, ?, ?, ?, ?, ?)",
+                        (e["brand"], e["subject"], e["value"], e["scope"], e["source"], e["valid_from"], e["valid_to"]))
+            added += 1
+    return added
 
 
-@todo
 def get_brand_facts(settings, brand: str, today: date | None = None) -> list[dict]:
-    """Ticket 2: not built yet. The brand's facts that are true today, one per subject."""
-    return []
+    """The brand's facts that are true on today (default: the real today), one per subject."""
+    load_brand_facts(settings, brand)
+    day = (today or date.today()).isoformat()
+    with closing(_open(settings)) as con:
+        rows = con.execute("select subject, value, scope, source, valid_from from brand_facts where brand = ? and valid_from <= ? "
+                           "and (valid_to is null or valid_to >= ?) order by subject", (brand, day, day)).fetchall()
+    return [dict(r) for r in rows]
 
 
 def all_brand_facts(settings, brand: str, today: date | None = None) -> list[dict]:
@@ -56,10 +67,16 @@ def all_brand_facts(settings, brand: str, today: date | None = None) -> list[dic
     return [{**dict(r), "true_today": r["valid_from"] <= day and (r["valid_to"] is None or r["valid_to"] >= day)} for r in rows]
 
 
-@todo
 def set_brand_fact(settings, brand: str, subject: str, value: str, source: str, scope: str = "brand", today: date | None = None) -> dict:
-    """Ticket 2: not built yet. Close the row that is true today (it ends yesterday) and open a new one from today."""
-    return {}
+    """Never overwrite: in one transaction, close the open row for this subject (it ends yesterday) and open a new one from today."""
+    load_brand_facts(settings, brand)
+    day = today or date.today()
+    with closing(_open(settings)) as con, con:  # the inner `with con` commits both statements together, or neither
+        con.execute("update brand_facts set valid_to = ? where brand = ? and subject = ? and valid_to is null",
+                    ((day - timedelta(days=1)).isoformat(), brand, subject))
+        con.execute("insert into brand_facts (brand, subject, value, scope, source, valid_from, valid_to) values (?, ?, ?, ?, ?, ?, null)",
+                    (brand, subject, value, scope, source, day.isoformat()))
+    return {"brand": brand, "subject": subject, "value": value, "source": source, "valid_from": day.isoformat()}
 
 
 def make_get_brand_facts(settings, ws):

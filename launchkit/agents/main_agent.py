@@ -114,7 +114,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
         # beside the three doors.
         update_memory_on_run=True,
         memory_manager=memory_manager(settings, trace, model),
-        learning=learning_machine(settings),
+        learning=learning_machine(settings, namespace=ws.id),
         tools=loose(catalogue.agent_tools()),
         tool_hooks=[make_leash(replace(settings.limits, step_cap=MAIN_STEP_CAP), trace)],
         telemetry=False,
