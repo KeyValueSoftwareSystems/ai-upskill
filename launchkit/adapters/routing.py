@@ -52,5 +52,7 @@ def on_failure(job: str, tried: list[str], remaining: list[str], error: Exceptio
     on and the trace says "fallback". Path B: the same model once more, then None, so the run stops with
     an error the person can read. The placeholder stops at once.
     """
-    # Path A: the launch carries on. The next model on the list takes the job, and the trace says fallback.
-    return remaining[0] if remaining else None
+    # Path B: the same model once more, then stop. Nothing moves to a model nobody chose; the person reads a
+    # clear error and decides.
+    failed = tried[-1]
+    return failed if tried.count(failed) < 2 else None

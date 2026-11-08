@@ -28,12 +28,34 @@ from launchkit.memory.store import Decision
 CONFIDENCE_GATE = 0.7
 
 
+CONFIDENCE_ASK = (
+    "A marketing assistant is deciding whether to remember this about the person it works for:\n\n{text}\n\n"
+    "How sure are you that this is a lasting fact about the person, true next month, and worth keeping? "
+    "Answer with one number from 0 to 1 and nothing else."
+)
+
+
 def confidence(text: str, settings, trace=None) -> float:
     """How sure a small model is that `text` is a lasting fact about the person, from 0 to 1.
 
-    Path B builds this. It is one short model call; the fake models answer it the same way every time.
+    One short call on the memory_write job's model, billed to the run's trace when one is given. A reply
+    that is not a number, or a call that fails, counts as 0, so a broken call never saves anything.
     """
-    raise NotImplementedError("path B of the first fork builds confidence()")
+    import re
+
+    from agno.exceptions import ModelProviderError
+    from agno.models.message import Message
+
+    from launchkit.adapters.jobs import Jobs
+    from launchkit.trace import Trace
+
+    model = Jobs(settings, trace or Trace()).first("memory_write")
+    try:
+        answer = model.response(messages=[Message(role="user", content=CONFIDENCE_ASK.format(text=text))])
+    except ModelProviderError:
+        return 0.0
+    found = re.search(r"(?:0?\.\d+|1(?:\.0+)?|0)", str(answer.content or ""))
+    return min(max(float(found.group()), 0.0), 1.0) if found else 0.0
 
 
 def decide_save(text: str, topics: list[str], approve: Callable[[str, dict], object], settings, trace=None) -> Decision:
@@ -47,10 +69,6 @@ def decide_save(text: str, topics: list[str], approve: Callable[[str, dict], obj
     if "source:web" in topics:
         # A page the helper read can say anything, and a saved row outlives the page.
         return Decision(keep=False, scope=None)
-    kind = next((t.split(":", 1)[1] for t in topics if t.startswith("kind:")), "fact")
-    answer = approve("keep_in_memory", {"memory": text, "kind": kind, "choices": ["Just me", "Everyone at the brand", "Don't keep"]})
-    if answer == "Just me":
-        return Decision(keep=True, scope="user")
-    if answer == "Everyone at the brand":
-        return Decision(keep=True, scope="brand")
-    return Decision(keep=False, scope=None)
+    # Path B: nobody is asked. The row is kept when the model is sure enough, and the Memory panel shows it
+    # with Forget, so the person can undo it.
+    return Decision(keep=confidence(text, settings, trace) >= CONFIDENCE_GATE, scope=None)
