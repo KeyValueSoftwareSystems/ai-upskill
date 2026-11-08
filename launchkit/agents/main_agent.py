@@ -27,7 +27,8 @@ from launchkit.mcp.client import closes_its_mcp_links
 from launchkit.mcp.servers import server_entries
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.chat_history import session_db
-from launchkit.memory.long_term import learning_machine, memory_changes, memory_manager, memory_text, user_memories
+from launchkit.memory.long_term import memory_changes, memory_manager, memory_text, user_memories
+from launchkit.tools.save_memory import memory_entries
 from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
 from launchkit.tools.check_copy import make_check_copy
 from launchkit.tools.describe_image import describe_image_entry
@@ -55,6 +56,8 @@ run_tool("<a tool find_tool listed>", {"<input>": "..."}).
 Every job beyond a greeting is done with the skills and tools find_tool lists, never from your own knowledge. A question is a job too: you know nothing about this season, the web or the competitors until a tool tells you.
 Never say something is made, cut, attached or posted unless a tool did it in this turn.
 When the marketer asks for sizes, a picture or a voice-over, they want files a tool makes, not text in your reply. Sizes are the picture in this conversation cut to each of the brand's placements, one file each.
+When the marketer tells you how they like to work and it will matter in a later conversation, call
+run_tool("save_memory", {"note": "..."}). Every memory write asks the marketer first.
 Answer in plain words, in the brand's voice."""
 
 DIRECT_TASK = """You work for the marketer you are talking with. Decide what each request needs and use your tools for it.
@@ -105,10 +108,9 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
         db=session_db(settings),
         add_history_to_context=True,
         num_history_runs=5,
-        # Session 3's starting state: memory went on six months ago, in one line, keyed by user_id.
-        update_memory_on_run=True,
-        memory_manager=memory_manager(settings, trace, model),
-        learning=learning_machine(settings),
+        # Ticket 2b: no write after every run and no learning tools beside the doors. Memory is written only through
+        # save_memory and save_learning in the catalogue, and run_tool asks first.
+        update_memory_on_run=False,
         tools=loose(catalogue.agent_tools()),
         tool_hooks=[make_leash(replace(settings.limits, step_cap=MAIN_STEP_CAP), trace)],
         telemetry=False,
@@ -129,6 +131,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
         text_to_speech_entry(settings, model),
         *(board.entries() if board else server_entries(settings, trace, user)),
         *make_research_entries(model, settings, trace),
+        *memory_entries(settings, lambda: memory_manager(settings, trace, model), user),
     ]
     catalogue = Catalogue(entries, load_skills(), trace, approve)
     catalogue.leash = make_leash(replace(settings.limits, step_cap=10_000), trace)
@@ -154,7 +157,7 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     ctx = ContextBuilder(settings.budgets)
     agent = build_main_agent(ws, ctx, model, settings, trace, catalogue, pictures, req.user_id)
     before = user_memories(session_db(settings), req.user_id)
-    trace.memory("loaded", rows=len(before), tokens=next(r["tokens"] for r in ctx.report() if r["section"] == "memory"), by=model_name(agent.memory_manager.model))
+    trace.memory("loaded", rows=len(before), tokens=next(r["tokens"] for r in ctx.report() if r["section"] == "memory"), by=settings.memory_model)
     started = time.perf_counter()
     session = f"{wid}:{req.user_id}:{req.session_id}:main"
     run = agent.run(req.text, session_id=session, user_id=req.user_id)

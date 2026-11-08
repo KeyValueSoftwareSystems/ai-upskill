@@ -24,6 +24,7 @@ class Entry:
     note: str
     kind: str
     fn: Callable
+    plan: Callable[[dict], dict] | None = None  # a write's planned change, shown when it asks; the inputs when there is none
 
 
 @dataclass(frozen=True)
@@ -122,7 +123,7 @@ class Catalogue:
                 inspect.signature(entry.fn).bind(**inputs)
             except TypeError as error:
                 return f"Wrong inputs for {name}: {error}. Check the skill's steps or call find_tool."
-            if entry.kind == "write" and not self.approve(name, inputs):
+            if entry.kind == "write" and not self.approve(name, entry.plan(inputs) if entry.plan else inputs):
                 self.trace.refused(name, "Maya said no")
                 return f"Maya did not allow {name}. Do not try it again; tell her what you wanted to do."
             if self.leash is None:

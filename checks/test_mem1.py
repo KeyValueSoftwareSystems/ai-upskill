@@ -1,9 +1,7 @@
 """Session 3, ticket 1: what one saved row may hold. Capture rules and a cheaper model on the memory manager."""
 
 from launchkit.adapters.models import resolve_model
-from launchkit.agents.main_agent import build_catalogue, build_main_agent
-from launchkit.agents.prompt import ContextBuilder
-from launchkit.brands.workspace import load_workspace
+from launchkit.agents.main_agent import build_catalogue
 from launchkit.memory.long_term import CAPTURE, memory_manager
 from launchkit.trace import Trace
 
@@ -25,8 +23,12 @@ def test_the_memory_manager_runs_on_a_cheaper_model(settings, monkeypatch):
     assert manager.model.id == settings.memory_model != settings.model
 
 
-def test_the_main_agent_carries_that_manager(settings, good):
-    """The main agent's manager is the one with the capture rules."""
-    ws = load_workspace("harbor", settings, Trace())
-    agent = build_main_agent(ws, ContextBuilder(settings.budgets), good, settings, Trace(), build_catalogue(settings, Trace(), NO), user_id="maya")
-    assert agent.memory_manager is not None and agent.memory_manager.memory_capture_instructions == CAPTURE
+def test_every_saved_note_goes_through_that_manager(settings, good, monkeypatch):
+    """A note the marketer allows is sorted into rows by the manager with the capture rules (from ticket 2b, through save_memory)."""
+    import launchkit.agents.main_agent as main
+
+    made = []
+    monkeypatch.setattr(main, "memory_manager", lambda *a: made.append(memory_manager(*a)) or made[-1])
+    catalogue = build_catalogue(settings, Trace(), lambda name, inputs: True, model=good)
+    catalogue.make_run_tool()("save_memory", {"note": "Maya likes the story size first."})
+    assert made and made[0].memory_capture_instructions == CAPTURE
