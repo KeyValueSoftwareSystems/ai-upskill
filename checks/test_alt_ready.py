@@ -240,3 +240,59 @@ def test_the_placeholder_forget_misses_the_copies(page, tmp_path):
     assert result["memories"] == 1 and result["summaries"] == 0
     assert not any("555-0142" in r.memory for r in store.get_user_memories(user_id="maya"))
     assert any(s.summary and "555-0142" in s.summary.summary for s in store.get_sessions(user_id="maya"))
+
+
+def test_a_models_total_is_its_weighted_scores(ranking_file):
+    """ready: a model's total weighs quality up and cost and time down, so the same three models rank differently per job"""
+    from dataclasses import replace
+
+    from launchkit.adapters.ranking import rank_list, total
+    from launchkit.settings import settings
+
+    weights = {"eval": 0.8, "cost": 0.1, "latency": 0.1}
+    assert abs(total({"eval": 0.92, "cost": 0.20, "latency": 0.40}, weights) - 0.796) < 1e-9
+    assert abs(total({"eval": 0.80, "cost": 0.60, "latency": 0.70}, weights) - 0.770) < 1e-9
+    assert abs(total({"eval": 0.70, "cost": 0.95, "latency": 0.90}, weights) - 0.745) < 1e-9
+    current = replace(settings, ranking=ranking_file)
+    assert rank_list("long_text", current) == ["strong-model", "mid-model", "cheap-model"]
+    assert rank_list("short_text", current) == ["cheap-model", "mid-model", "strong-model"]
+
+
+def test_the_placeholder_route_returns_one_model_even_with_no_setting(ranking_file):
+    """ready: on the participant branch every job gets the one configured model, and with LAUNCHKIT_MODEL empty the default"""
+    from dataclasses import replace
+
+    from launchkit.adapters.routing import route
+    from launchkit.settings import DEFAULT_MODEL, settings
+
+    current = replace(settings, model="", ranking=ranking_file)
+    assert route("long_text", current) == ("long_text", [(DEFAULT_MODEL, "the one setting")])
+    assert route("vision", replace(current, model="gpt-5.5")) == ("vision", [("gpt-5.5", "the one setting")])
+
+
+def test_the_scoreboard_groups_calls_by_model():
+    """ready: the scoreboard adds up calls, tokens, seconds and dollars per model"""
+    trace = Trace()
+    trace.route("long_text", "gpt-5.5", "the one setting")
+    trace.call("long_text", "gpt-5.5", seconds=4.0, input_tokens=1000, cached_tokens=0, output_tokens=200, usd=0.011)
+    trace.call("short_text", "gpt-5.5", seconds=2.0, input_tokens=500, cached_tokens=100, output_tokens=50, usd=0.004)
+    trace.call("research", "gpt-5-nano", seconds=1.0, input_tokens=300, cached_tokens=0, output_tokens=60, usd=None)
+    rows = {r["model"]: r for r in trace.bill()}
+    assert rows["gpt-5.5"]["calls"] == 2 and rows["gpt-5.5"]["seconds"] == 6.0 and round(rows["gpt-5.5"]["usd"], 3) == 0.015
+    assert rows["gpt-5.5"]["jobs"] == ["long_text", "short_text"]
+    assert rows["gpt-5-nano"]["usd"] is None
+    lines = trace.lines()
+    assert any(l.startswith("route     long_text · gpt-5.5 · the one setting") for l in lines)
+    assert any(l.startswith("call      long_text · gpt-5.5 · 4.0 s") for l in lines)
+
+
+def test_the_models_route_lists_every_job_with_its_rank_list(page, ranking_file, monkeypatch):
+    """ready: GET /models shows each job's models in rank order, with their scores, so the room can read the rank file"""
+    from dataclasses import replace
+
+    from launchkit.web import app as web
+
+    monkeypatch.setattr(web, "settings", replace(web.settings, ranking=ranking_file))
+    body = page.get("/models").json()
+    assert [m["model"] for m in body["jobs"]["long_text"]["models"]] == ["strong-model", "mid-model", "cheap-model"]
+    assert body["jobs"]["long_text"]["weights"] == {"eval": 0.8, "cost": 0.1, "latency": 0.1}

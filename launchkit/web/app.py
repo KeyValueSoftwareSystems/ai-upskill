@@ -23,6 +23,7 @@ from launchkit.brands.users import list_logins
 from launchkit.guardrails.poster_check import SpecError
 from launchkit.knowledge.brand_library import asset_path, read_library, workspace_root
 from launchkit.mcp.servers.notion import NotionServer, connected, log_in
+from launchkit.adapters.ranking import job_table
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.brand_facts import BrandFacts
 from launchkit.memory.store import memory_section, memory_tokens, open_store, rows_for, topic_value
@@ -276,6 +277,12 @@ def _onboard_worker(path: Path, workspace_id: str | None, model: str | None, que
         queue.put({"type": "error", "kind": type(error).__name__, "message": str(error)})
     finally:
         queue.put(DONE)
+
+
+@app.get("/models")
+def models():
+    """The rank file as the room reads it: every job, its weights, its models in rank order with scores and totals."""
+    return job_table(settings)
 
 
 @app.get("/memories/{workspace_id}/{user_id}")

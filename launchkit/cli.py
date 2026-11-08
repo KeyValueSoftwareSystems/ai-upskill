@@ -215,7 +215,7 @@ ORCH_GATE = ORCH_STEPS + [name for name in TOOLS_STEPS if name in ("tools3", "to
 # trainers' proof that the ready-made plumbing and the answer branches work.
 ALT_CHECKS = ("alt-setup", "alt-ready", "alt-build-a", "alt-build-b", "alt-build-c")
 CHECK_NAMES = ("0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch", *ALT_CHECKS, "alt")
-COMMANDS = ("run", "main", "lookup", "chunks", "index", "onboard", "notion", "explain", "check", "ui", "setup", "forget", "retention")
+COMMANDS = ("run", "main", "lookup", "chunks", "index", "onboard", "notion", "explain", "check", "ui", "setup", "forget", "retention", "models")
 
 
 def check_targets(step: str) -> list[Path]:
@@ -305,6 +305,20 @@ def cmd_setup(args):
         console.print(f"\n[red]Setup stopped[/red]  {problems[0]}")
         return 1
     console.print("\n[green]Setup complete[/green]  start the chat page with: uv run launchkit ui")
+    return 0
+
+
+def cmd_models(args):
+    """Print the rank file: for every job, its models best first, with their scores, total and whether they are on."""
+    from launchkit.adapters.ranking import job_table
+
+    table = job_table(settings)
+    for job, entry in table["jobs"].items():
+        weights = " · ".join(f"{k} {v}" for k, v in entry["weights"].items())
+        console.print(f"\n[bold]{job}[/bold]  {entry['about']}  (weights: {weights})")
+        for rank, row in enumerate(entry["models"], 1):
+            state = "" if row["enabled"] else "  [red]off[/red]"
+            console.print(f"  {rank}. {row['model']:<20} eval {row['eval']:.2f} · cost {row['cost']:.2f} · latency {row['latency']:.2f} · total {row['total']:.3f}{state}", highlight=False)
     return 0
 
 
@@ -400,6 +414,9 @@ def main(argv=None):
     forget.add_argument("user")
     forget.add_argument("text")
     forget.set_defaults(func=cmd_forget)
+
+    models = sub.add_parser("models", help="print the rank file: each job's models best first, with scores")
+    models.set_defaults(func=cmd_models)
 
     retention = sub.add_parser("retention", help="remove a brand's rows older than a number of days")
     retention.add_argument("workspace")

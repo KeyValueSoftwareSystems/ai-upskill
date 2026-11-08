@@ -9,7 +9,7 @@ stays out of the catalogue.
 import inspect
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
@@ -32,6 +32,8 @@ class Skill:
     note: str
     text: str
     hides: tuple[str, ...] = ()
+    # Models a skill pins for a job, from lines like `Model: vision = gpt-5.5`.
+    pins: dict = field(default_factory=dict)
 
 
 def built(fn: Callable) -> bool:
@@ -48,7 +50,9 @@ def load_skills(folder: Path = SKILLS_DIR) -> dict[str, Skill]:
     for path in sorted(folder.glob("*/skill.md")):
         text = path.read_text(encoding="utf-8")
         hides = tuple(t.strip(" `") for t in field_of(text, "hides").split("(")[0].split(",") if t.strip(" `"))
-        skills[path.parent.name] = Skill(path.parent.name, field_of(text, "pick me when"), text, hides)
+        pins = dict(pin.strip().split("=", 1) for pin in [field_of(text, "model")] if "=" in pin)
+        pins = {job.strip(): model.strip() for job, model in pins.items()}
+        skills[path.parent.name] = Skill(path.parent.name, field_of(text, "pick me when"), text, hides, pins)
     return skills
 
 
@@ -64,6 +68,13 @@ class Catalogue:
         self.trace = trace
         self.approve = approve
         self.leash: Callable | None = None
+
+    def pinning(self, job: str) -> str | None:
+        """The model a skill pins for this job, if any skill does."""
+        for skill in self.skills.values():
+            if job in skill.pins:
+                return skill.pins[job]
+        return None
 
     @property
     def lookup(self) -> bool:

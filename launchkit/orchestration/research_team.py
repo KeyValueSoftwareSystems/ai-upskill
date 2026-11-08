@@ -47,14 +47,22 @@ def build_research_agent(model, settings, trace: Trace, store: MemoryStore | Non
     )
 
 
-def make_research_entries(model, settings, trace: Trace, store: MemoryStore | None = None) -> list[Entry]:
-    """Orchestration step 2: research and research_many, as read tools for the catalogue."""
+def make_research_entries(jobs_or_model, settings, trace: Trace, store: MemoryStore | None = None) -> list[Entry]:
+    """Orchestration step 2: research and research_many, as read tools for the catalogue. Each run gets its model
+    from the research job's route, and moves on the way on_failure says when that model is down. A plain model
+    instead of a Jobs means: this model, every time."""
+    from launchkit.adapters.jobs import Jobs
+
+    jobs = jobs_or_model if isinstance(jobs_or_model, Jobs) else Jobs(settings, trace, fixed=jobs_or_model)
 
     def research(brief: str) -> str:
-        run = build_research_agent(model, settings, trace, store).run(brief)
-        raise_if_failed(run)
-        trace.model("research", model_name(model), run.metrics)
-        return str(run.content or "")
+        def call(model):
+            run = build_research_agent(model, settings, trace, store).run(brief)
+            raise_if_failed(run)
+            trace.model("research", model_name(model), run.metrics)
+            return str(run.content or "")
+
+        return jobs.in_order("research", call)
 
     def research_many(briefs: list[str]) -> list[str]:
         with ThreadPoolExecutor(max_workers=max(len(briefs), 1)) as pool:

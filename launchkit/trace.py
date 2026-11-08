@@ -50,6 +50,53 @@ class Trace:
         """One chunk a search returned, so the trace shows what the model is about to read and why it ranked."""
         self.add("chunk", rank=rank, ref=ref, score=score, text=text)
 
+    def route(self, job: str, model: str, reason: str):
+        """Which model a job got, and why: pick, skill, rank N, fallback, retry, or the one setting."""
+        self.add("route", job=job, model=model, reason=reason)
+
+    def call(self, job: str, model: str, seconds: float, input_tokens: int, cached_tokens: int, output_tokens: int, usd: float | None):
+        """One model call, as the scoreboard counts it. usd is None when nobody knows the price."""
+        self.add("call", job=job, model=model, seconds=seconds, input_tokens=input_tokens, cached_tokens=cached_tokens, output_tokens=output_tokens, usd=usd)
+
+    def bill(self) -> list[dict]:
+        """The scoreboard: one row per model with its jobs, calls, tokens, seconds and dollars."""
+        rows: dict[str, dict] = {}
+        for e in self.events:
+            if e.kind != "call":
+                continue
+            d = e.detail
+            row = rows.setdefault(d["model"], {"model": d["model"], "jobs": [], "calls": 0, "input_tokens": 0, "cached_tokens": 0, "output_tokens": 0, "seconds": 0.0, "usd": 0.0, "unpriced": 0})
+            if d["job"] not in row["jobs"]:
+                row["jobs"].append(d["job"])
+            row["calls"] += 1
+            row["input_tokens"] += d["input_tokens"]
+            row["cached_tokens"] += d["cached_tokens"]
+            row["output_tokens"] += d["output_tokens"]
+            row["seconds"] = round(row["seconds"] + d["seconds"], 2)
+            if d["usd"] is None:
+                row["unpriced"] += 1
+            else:
+                row["usd"] += d["usd"]
+        for row in rows.values():
+            if row["unpriced"] == row["calls"]:
+                row["usd"] = None
+        return list(rows.values())
+
+    def scoreboard(self):
+        """Write the scoreboard into the trace: one score line per model and a total line."""
+        rows = self.bill()
+        if not rows:
+            return
+        for row in rows:
+            self.add("score", **row)
+        self.add(
+            "total",
+            calls=sum(r["calls"] for r in rows),
+            seconds=round(sum(r["seconds"] for r in rows), 2),
+            usd=sum(r["usd"] for r in rows if r["usd"] is not None),
+            unpriced=sum(r["unpriced"] for r in rows),
+        )
+
     def memory_kept(self, scope: str, text: str):
         self.add("memory_kept", scope=scope, text=text)
 
@@ -115,6 +162,18 @@ class Trace:
                 return f"chunk     #{d['rank']} {d['ref']}{score} · {_short(d['text'], 70)}"
             case "refused":
                 return f"refused   {d['name']}: {d['reason']}"
+            case "route":
+                return f"route     {d['job']} · {d['model']} · {d['reason']}"
+            case "call":
+                price = f"${d['usd']:.4f}" if d["usd"] is not None else "price unknown"
+                cached = f" ({d['cached_tokens']} cached)" if d["cached_tokens"] else ""
+                return f"call      {d['job']} · {d['model']} · {d['seconds']:.1f} s · {d['input_tokens']} in{cached} · {d['output_tokens']} out · {price}"
+            case "score":
+                price = f"${d['usd']:.4f}" if d["usd"] is not None else "price unknown"
+                return f"score     {d['model']} · {d['calls']} calls · {d['seconds']:.1f} s · {price} · {', '.join(d['jobs'])}"
+            case "total":
+                unpriced = f" ({d['unpriced']} unpriced)" if d["unpriced"] else ""
+                return f"total     {d['calls']} calls · {d['seconds']:.1f} s · ${d['usd']:.4f}{unpriced}"
             case "memory_kept":
                 return f"memory    kept · {d['scope']} · {_short(d['text'], 70)}"
             case "memory_refused":

@@ -1,0 +1,54 @@
+{
+  "about": "Which model does each job, as data. Scores run from 0 to 1 and higher is better: eval is how the model does on Harbor's own test asks, cost is how cheap it is, latency is how fast it answers. The weights say what each job cares about most. The eval and latency numbers are first estimates from prep and are meant to be re-measured on the room's own asks.",
+  "jobs": {
+    "long_text": {
+      "about": "launch copy and anything else that must follow Harbor's voice and never-say list",
+      "weights": {"eval": 0.8, "cost": 0.1, "latency": 0.1},
+      "models": {
+        "gpt-5.5": {"eval": 0.92, "cost": 0.20, "latency": 0.40},
+        "claude-sonnet-4-6": {"eval": 0.90, "cost": 0.28, "latency": 0.46},
+        "gpt-5.4-mini": {"eval": 0.80, "cost": 0.60, "latency": 0.70},
+        "gpt-4.1-mini": {"eval": 0.74, "cost": 0.80, "latency": 0.80},
+        "gpt-5-nano": {"eval": 0.60, "cost": 0.95, "latency": 0.90}
+      }
+    },
+    "short_text": {
+      "about": "a short answer to a short question, one fact from the brand",
+      "weights": {"eval": 0.2, "cost": 0.6, "latency": 0.2},
+      "models": {
+        "gpt-5.5": {"eval": 0.92, "cost": 0.20, "latency": 0.40},
+        "gpt-5.4-mini": {"eval": 0.82, "cost": 0.60, "latency": 0.70},
+        "gpt-4.1-mini": {"eval": 0.78, "cost": 0.80, "latency": 0.80},
+        "gpt-5-nano": {"eval": 0.70, "cost": 0.95, "latency": 0.90}
+      }
+    },
+    "research": {
+      "about": "the research helper: read saved pages, write three lines",
+      "weights": {"eval": 0.5, "cost": 0.3, "latency": 0.2},
+      "models": {
+        "gpt-5.5": {"eval": 0.90, "cost": 0.20, "latency": 0.40},
+        "gpt-5.4-mini": {"eval": 0.82, "cost": 0.60, "latency": 0.70},
+        "gpt-4.1-mini": {"eval": 0.76, "cost": 0.80, "latency": 0.80},
+        "gpt-5-nano": {"eval": 0.64, "cost": 0.95, "latency": 0.90}
+      }
+    },
+    "memory_write": {
+      "about": "the extractor: read a chat, decide what to keep, write a short row",
+      "weights": {"eval": 0.3, "cost": 0.5, "latency": 0.2},
+      "models": {
+        "gpt-5.4-mini": {"eval": 0.82, "cost": 0.60, "latency": 0.70},
+        "gpt-4.1-mini": {"eval": 0.78, "cost": 0.80, "latency": 0.80},
+        "gpt-5-nano": {"eval": 0.66, "cost": 0.95, "latency": 0.90}
+      }
+    },
+    "vision": {
+      "about": "reading a photo: words on it, another brand's logo, where the product is",
+      "weights": {"eval": 0.7, "cost": 0.2, "latency": 0.1},
+      "models": {
+        "gpt-5.5": {"eval": 0.93, "cost": 0.20, "latency": 0.40},
+        "gpt-5.4-mini": {"eval": 0.80, "cost": 0.60, "latency": 0.70},
+        "gpt-4.1-mini": {"eval": 0.72, "cost": 0.80, "latency": 0.80}
+      }
+    }
+  }
+}

@@ -19,7 +19,8 @@ from agno.tools.function import Function
 
 from launchkit.adapters.fakes import FakeModel
 from launchkit.adapters.image_providers import FromPicture, make_images
-from launchkit.adapters.models import check_reachable, model_name, resolve_model
+from launchkit.adapters.jobs import Jobs
+from launchkit.adapters.models import check_reachable, model_name
 from launchkit.agents.prompt import ContextBuilder
 from launchkit.brands.request import Request, resolve_workspace_id
 from launchkit.guardrails.limits import make_leash
@@ -93,7 +94,7 @@ def placements_text(ws) -> str:
     return "This brand's placements (every size): " + ", ".join(sizes) + "." if sizes else ""
 
 
-def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue, pictures: Pictures | None = None, store: MemoryStore | None = None) -> Agent:
+def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue, pictures: Pictures | None = None, store: MemoryStore | None = None, extractor_model=None) -> Agent:
     ctx.set("rules", f"{ws.soul}\n\n{ws.agents}\n\n{placements_text(ws)}")
     warnings = " ".join(e.detail["text"] for e in trace.events if e.kind == "warning")
     ctx.set("facts", f"Today is {date.today():%-d %B %Y}. {warnings} {pictures.describe() if pictures else ''}".strip())
@@ -115,15 +116,20 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
         # chat and saves what it finds, following capture_rules.md. The fakes cannot play the extractor,
         # so it stays off when a fake model drives the agent.
         update_memory_on_run=store is not None and not isinstance(model, FakeModel),
-        memory_manager=MemoryManager(memory_capture_instructions=capture_rules()) if store is not None else None,
+        memory_manager=MemoryManager(model=extractor_model, memory_capture_instructions=capture_rules()) if store is not None else None,
         tools=loose(catalogue.agent_tools()),
         tool_hooks=[make_leash(replace(settings.limits, step_cap=MAIN_STEP_CAP), trace)],
         telemetry=False,
     )
 
 
-def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya", pictures: Pictures | None = None, helper_store: MemoryStore | None = None, store: MemoryStore | None = None) -> Catalogue:
+def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya", pictures: Pictures | None = None, helper_store: MemoryStore | None = None, store: MemoryStore | None = None, jobs: Jobs | None = None) -> Catalogue:
     ws = ws or load_workspace("harbor", settings, trace)
+    jobs = jobs or Jobs(settings, trace, fixed=model)
+    skills = load_skills()
+    # The photo tools run on the vision job's model; a skill may pin one with a `Model: vision = ...` line.
+    vision_pin = next((s.pins["vision"] for s in skills.values() if "vision" in s.pins), None)
+    vision_model = jobs.first("vision", skill=vision_pin)
     desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None)
     entries: list[Entry] = [
         Entry("get_brand_details", "look up this brand's guide and product facts", "read", make_get_brand_details(ws, trace, settings)),
@@ -132,13 +138,13 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
         Entry("check_copy", "check a headline, subheadline and body against the brand's word limits and banned claims", "read", make_check_copy(ws)),
         Entry("record_brand_fact", "record a fact about the brand or its product that is true from today, such as a new warranty", "write", record_brand_fact_entry(BrandFacts(str(settings.data_dir / "sessions.db")), ws.id)),
         search_entry(settings),
-        describe_image_entry(settings, model, desk),
+        describe_image_entry(settings, vision_model, desk),
         text_to_speech_entry(settings, model),
         *(board.entries() if board else server_entries(settings, trace, user)),
-        *make_research_entries(model, settings, trace, helper_store),
+        *make_research_entries(jobs, settings, trace, helper_store),
         *([recall_entry(store, ws.id, user)] if store is not None else []),
     ]
-    catalogue = Catalogue(entries, load_skills(), trace, approve)
+    catalogue = Catalogue(entries, skills, trace, approve)
     catalogue.leash = make_leash(replace(settings.limits, step_cap=10_000), trace)
     return catalogue
 
@@ -149,7 +155,9 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     wid = resolve_workspace_id(req, settings)
     ws = load_workspace(wid, settings, trace)
-    model = model if model is not None else resolve_model(settings, trace)
+    # One Jobs per run: it gives every job its model from the rank file, or the one model handed in.
+    jobs = Jobs(settings, trace, fixed=model)
+    model = jobs.first("long_text", ask=req.text)
     check_reachable(model)
     if isinstance(model, FakeModel):
         # The fakes are scripted against the saved pages and the local board, so a fake never reaches the live web or Notion.
@@ -163,13 +171,20 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     door = lambda text, topics: decide_save(text, topics, approve, settings)  # noqa: E731
     store = open_store(settings, wid, req.user_id, trace, decide=door)
     helper_store = open_store(settings, wid, "research-helper", trace, decide=door)
-    catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures, helper_store, store)
+    catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures, helper_store, store, jobs)
     ctx = ContextBuilder(settings.budgets)
-    agent = build_main_agent(ws, ctx, model, settings, trace, catalogue, pictures, store)
     started = time.perf_counter()
     session = f"{wid}:{req.user_id}:{req.session_id}:main"
-    run = agent.run(req.text, session_id=session, user_id=req.user_id)
-    raise_if_failed(run)
+
+    def run_with(main_model):
+        """Build the agent on one model and run the turn. Jobs calls it again on another model if this one is down."""
+        agent = build_main_agent(ws, ctx, main_model, settings, trace, catalogue, pictures, store, jobs.first("memory_write"))
+        run = agent.run(req.text, session_id=session, user_id=req.user_id)
+        raise_if_failed(run)
+        return agent, run
+
+    agent, run = jobs.in_order("long_text", run_with, ask=req.text)
+    model = agent.model
     trace.model("main", model_name(model), run.metrics)
     result = MainResult(trace=trace, runs=[run])
     turn = main_turn(run.content)

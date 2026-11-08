@@ -2,6 +2,7 @@ import json
 import re
 from typing import Any, AsyncIterator, Iterator
 
+from agno.exceptions import ModelProviderError
 from agno.models.base import Model
 from agno.models.message import MessageMetrics
 from agno.models.response import ModelResponse
@@ -15,6 +16,27 @@ HARBOR_SPEC = {
     "image_prompt": "A steel bottle on a misty lakeshore at dawn, navy water, sea glass and sand tones, soft light",
     "format": "A3 portrait",
 }
+
+
+class DownModel:
+    """A model that is down: every call fails the way a provider outage does. `fake:down`, for the second fork."""
+
+    id = "fake:down"
+    provider = "fake"
+    name = "down"
+    on_call = None
+
+    def reply(self):
+        raise ModelProviderError("fake:down is not answering", status_code=503)
+
+    def invoke(self, *args, **kwargs):
+        self.reply()
+
+    def ainvoke(self, *args, **kwargs):
+        self.reply()
+
+    def response(self, *args, **kwargs):
+        self.reply()
 
 
 class FakeModel(Model):

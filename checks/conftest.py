@@ -138,3 +138,27 @@ def no_gpu_pictures(monkeypatch):
     """Checks never call the GPU picture service, even when a trainee's .env points at it: real-picture checks stand in for LiteLLM."""
     monkeypatch.delenv("IMAGESVC_URL", raising=False)
     monkeypatch.setenv("LAUNCHKIT_IMAGE_PROVIDER", "litellm")
+
+
+@pytest.fixture
+def ranking_file(tmp_path):
+    """A small rank file with the design page's numbers: strong 0.92/0.20/0.40, mid 0.80/0.60/0.70, cheap 0.70/0.95/0.90."""
+    import json
+
+    path = tmp_path / "ranking.json"
+    models = {
+        "strong-model": {"eval": 0.92, "cost": 0.20, "latency": 0.40},
+        "mid-model": {"eval": 0.80, "cost": 0.60, "latency": 0.70},
+        "cheap-model": {"eval": 0.70, "cost": 0.95, "latency": 0.90},
+    }
+    path.write_text(json.dumps({
+        "about": "test numbers",
+        "jobs": {
+            "long_text": {"about": "launch copy", "weights": {"eval": 0.8, "cost": 0.1, "latency": 0.1}, "models": models},
+            "short_text": {"about": "a short answer", "weights": {"eval": 0.2, "cost": 0.6, "latency": 0.2}, "models": models},
+            "research": {"about": "three lines from pages", "weights": {"eval": 0.5, "cost": 0.3, "latency": 0.2}, "models": models},
+            "memory_write": {"about": "the extractor", "weights": {"eval": 0.3, "cost": 0.5, "latency": 0.2}, "models": models},
+            "vision": {"about": "reading a photo", "weights": {"eval": 0.7, "cost": 0.2, "latency": 0.1}, "models": {**models, "see-model": {"eval": 0.95, "cost": 0.3, "latency": 0.5}}},
+        },
+    }))
+    return path
