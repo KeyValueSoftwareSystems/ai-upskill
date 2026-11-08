@@ -2,6 +2,9 @@
 
 Session 1's harness ran a fixed order, copy agent then picture agent. Here one agent decides. Same DNA, same
 leash, same sessions. It holds get_brand_details and generate_image, and every tool the room builds after them.
+
+Session 3 wires in memory and routing. Ready-made for every ticket. Reference: page 1, "Where a fact lives", and
+page 11, "Jobs and the scoreboard".
 """
 
 import inspect
@@ -168,7 +171,7 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
         pictures.attach(Path(picture))
     # Every save passes the write door. The person's own agent and the research helper each open the
     # store as themselves, so a row says who wrote it.
-    door = lambda text, topics: decide_save(text, topics, approve, settings)  # noqa: E731
+    door = lambda text, topics: decide_save(text, topics, approve, settings, trace=trace)  # noqa: E731
     store = open_store(settings, wid, req.user_id, trace, decide=door)
     helper_store = open_store(settings, wid, "research-helper", trace, decide=door)
     catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures, helper_store, store, jobs)
@@ -200,6 +203,7 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     result.view_tokens = tool_result_size(run)[0]
     result.history_tokens = history_size(run)[0]
     result.memory_tokens = memory_tokens(ctx.sections.get("memory", ""))
+    trace.scoreboard()
     return result
 
 

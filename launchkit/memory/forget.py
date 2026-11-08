@@ -19,6 +19,8 @@ def forget(store: MemoryStore, workspace_id: str, user_id: str, text: str) -> di
     chats and of any chat at the brand that mention it (`summaries`), and the brand's shared rows
     (`learnings`). Other people's own rows are never touched.
     """
+    if not text.strip():
+        raise ValueError("say what to forget; an empty text would match every row")
     rows = store.get_user_memories(user_id=user_id) or []
     hits = [r.memory_id for r in rows if text in r.memory]
     if hits:

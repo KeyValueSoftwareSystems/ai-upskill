@@ -1,37 +1,40 @@
 # The starting state the room inherits: what six months of memory with one setting switched on left behind.
 # scripts/build_seed.py turns this file into samples/memory/seed.db. Dates are the day a row was written.
 #
-# Rows are what the extractor saved, worded the way it worded them. Topics are the labels the door would have
-# stamped, except that the first six months ran before the door existed, so every row is a plain user row.
+# Rows are what the extractor saved, worded the way it worded them. Topics are the labels the door stamped:
+# the kind, who said it, where it came from, who may read it, the brand it was saved at, when it became true,
+# and a one-word topic. Scope was never used when reading, which is ticket 3.
 
 memories:
   # Maya at Harbor. The extractor turned her never-say rule into a preference.
   - user_id: maya
     memory: "prefers 'lifetime guarantee' in headlines"
-    topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "valid_from:2026-05-14"]
+    topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "brand:harbor", "topic:copy", "valid_from:2026-05-14"]
   # Harbor navy, the brand colour, saved once per chat, eleven ways.
-  - {user_id: maya, memory: "likes navy backgrounds", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "valid_from:2026-05-02"]}
-  - {user_id: maya, memory: "uses Harbor navy as the main colour", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "valid_from:2026-05-09"]}
-  - {user_id: maya, memory: "prefers the brand's navy for posters", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "valid_from:2026-05-16"]}
-  - {user_id: maya, memory: "wants Harbor navy behind the headline", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "valid_from:2026-05-23"]}
-  - {user_id: maya, memory: "navy backgrounds, not white", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "valid_from:2026-06-04"]}
-  - {user_id: maya, memory: "likes the deep navy from the brand book", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "valid_from:2026-06-18"]}
-  - {user_id: maya, memory: "Harbor navy on every size", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "valid_from:2026-07-01"]}
-  - {user_id: maya, memory: "asked for navy again for the story size", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "valid_from:2026-07-15"]}
-  - {user_id: maya, memory: "prefers navy to sea glass as the base colour", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "valid_from:2026-08-06"]}
-  - {user_id: maya, memory: "navy background for the web banner", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "valid_from:2026-08-27"]}
-  - {user_id: maya, memory: "keeps Harbor navy as the poster background", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "valid_from:2026-09-19"]}
+  - {user_id: maya, memory: "likes navy backgrounds", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "brand:harbor", "topic:colour", "valid_from:2026-05-02"]}
+  - {user_id: maya, memory: "uses Harbor navy as the main colour", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "brand:harbor", "topic:colour", "valid_from:2026-05-09"]}
+  - {user_id: maya, memory: "prefers the brand's navy for posters", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "brand:harbor", "topic:colour", "valid_from:2026-05-16"]}
+  - {user_id: maya, memory: "wants Harbor navy behind the headline", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "brand:harbor", "topic:colour", "valid_from:2026-05-23"]}
+  - {user_id: maya, memory: "navy backgrounds, not white", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "brand:harbor", "topic:colour", "valid_from:2026-06-04"]}
+  - {user_id: maya, memory: "likes the deep navy from the brand book", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "brand:harbor", "topic:colour", "valid_from:2026-06-18"]}
+  - {user_id: maya, memory: "Harbor navy on every size", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "brand:harbor", "topic:colour", "valid_from:2026-07-01"]}
+  - {user_id: maya, memory: "asked for navy again for the story size", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "brand:harbor", "topic:colour", "valid_from:2026-07-15"]}
+  - {user_id: maya, memory: "prefers navy to sea glass as the base colour", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "brand:harbor", "topic:colour", "valid_from:2026-08-06"]}
+  - {user_id: maya, memory: "navy background for the web banner", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "brand:harbor", "topic:colour", "valid_from:2026-08-27"]}
+  - {user_id: maya, memory: "keeps Harbor navy as the poster background", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "brand:harbor", "topic:colour", "valid_from:2026-09-19"]}
   # The one row that belongs in memory.
-  - {user_id: maya, memory: "prefers Harbor's own shoot photos, not AI pictures", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "valid_from:2026-04-22"]}
+  - {user_id: maya, memory: "prefers Harbor's own shoot photos, not AI pictures", topics: ["kind:preference", "author:maya", "source:chat", "scope:user:maya", "brand:harbor", "topic:photography", "valid_from:2026-06-10"]}
   # Personal data and a pasted key, saved as if they were facts about Maya.
-  - {user_id: maya, memory: "the customer for the launch call can be reached on 555-0142", topics: ["kind:fact", "author:maya", "source:chat", "scope:user:maya", "valid_from:2026-09-30"]}
-  - {user_id: maya, memory: "the board api token is sk-live-7f3a9c2e1b", topics: ["kind:fact", "author:maya", "source:chat", "scope:user:maya", "valid_from:2026-10-03"]}
+  - {user_id: maya, memory: "the customer for the launch call can be reached on 555-0142", topics: ["kind:fact", "author:maya", "source:chat", "scope:user:maya", "brand:harbor", "topic:customer", "valid_from:2026-09-30"]}
+  - {user_id: maya, memory: "the board api token is sk-live-7f3a9c2e1b", topics: ["kind:fact", "author:maya", "source:chat", "scope:user:maya", "brand:harbor", "topic:board", "valid_from:2026-10-03"]}
   # Dana, the agency manager, at Harbor. Brand rules saved as her own rows.
-  - {user_id: dana, memory: "never say 'lifetime guarantee'", topics: ["kind:preference", "author:dana", "source:chat", "scope:user:dana", "valid_from:2026-07-08"]}
-  - {user_id: dana, memory: "uses Harbor navy", topics: ["kind:preference", "author:dana", "source:chat", "scope:user:dana", "valid_from:2026-07-08"]}
-  - {user_id: dana, memory: "works on Harbor on Mondays and Alder on Thursdays", topics: ["kind:fact", "author:dana", "source:chat", "scope:user:dana", "valid_from:2026-07-08"]}
+  - {user_id: dana, memory: "never say 'lifetime guarantee'", topics: ["kind:preference", "author:dana", "source:chat", "scope:user:dana", "brand:harbor", "topic:copy", "valid_from:2026-07-08"]}
+  - {user_id: dana, memory: "uses Harbor navy", topics: ["kind:preference", "author:dana", "source:chat", "scope:user:dana", "brand:harbor", "topic:colour", "valid_from:2026-07-08"]}
+  - {user_id: dana, memory: "works on Harbor on Mondays and Alder on Thursdays", topics: ["kind:fact", "author:dana", "source:chat", "scope:user:dana", "brand:harbor", "topic:schedule", "valid_from:2026-07-08"]}
   # The learning the research helper saved from a competitor's page. Everyone at Harbor reads it.
-  - {user_id: "harbor:brand", memory: "a lifetime guarantee sells; the market leader prints it on every bottle", topics: ["kind:fact", "author:research-helper", "source:web", "scope:brand:harbor", "valid_from:2026-10-11"]}
+  - {user_id: "harbor:brand", memory: "a lifetime guarantee sells; the market leader prints it on every bottle", topics: ["kind:fact", "author:research-helper", "source:web", "scope:brand:harbor", "brand:harbor", "topic:competitors", "valid_from:2026-10-11"]}
+  # A learning the extractor made from Maya's launch-call chat and filed for the whole brand. The number travelled.
+  - {user_id: "harbor:brand", memory: "the launch customer is on 555-0142 and prefers morning calls", topics: ["kind:fact", "author:maya", "source:chat", "scope:brand:harbor", "brand:harbor", "topic:customer", "valid_from:2026-10-01"]}
 
 brand_facts:
   - {workspace_id: harbor, subject: warranty, value: "2 years", source: chat, valid_from: 2026-02-03}

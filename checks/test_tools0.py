@@ -44,7 +44,7 @@ def test_the_chat_page_runs_the_main_agent(settings, monkeypatch):
     web._worker(web.RunBody(workspace_id="harbor", user_id="maya", text="Morning!", model="fake:tools"), queue)
     events = list(queue.queue)
     result = next(e for e in events if isinstance(e, dict) and e.get("type") == "result")
-    assert result["reply"] and set(result["view"]) == {"tool_tokens", "history_tokens", "seconds"}
+    assert result["reply"] and {"tool_tokens", "history_tokens", "seconds"} <= set(result["view"])
 
 
 def test_the_chat_page_asks_before_a_write_and_waits_for_the_answer():

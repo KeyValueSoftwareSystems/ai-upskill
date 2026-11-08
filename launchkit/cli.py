@@ -1,3 +1,8 @@
+"""LaunchKit's commands. Session 3 adds setup, forget, retention, models, and ui --reload.
+
+Ready-made for every ticket. Reference: READY-MADE.md.
+"""
+
 import argparse
 import json
 import re
@@ -271,6 +276,22 @@ def cmd_ui(args):
     return 0
 
 
+def _has_brand_facts(db_file: Path) -> bool:
+    """True when a database already has the Session 3 tables."""
+    import sqlite3
+
+    with sqlite3.connect(db_file) as db:
+        names = {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+    return "brand_facts" in names
+
+
+def _relative_to_root(path: Path) -> str:
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
 def cmd_setup(args):
     """Prepare a fresh clone for Session 3: the seeded database, the Alder brand and the rank file.
 
@@ -279,15 +300,22 @@ def cmd_setup(args):
     """
     import shutil
 
+    import sqlite3
+
     problems = []
     seed = ROOT / "samples" / "memory" / "seed.db"
     target = settings.data_dir / "sessions.db"
+    if target.exists() and not _has_brand_facts(target):
+        # A Session 1 or 2 database. Keep it under another name, so nothing is lost, and seed the Session 3 start.
+        kept = target.with_name("sessions.before-session-3.db")
+        target.rename(kept)
+        console.print(f"database      the earlier sessions' database is kept as {kept.name}")
     if target.exists():
-        console.print(f"database      {target.relative_to(ROOT)} already there, left as it is")
+        console.print(f"database      {_relative_to_root(target)} already there, left as it is")
     elif seed.exists():
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(seed, target)
-        console.print(f"database      copied the seeded start to {target.relative_to(ROOT)}")
+        console.print(f"database      copied the seeded start to {_relative_to_root(target)}")
     else:
         problems.append(f"the seeded database is missing: {seed.relative_to(ROOT)}")
     alder = settings.workspaces_dir / "alder" / "users.yaml"
@@ -328,7 +356,11 @@ def cmd_forget(args):
     from launchkit.memory.store import open_store
 
     store = open_store(settings, args.workspace, args.user, Trace())
-    result = forget(store, args.workspace, args.user, args.text)
+    try:
+        result = forget(store, args.workspace, args.user, args.text)
+    except ValueError as error:
+        console.print(f"[red]{error}[/red]")
+        return 1
     console.print(f"memories {result['memories']} · summaries {result['summaries']} · learnings {result['learnings']}")
     return 0
 

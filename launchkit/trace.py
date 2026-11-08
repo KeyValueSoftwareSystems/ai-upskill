@@ -1,3 +1,9 @@
+"""The trace: every line the Trace tab shows, and the scoreboard built from the call lines.
+
+Ready-made for every ticket. Reference: page 11, "Jobs and the scoreboard". Memory writes `memory kept` and
+`memory not kept`; routing writes `route`, `call`, `score` and `total`.
+"""
+
 from dataclasses import dataclass, field
 from pathlib import Path
 

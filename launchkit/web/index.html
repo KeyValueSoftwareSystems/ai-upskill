@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- The chat page. Session 3 adds the Memory panel with Forget, one button per choice on a question, and memory tokens in the Context tab. Ready-made for every ticket; reference page 6. -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -208,7 +209,7 @@ function loadLogins(select){
 }
 loadLogins("harbor");
 $("brand").onchange = () => { fillPeople(); showNotion(); loadConversation(); if (!$("library").hidden) loadLibrary(); if (!$("memory").hidden) loadMemory(); };
-$("person").onchange = () => { loadConversation(); showNotion(); };
+$("person").onchange = () => { loadConversation(); showNotion(); if (!$("memory").hidden) loadMemory(); };
 async function showNotion(){
   const w = who(); if (!w.user_id) return;
   const c = await (await fetch(`/connections/${w.workspace_id}/${w.user_id}`)).json();

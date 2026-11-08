@@ -1,3 +1,9 @@
+"""The prompt the main agent gets, built section by section with a token budget each.
+
+Ready-made for tickets 1 and 5. Reference: page 6, "Reading memory back". Session 3 adds the brand facts and
+memory sections between the task and the facts.
+"""
+
 ORDER = ("rules", "task", "brand_facts", "memory", "facts")
 HEADERS = {"rules": "# Rules", "task": "# Task", "brand_facts": "# Brand facts", "memory": "# Memory", "facts": "# Facts"}
 

@@ -152,7 +152,7 @@ uv run launchkit setup       # copies the seeded database into place and checks 
 uv run launchkit ui --reload # the chat page on http://localhost:8000; it restarts when you change a file under launchkit/
 ```
 
-`setup` ends with `Setup complete`. If it stops, bring the line it printed to the session.
+`setup` ends with `Setup complete`. If it stops, bring the line it printed to the session. On a clone you used in Session 1 or 2, `setup` keeps your old database as `data/sessions.before-session-3.db` and puts the Session 3 start in its place.
 
 The tickets you work through are in `TICKETS.md`. The pieces that are already built, and what each does, are in `READY-MADE.md`. Write each decision you make in `DECISIONS.md`.
 

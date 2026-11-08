@@ -1,6 +1,6 @@
 # Session 3: the ticket queue
 
-Nine months after Session 2, LaunchKit serves forty brands and about three hundred marketers. Agency teams work on several brands in one afternoon. Six months ago memory was switched on with one setting, `update_memory_on_run=True`: after every reply an extra model call reads the chat, pulls out facts about the person, and saves them. Every later chat of theirs loads those facts. For three months it looked like a success. Then the support queue filled.
+Nine months after Session 2, LaunchKit serves forty brands and about three hundred marketers. Agency teams work on several brands in one afternoon. Six months ago memory was switched on with one setting, `update_memory_on_run=True`: after every reply an extra model call reads the chat, pulls out facts about the person, and saves them. Every later chat of theirs loads those facts. For three months it looked like a success. Then the support queue filled with the tickets below.
 
 You start from the database that queue left behind. `uv run launchkit setup` put it in place. Open the chat page, press **Memory**, and read what the agent kept for Maya.
 
@@ -12,7 +12,7 @@ How to work a ticket:
 - Write your decision in `DECISIONS.md`, a few words. The room compares them after each build.
 - Stuck? Move to the next ticket. Every piece ships with a placeholder that runs.
 
-Tickets 1, 2 and 3 share one cause and one build, build A. Tickets 4, 5 and 6 share another, build B. Ticket 7 is a test, not a build. Ticket 8 is build C.
+Tickets 1, 2 and 3 share one cause and one build, build A. Tickets 4, 5 and 6 share another, build B. Ticket 7 is worked as a test in the room. Ticket 8 is build C.
 
 The pieces that are already there, and what each does, are in `READY-MADE.md`.
 
@@ -27,7 +27,7 @@ The pieces that are already there, and what each does, are in `READY-MADE.md`.
 **Done when**
 
 - Sign in as Maya at Harbor, open **Memory**: the rows the extractor saves from a new chat are each one plain fact, and none of them is a quoted phrase from the never-say list.
-- Say "Never say 'lifetime guarantee'" in a new chat and read what was saved: a rule that it must not be said, or nothing. Not a preference for it.
+- Say "Never say 'lifetime guarantee'" in a new chat and read what was saved. Either a rule that it must not be said, or nothing at all. A preference for the phrase is the bug.
 - Nothing personal is saved: say a phone number in a chat and the Memory panel does not show it.
 
 <details><summary>Hint 1, a nudge</summary>
@@ -50,7 +50,7 @@ Four short paragraphs: what to save, how to word a row, what never to save, what
 
 > Maya, Harbor: "The warranty is five years. It still says two. Sometimes it says both."
 
-**What is actually wrong.** Two brand-fact rows for `warranty` are both open: `2 years` from February and `5 years` from October. Nothing on a row says when it stopped being true, and the prompt lists both as current. Open **Memory** and look at the brand facts table at the bottom: both rows show, with no end.
+**What is actually wrong.** Two brand-fact rows for `warranty` are both open, `2 years` from February and `5 years` from October. Nothing on a row says when it stopped being true, and the prompt lists both as current. Open **Memory** and look at the brand facts table at the bottom: both rows show, with no end.
 
 **Done when**
 
@@ -63,11 +63,11 @@ Brand facts have their own table, <code>brand_facts</code>, with <code>valid_fro
 </details>
 
 <details><summary>Hint 2, the approach</summary>
-Ask for two changes in <code>launchkit/memory/brand_facts.py</code>: <code>record</code> closes the open row with the same subject by setting its <code>valid_to</code> to the new row's <code>valid_from</code>; <code>current</code> returns only rows where <code>valid_from</code> is on or before today and <code>valid_to</code> is empty or after today. Check with two rows for one subject that exactly one comes back, and that asking as of an earlier date gives the earlier value.
+Ask for two changes in <code>launchkit/memory/brand_facts.py</code>. <code>record</code> closes the open rows for the same subject that started before the new one, by setting their <code>valid_to</code> to the new row's <code>valid_from</code>. <code>current</code> returns, for each subject, one row: the one valid on that day with the latest <code>valid_from</code>. The seed has two open rows for the warranty and no end dates, so the second rule is what fixes the ticket on the database you have. Check with two open rows for one subject that exactly one comes back, and that asking as of an earlier date gives the earlier value.
 </details>
 
 <details><summary>Hint 3, nearly the answer</summary>
-In <code>record</code>, one UPDATE before the INSERT: set <code>valid_to</code> where <code>workspace_id</code>, <code>subject</code> match and <code>valid_to IS NULL</code>. In <code>current</code>, filter <code>history()</code> in Python by the two dates. Dates are ISO strings in the table; compare as <code>date</code> objects.
+In <code>record</code>, one UPDATE before the INSERT: set <code>valid_to</code> where the brand and subject match, <code>valid_to IS NULL</code> and <code>valid_from</code> is on or before the new date. In <code>current</code>, filter <code>history()</code> by the two dates, then keep the latest <code>valid_from</code> per subject. Dates are ISO strings in the table; compare them as <code>date</code> objects.
 </details>
 
 **Decision to write down.** When a fact changes, do you keep the old row with an end date, or delete it? What does each choice let you answer later?
@@ -87,15 +87,15 @@ In <code>record</code>, one UPDATE before the INSERT: set <code>valid_to</code> 
 - A row saved for "everyone at the brand" shows for Maya and for Dana at Harbor, and for nobody at Alder.
 
 <details><summary>Hint 1, a nudge</summary>
-Every row carries a <code>scope:</code> topic the door stamps on the way in: <code>scope:user:dana</code> or <code>scope:brand:harbor</code>. One function decides which rows a person at a brand reads. It ignores the scope today.
+Every row carries two labels the door stamps on the way in: <code>scope:user:dana</code> or <code>scope:brand:harbor</code>, and <code>brand:harbor</code>, the brand it was saved at. One function decides which rows a person at a brand reads. It ignores both labels today.
 </details>
 
 <details><summary>Hint 2, the approach</summary>
-Ask for <code>rows_for</code> in <code>launchkit/memory/store.py</code> to return the person's own rows that were saved at this brand, plus the brand's shared rows (filed under the brand's own user id, <code>&lt;brand&gt;:brand</code>), and nothing else. A person's row needs to say which brand it was saved at; decide where that label goes (the door stamps it) so an old row with no label is still read as the person's own. Check that Dana's Harbor rows do not load at Alder, and that a brand row loads for everyone at that brand.
+Ask for <code>rows_for</code> in <code>launchkit/memory/store.py</code> to return the person's own rows whose <code>brand:</code> label is this brand, plus the brand's shared rows (filed under the brand's own user id, <code>&lt;brand&gt;:brand</code>), and nothing else. Decide what happens to a row with no brand label at all. Check that Dana's Harbor rows do not load at Alder, and that a brand row loads for everyone at that brand.
 </details>
 
 <details><summary>Hint 3, nearly the answer</summary>
-Stamp <code>brand:&lt;workspace_id&gt;</code> in the door next to <code>scope:</code>. In <code>rows_for</code>, read the person's rows and keep those whose <code>brand:</code> label matches, or that have no label; then add <code>get_user_memories(user_id=brand_owner(workspace_id))</code>. The seed rows have no brand label, so decide and write down what happens to them.
+In <code>rows_for</code>, read the person's rows and keep those whose <code>brand:</code> label matches this brand; then add <code>get_user_memories(user_id=brand_owner(workspace_id))</code>. Rows with no label are your call: the person's everywhere, or nowhere.
 </details>
 
 **Decision to write down.** Rows saved before the brand label existed: are they the person's at every brand, at the brand where they were most likely said, or nowhere?
@@ -104,9 +104,9 @@ Stamp <code>brand:&lt;workspace_id&gt;</code> in the door next to <code>scope:</
 
 ## Ticket 4
 
-> Maya, Harbor: "It's back: 'lifetime guarantee' again, in a draft for another brand. Nobody there said it."
+> Maya, Harbor: "It's back: 'lifetime guarantee' again, in a Breeze draft. Nobody here said it this time."
 
-**What is actually wrong.** Build A fixed what Maya typed. This time the phrase came from outside. The research helper read a competitor's page, decided "a lifetime guarantee sells" was worth keeping, and saved it with its own tool as a learning every chat at the brand reads. Open **Memory** as Maya: the row is there, source `web`, said by `research-helper`.
+**What is actually wrong.** Build A fixed what Maya typed. This time the phrase came from outside. The research helper read a competitor's page, decided "a lifetime guarantee sells" was worth keeping, and saved it with its own tool as a learning every chat at the brand reads. Open **Memory** as Maya and find the row with source `web`, said by `research-helper`.
 
 This ticket is the first fork. Both ways below run in real products. Pick one and build it.
 
@@ -130,7 +130,7 @@ First, in <code>decide_save</code>, refuse any row whose topics include <code>so
 </details>
 
 <details><summary>Hint 3, nearly the answer</summary>
-Path A: the inputs dict is <code>{"memory": text, "kind": kind, "choices": ["Just me", "Everyone at the brand", "Don't keep"]}</code>; anything other than the first two answers is a no. Path B: resolve the memory_write job's model with <code>Jobs(settings, trace).first("memory_write")</code>, ask it to answer with only a number for "how sure are you that this is a lasting fact about the person", parse it, and treat a parse failure as 0. For the helper, drop the <code>if store is not None</code> branch that adds the tool.
+Path A: the question needs the row's text, its kind and the three choices in <code>inputs</code>; anything other than the first two answers is a no. Path B: get the memory_write job's model from <code>Jobs</code>, ask it for only a number for "how sure are you that this is a lasting fact about the person", parse it, and treat a parse failure as 0. For the helper, take the save tool out of the list in <code>build_research_agent</code>.
 </details>
 
 **Decision to write down.** Which path, and what the person being remembered would expect.
@@ -141,7 +141,7 @@ Path A: the inputs dict is <code>{"memory": text, "kind": kind, "choices": ["Jus
 
 > Maya, Harbor: "It got slow and expensive. And it forgot the brief halfway through a long job."
 
-**What is actually wrong.** Every row a person may read goes into every prompt. One power user has hundreds. The Context tab shows the memory tokens on every turn. The long job is a different problem with the same symptom: the agent rereads only the last five messages of a chat, so a brief given in message one is gone by message eight.
+**What is actually wrong.** Every row a person may read goes into every prompt. One power user has hundreds. The Context tab shows the memory tokens on every turn. The long job is a different problem with the same symptom. The agent rereads only the last five messages of a chat, so a brief given in message one is gone by message eight.
 
 **Done when**
 
@@ -169,12 +169,12 @@ Group rows with <code>topic_of</code> into a dict of lists; "1 row" and "n rows"
 
 > Maya, Harbor: "A customer's phone number is in a headline draft. Legal asked where it came from, and wants everything saved about that customer gone by Friday."
 
-**What is actually wrong.** A phone number and a pasted token were saved as facts about Maya. Deleting her rows is not enough: the number also sits in a chat summary and in a shared learning. Try it: `uv run launchkit forget harbor maya 555-0142` removes one row and reports zero summaries. Open **Memory**: the brand's learning still has it.
+**What is actually wrong.** A phone number and a pasted token were saved as facts about Maya. Deleting her rows is not enough, because the number also sits in a chat summary and in a shared learning. Try it. `uv run launchkit forget harbor maya 555-0142` removes one row and reports zero summaries, and in **Memory** the brand's learning still has the number.
 
 **Done when**
 
 - `uv run launchkit forget harbor maya 555-0142` reports the rows, the summaries and the learnings it cleared, and a second run reports zeros.
-- Grep the database afterwards: the number is nowhere.
+- Search the database file afterwards (`grep -c 555-0142 data/sessions.db`): the number is nowhere, in the rows or in the file's free space.
 - Dana's rows are untouched.
 
 <details><summary>Hint 1, a nudge</summary>
@@ -186,7 +186,7 @@ Ask for <code>forget</code> to clear three places and count each: the person's r
 </details>
 
 <details><summary>Hint 3, nearly the answer</summary>
-Sessions come from <code>store.get_sessions()</code>; a summary is <code>session.summary.summary</code>; set it to an empty string and call <code>store.upsert_session(session)</code>. Brand rows come from <code>get_user_memories(user_id=brand_owner(workspace_id))</code>; delete with <code>delete_user_memories</code>. Then redaction at capture, the stretch: a rule in <code>capture_rules.md</code> that a phone number or a token is never a row.
+Sessions come from <code>store.get_sessions()</code>; a summary is <code>session.summary.summary</code>; take out the sentence that holds the text and call <code>store.upsert_session(session)</code>. Brand rows come from <code>get_user_memories(user_id=brand_owner(workspace_id))</code>; delete with <code>delete_user_memories</code>. Keep to this brand: a person's rows carry a <code>brand:</code> label. SQLite keeps deleted bytes in free pages until <code>VACUUM</code> runs. Then redaction at capture, the stretch: a rule in <code>capture_rules.md</code> that a phone number or a token is never a row.
 </details>
 
 **Decision to write down.** What does "forgotten" have to mean in Harbor's contract: the row, every copy, or every copy plus the chat it came from?
@@ -199,7 +199,7 @@ Sessions come from <code>store.get_sessions()</code>; a summary is <code>session
 
 **What is actually wrong.** There is no test. Nobody can say whether memory now recalls the right things, or only fewer things.
 
-This ticket is worked in the room, not in code. Two stores are scored on tickets 1 to 6: a table with a schema you own, which is what you built, and a temporal knowledge graph. For each, answer: does a fact carry time, who may see it, how is it read back, when is it written, can you forget on demand, can you prove it works. Then the operations column: self-hosted or a service, latency per turn, cost per fact, how you would leave.
+This ticket is worked in the room, with no code. Two stores are scored on tickets 1 to 6: a table with a schema you own, which is what you built, and a temporal knowledge graph. For each, answer: does a fact carry time, who may see it, how is it read back, when is it written, can you forget on demand, can you prove it works. Then the operations column: self-hosted or a service, latency per turn, cost per fact, how you would leave.
 
 **Decision to write down.** Which store you would ship for Harbor, and the one question it answers badly.
 
@@ -220,18 +220,18 @@ This ticket is the second fork.
 
 - With `LAUNCHKIT_MODEL` empty, the Trace tab shows a different model per job, each with its rank as the reason; `uv run launchkit models` shows the order.
 - Attach a photo and run the ingest skill: the vision job runs on the model its skill pins, reason `skill`.
-- Put the top model in `LAUNCHKIT_DISABLED_MODELS` and restart: Path A, the trace says `fallback` and the ask completes on the next model; Path B, the ask stops with an error that names the model.
+- Put the top model in `LAUNCHKIT_DOWN_MODELS` in `.env` and restart, so every call to it fails the way an outage does. Path A: the trace says `fallback` and the ask completes on the next model. Path B: the ask stops with an error that names the model. (`LAUNCHKIT_DISABLED_MODELS` is different: a model there leaves the list before any call.)
 
 <details><summary>Hint 1, a nudge</summary>
 Two functions in <code>launchkit/adapters/routing.py</code>: <code>route</code> decides the list before any call, <code>on_failure</code> decides what happens after one fails. <code>rank_list</code> in <code>ranking.py</code> already reads the file.
 </details>
 
 <details><summary>Hint 2, the approach</summary>
-Ask for <code>route</code> to return, in order: the person's pick when there is one and the job is a main job (long text or short text); the skill's pin for the job; the job's rank list with disabled models left out, reasons "pick", "skill", "rank 1", "rank 2" and so on, with duplicates removed. A main-reply ask that is a short question (ends with a question mark, twelve words or fewer) becomes <code>short_text</code>. Then <code>on_failure</code> for your path: A returns <code>remaining[0]</code> or None when nothing remains; B returns the same model once, then None. Check with <code>fake:down</code> in the rank file that a down model behaves the way your path says.
+Ask for <code>route</code> to return, in order: the person's pick when there is one and the job is a main job (long text or short text); the skill's pin for the job; the job's rank list with disabled models left out, reasons "pick", "skill", "rank 1", "rank 2" and so on, with duplicates removed. A main-reply ask that is a short question (ends with a question mark, twelve words or fewer) becomes <code>short_text</code>. Then <code>on_failure</code> for your path: A returns the next model that remains, or None when nothing does; B returns the same model once more, then None. Check it by putting a model in <code>LAUNCHKIT_DOWN_MODELS</code> and watching the trace.
 </details>
 
 <details><summary>Hint 3, nearly the answer</summary>
-Build the list as pairs, then drop a name you have already added. <code>MAIN_JOBS = ("long_text", "short_text")</code>. For path B, "once" means <code>tried.count(tried[-1]) &lt; 2</code>.
+Build the list as pairs, then drop a name you have already added. <code>MAIN_JOBS = ("long_text", "short_text")</code>. For path B, count how many times the failed model appears in <code>tried</code>.
 </details>
 
 **Decision to write down.** Which path, and what Maya would want in the middle of a launch: a different model, or a clear error.

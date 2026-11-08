@@ -34,6 +34,9 @@ class Settings:
     ranking: Path = field(default_factory=lambda: Path(_env("LAUNCHKIT_RANKING", str(ROOT / "launchkit" / "ranking.json"))))
     # Models switched off by hand, comma-separated. How the room simulates a provider outage.
     disabled_models: tuple = field(default_factory=lambda: tuple(m.strip() for m in _env("LAUNCHKIT_DISABLED_MODELS", "").split(",") if m.strip()))
+    # Models that are "down", comma-separated: still on the rank list, but every call to them fails. How the room
+    # acts out an outage and watches on_failure decide.
+    down_models: tuple = field(default_factory=lambda: tuple(m.strip() for m in _env("LAUNCHKIT_DOWN_MODELS", "").split(",") if m.strip()))
     limits: Limits = Limits()
     budgets: dict = field(default_factory=lambda: {"rules": 1500, "task": 400, "brand_facts": 400, "memory": 1500, "facts": 1500, "history": 2000})
 

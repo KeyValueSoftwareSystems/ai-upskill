@@ -15,7 +15,7 @@ from typing import Any
 
 from agno.exceptions import ModelProviderError
 
-from launchkit.adapters.fakes import DownModel  # noqa: F401  the down model lives with the other fakes; tests reach it from here
+from launchkit.adapters.fakes import DownModel
 from launchkit.adapters.models import model_name, resolve_model
 from launchkit.adapters.routing import on_failure, route
 from launchkit.trace import Trace
@@ -27,19 +27,20 @@ class Jobs:
         self.trace = trace
         # Ready-built models by name. The tests use it to hand in fakes; the app leaves it empty.
         self.given = dict(models or {})
-        self.built: dict[str, Any] = {}
+        self.built: dict[tuple[str, str], Any] = {}
         # One model for every job, no routing: how `run_main(model=...)` and `--model fake:...` behave.
         self.fixed = fixed
 
     def build(self, job: str, name: str):
-        """The model object for a name, built once and wired to write its calls to the scoreboard under this job."""
+        """The model object for a name, built once per job and wired to write its calls to the scoreboard under
+        that job. One object per job, so a model two jobs share bills each call to the right job."""
         if name in self.given:
             model = self.given[name]
-        elif name in self.built:
-            model = self.built[name]
+        elif (job, name) in self.built:
+            model = self.built[(job, name)]
         else:
-            model = resolve_model(self.settings, self.trace, name=name)
-            self.built[name] = model
+            model = DownModel(name) if name in self.settings.down_models else resolve_model(self.settings, self.trace, name=name)
+            self.built[(job, name)] = model
         if hasattr(model, "on_call") or not isinstance(model, (str, type(None))):
             try:
                 model.on_call = lambda seconds, inp, cached, out, usd, job=job, name=name: self.trace.call(job, name, seconds, inp, cached, out, usd)

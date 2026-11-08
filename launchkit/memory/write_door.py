@@ -28,7 +28,7 @@ from launchkit.memory.store import Decision
 CONFIDENCE_GATE = 0.7
 
 
-def confidence(text: str, settings) -> float:
+def confidence(text: str, settings, trace=None) -> float:
     """How sure a small model is that `text` is a lasting fact about the person, from 0 to 1.
 
     Path B builds this. It is one short model call; the fake models answer it the same way every time.
@@ -36,11 +36,12 @@ def confidence(text: str, settings) -> float:
     raise NotImplementedError("path B of the first fork builds confidence()")
 
 
-def decide_save(text: str, topics: list[str], approve: Callable[[str, dict], object], settings) -> Decision:
+def decide_save(text: str, topics: list[str], approve: Callable[[str, dict], object], settings, trace=None) -> Decision:
     """Keep this row or not, and under which scope.
 
     `text` is the row as the extractor or the agent worded it. `topics` are the labels the door has
     stamped so far (kind, author, source, scope, valid_from). `approve` is the chat page's question
-    box: pass it a name and inputs; with `choices` in inputs it returns the chosen text.
+    box: pass it a name and inputs; with `choices` in inputs it returns the chosen text. `trace` is the
+    run's trace, so a model call made here lands on the scoreboard.
     """
     return Decision(keep=True, scope=None)

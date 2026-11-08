@@ -73,7 +73,7 @@ class MemoryStore(SqliteDb):
         if self.decide is not None:
             decision = self.decide(memory.memory, topics)
             if not decision.keep:
-                self.trace.memory_refused(memory.memory, f"{self.user_id} said no")
+                self.trace.memory_refused(memory.memory, "the write door said no")
                 return None
             if decision.scope == "brand":
                 topics = [t for t in topics if not t.startswith("scope:")] + [f"scope:brand:{self.workspace_id}"]
@@ -108,9 +108,12 @@ def rows_for(store: MemoryStore, workspace_id: str, user_id: str) -> list[UserMe
     """The rows one person at one brand may read.
 
     Build A, ticket 3, fills this in. The placeholder returns every row filed under the person's user
-    id, whatever brand they were saved at, and none of the brand's shared rows.
+    id, whatever brand they were saved at, plus the brand's shared rows. The brand label on a row is
+    never read, which is how Dana's Harbor rows reach her Alder chats.
     """
-    return list(store.get_user_memories(user_id=user_id) or [])
+    own = list(store.get_user_memories(user_id=user_id) or [])
+    shared = list(store.get_user_memories(user_id=brand_owner(workspace_id)) or [])
+    return own + shared
 
 
 def memory_section(rows: list[UserMemory]) -> str:

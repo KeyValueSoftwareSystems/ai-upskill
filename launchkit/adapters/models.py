@@ -1,3 +1,9 @@
+"""Model objects by name: a fake, KeyValue's proxy, or a provider's own client.
+
+Ready-made for ticket 8. Reference: page 15, "Gateway, caching, effort". The proxy client also reads what each
+call cost from the proxy's answer and hands it to the scoreboard.
+"""
+
 import os
 import socket
 import time

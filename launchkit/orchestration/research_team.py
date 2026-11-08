@@ -1,3 +1,8 @@
+"""The research helper: a subagent that reads pages and reports back. As memory shipped it also carried a save tool.
+
+Ready-made for ticket 4. Reference: page 5, "Scope".
+"""
+
 from concurrent.futures import ThreadPoolExecutor
 
 from agno.agent import Agent

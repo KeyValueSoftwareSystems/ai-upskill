@@ -1,3 +1,8 @@
+"""The chat page's server: conversations, runs, questions to the person, the Memory panel, the rank file.
+
+Ready-made for every ticket. Reference: page 6, "Reading memory back", for the Memory panel; page 11 for /models.
+"""
+
 import asyncio
 import json
 import re
@@ -26,7 +31,8 @@ from launchkit.mcp.servers.notion import NotionServer, connected, log_in
 from launchkit.adapters.ranking import job_table
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.brand_facts import BrandFacts
-from launchkit.memory.store import memory_section, memory_tokens, open_store, rows_for, topic_value
+from launchkit.memory.index import memory_index
+from launchkit.memory.store import memory_tokens, open_store, rows_for, topic_value
 from launchkit.settings import settings
 from launchkit.trace import Trace
 
@@ -309,7 +315,7 @@ def memories(workspace_id: str, user_id: str = UrlPart(pattern=USER_ID)):
             {"subject": f.subject, "value": f.value, "since": f.valid_from.isoformat(), "until": f.valid_to.isoformat() if f.valid_to else None}
             for f in facts
         ],
-        "tokens": memory_tokens(memory_section(rows)),
+        "tokens": memory_tokens(memory_index(rows)),
     }
 
 

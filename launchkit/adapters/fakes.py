@@ -18,27 +18,6 @@ HARBOR_SPEC = {
 }
 
 
-class DownModel:
-    """A model that is down: every call fails the way a provider outage does. `fake:down`, for the second fork."""
-
-    id = "fake:down"
-    provider = "fake"
-    name = "down"
-    on_call = None
-
-    def reply(self):
-        raise ModelProviderError("fake:down is not answering", status_code=503)
-
-    def invoke(self, *args, **kwargs):
-        self.reply()
-
-    def ainvoke(self, *args, **kwargs):
-        self.reply()
-
-    def response(self, *args, **kwargs):
-        self.reply()
-
-
 class FakeModel(Model):
     supports_native_structured_outputs = False
     supports_json_schema_outputs = False
@@ -83,6 +62,20 @@ class FakeModel(Model):
 
 
 POSTER_WORDS = ("poster", "headline", "copy", "ad ", "campaign", "launch", "mention", "shorter", "bigger", "variant", "tagline", "subheadline", "slogan")
+
+
+class DownModel(FakeModel):
+    """A model that is down: every call fails the way a provider outage does. `fake:down`, and what Jobs builds
+    for a model named in LAUNCHKIT_DOWN_MODELS. It keeps the real model's name, so the trace reads as the outage would."""
+
+    def __init__(self, name: str = "fake:down"):
+        super().__init__(name)
+
+    def reply(self):
+        raise ModelProviderError(f"{self.id} is not answering", status_code=503)
+
+    def answer(self, messages: list, tools: list) -> ModelResponse:
+        self.reply()
 
 
 def wants_a_poster(text: str) -> bool:

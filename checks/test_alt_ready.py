@@ -143,7 +143,7 @@ def test_the_memory_panel_lists_a_persons_rows_with_their_labels(page):
     """ready: GET /memories/{brand}/{person} returns each row with its kind, scope, source and date, the brand facts, and the token count"""
     body = page.get("/memories/harbor/maya").json()
     row = next(r for r in body["rows"] if "shoot photos" in r["memory"])
-    assert row["kind"] == "preference" and row["scope"] == "user:maya" and row["source"] == "chat" and row["since"] == "2026-04-22"
+    assert row["kind"] == "preference" and row["scope"] == "user:maya" and row["source"] == "chat" and row["since"] == "2026-06-10"
     assert {"id", "memory", "kind", "scope", "source", "since", "author"} <= set(row)
     assert any(f["subject"] == "warranty" for f in body["brand_facts"])
     assert body["tokens"] > 0
@@ -304,3 +304,100 @@ def test_the_models_route_lists_every_job_with_its_rank_list(page, ranking_file,
     body = page.get("/models").json()
     assert [m["model"] for m in body["jobs"]["long_text"]["models"]] == ["strong-model", "mid-model", "cheap-model"]
     assert body["jobs"]["long_text"]["weights"] == {"eval": 0.8, "cost": 0.1, "latency": 0.1}
+
+
+# ---- fixes after the whole-branch review ----
+
+
+def test_the_web_learning_shows_in_the_panel_on_the_participant_branch(page):
+    """ready: the brand's shared rows, the research helper's learning included, show for Maya before build A exists"""
+    rows = page.get("/memories/harbor/maya").json()["rows"]
+    assert any(r["source"] == "web" and r["author"] == "research-helper" for r in rows)
+
+
+def test_the_panel_token_count_is_what_the_prompt_carries(page):
+    """ready: the Memory panel's token count is the memory section as the prompt gets it, index included"""
+    from launchkit.memory.index import memory_index
+    from launchkit.memory.store import MemoryStore, memory_tokens, rows_for
+    from launchkit.web import app as web
+
+    store = MemoryStore(str(web.settings.data_dir / "sessions.db"), "harbor", "maya", Trace())
+    expected = memory_tokens(memory_index(rows_for(store, "harbor", "maya")))
+    assert page.get("/memories/harbor/maya").json()["tokens"] == expected
+
+
+def test_a_turn_ends_with_the_scoreboard():
+    """ready: after the calls of one turn, the trace ends with one score line per model and a total line"""
+    trace = Trace()
+    trace.call("long_text", "gpt-5.5", 4.0, 1000, 0, 200, 0.011)
+    trace.call("research", "gpt-5-nano", 1.0, 300, 0, 60, 0.0005)
+    trace.scoreboard()
+    lines = trace.lines()
+    assert lines[-1].startswith("total     2 calls · 5.0 s · $0.0115")
+    assert sum(l.startswith("score     ") for l in lines) == 2
+
+
+def test_run_main_writes_the_scoreboard(settings, good, request_for, monkeypatch):
+    """ready: run_main ends every turn by writing the scoreboard into the trace"""
+    from launchkit.agents.main_agent import run_main
+
+    written = []
+    monkeypatch.setattr(Trace, "scoreboard", lambda self: written.append(True))
+    run_main(request_for(text="Hi"), settings=settings, model=good, trace=Trace())
+    assert written == [True]
+
+
+def test_a_down_model_fails_its_calls_like_an_outage(ranking_file):
+    """ready: a model named in LAUNCHKIT_DOWN_MODELS is built as a model that is down, and every call to it fails as a provider error"""
+    from dataclasses import replace
+
+    from agno.exceptions import ModelProviderError
+    from agno.models.base import Model
+
+    from launchkit.adapters.jobs import Jobs
+    from launchkit.settings import settings
+
+    current = replace(settings, model="gpt-5.5", ranking=ranking_file, down_models=("gpt-5.5",))
+    model = Jobs(current, Trace()).first("long_text")
+    assert isinstance(model, Model)
+    with pytest.raises(ModelProviderError):
+        model.reply()
+
+
+def test_models_are_cached_per_job_so_calls_land_on_the_right_job(ranking_file):
+    """ready: the same model name used by two jobs is two model objects, so each call is billed to its own job"""
+    from dataclasses import replace
+
+    from launchkit.adapters.jobs import Jobs
+    from launchkit.settings import settings
+
+    current = replace(settings, model="gpt-5.5", ranking=ranking_file, down_models=("gpt-5.5",))
+    jobs = Jobs(current, Trace())
+    assert jobs.first("long_text") is not jobs.first("vision")
+
+
+def test_forget_refuses_empty_text(store_for):
+    """ready: forgetting nothing in particular is refused, so one empty argument cannot wipe a person's memory"""
+    from launchkit.memory.forget import forget
+
+    with pytest.raises(ValueError):
+        forget(store_for(), "harbor", "maya", "   ")
+
+
+def test_setup_moves_an_older_database_aside(tmp_path, monkeypatch):
+    """ready: on a clone that already has a Session 1 or 2 database, setup keeps it under another name and puts the seed in place"""
+    import shutil
+    import sqlite3
+    from dataclasses import replace
+
+    from launchkit import cli
+    from launchkit.settings import settings
+
+    data = tmp_path / "data"
+    data.mkdir()
+    old = data / "sessions.db"
+    sqlite3.connect(old).execute("CREATE TABLE agno_sessions (session_id TEXT)").connection.commit()
+    monkeypatch.setattr(cli, "settings", replace(settings, data_dir=data))
+    assert cli.cmd_setup(None) == 0
+    assert (data / "sessions.before-session-3.db").exists()
+    assert "brand_facts" in {r[0] for r in sqlite3.connect(old).execute("SELECT name FROM sqlite_master WHERE type='table'")}
