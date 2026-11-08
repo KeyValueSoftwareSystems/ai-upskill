@@ -427,3 +427,39 @@ class BriefModel(FakeModel):
             return text_response("\n".join(json.loads(results[2])), messages)
         searches = results[2:] + [""] * len(wanted)
         return text_response("\n".join(research_report(name, pages) for name, pages in zip(wanted, searches)), messages)
+
+
+NEVER_SAY = re.compile(r"never (?:say|use|mention) ['\"“]?([a-z][a-z' -]*?[a-z])['\"”]?(?=[,.;:!?]| it\b| in\b|$)", re.I)
+
+
+class MemoryModel(FakeModel):
+    """Session 3, ticket 1: the memory failure the real model makes now and then, made every time.
+
+    As the memory manager it saves Maya's quoted never-say phrase as something she wants, unless ticket 1's capture
+    rules are in its prompt; then it saves the rule. As the main agent it writes one headline and follows whatever its
+    view says: a never-say instruction in this message wins; otherwise a remembered "mention the lifetime guarantee"
+    puts the phrase in the headline, the way Maya's ticket describes."""
+
+    def __init__(self):
+        super().__init__("memory")
+
+    def answer(self, messages, tools):
+        system, asked = system_text(messages), last_user_text(messages)
+        if system.startswith("You are a Memory Manager"):
+            return self.manage(system, asked, messages, tools)
+        if not wants_a_poster(asked):
+            return text_response("Morning, Maya. What do you need today?", messages)
+        if NEVER_SAY.search(asked):
+            return text_response("Tidal. Cold from trail to train.", messages)
+        if "mention the lifetime guarantee" in section(system, "\n# Memory\n").lower():
+            return text_response("Tidal: a lifetime guarantee on every trail.", messages)
+        return text_response("Tidal. Cold from trail to train.", messages)
+
+    def manage(self, system: str, asked: str, messages, tools) -> ModelResponse:
+        found = NEVER_SAY.search(asked)
+        if has_tool_result(messages) or not found or "add_memory" not in tool_names(tools):
+            return text_response("No changes needed.", messages)
+        phrase = found.group(1).lower()
+        if "is a rule, not a wish" in system:
+            return tool_call_response("add_memory", {"memory": f'Never use "{phrase}".', "topics": ["rules"]}, "call_1")
+        return tool_call_response("add_memory", {"memory": f"Maya wants headlines to mention the {phrase}.", "topics": ["preferences", "headlines"]}, "call_1")

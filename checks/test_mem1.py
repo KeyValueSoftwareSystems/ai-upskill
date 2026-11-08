@@ -39,3 +39,20 @@ def test_whatever_saves_memory_uses_that_manager(settings, good, monkeypatch):
     monkeypatch.setattr(main, "memory_manager", lambda *a: made.append(memory_manager(*a)) or made[-1])
     build_catalogue(settings, Trace(), lambda name, inputs: True, model=good).make_run_tool()("save_memory", {"note": "Maya likes the story size first."})
     assert made and made[0].memory_capture_instructions == CAPTURE
+
+
+def test_the_fake_memory_model_makes_ticket_1s_mistake_until_the_rules_say_otherwise(settings):
+    """fake:memory, the chat page's fallback for ticket 1: Agno's default rules save the never-say phrase as a wish;
+    the capture rules make it save the rule."""
+    from agno.memory import MemoryManager
+
+    from launchkit.adapters.fakes import MemoryModel
+    from launchkit.memory.chat_history import session_db
+
+    ask = "Write the headline. Remember: never say lifetime guarantee, it's on our never-say list."
+    default = MemoryManager(model=MemoryModel(), db=session_db(settings))
+    default.create_user_memories(message=ask, user_id="maya")
+    assert [m.memory for m in default.get_user_memories("maya")] == ["Maya wants headlines to mention the lifetime guarantee."]
+    ruled = MemoryManager(model=MemoryModel(), memory_capture_instructions="A phrase they quote and tell you never to use is a rule, not a wish.", db=session_db(settings))
+    ruled.create_user_memories(message=ask, user_id="sam")
+    assert [m.memory for m in ruled.get_user_memories("sam")] == ['Never use "lifetime guarantee".']

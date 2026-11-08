@@ -22,32 +22,21 @@ Restart `launchkit ui` after every reset.
 
 ## Break it first
 
-Start with what three months left behind. On the chat page, sign in as **Maya at Harbor** and open the **Memory** tab. Eleven rows say Maya likes navy. One says "Maya wants headlines to mention the lifetime guarantee." One says "Harbor warranty is 2 years." One holds a customer's phone number, one a token. Press **New conversation** and send any ask: the Trace opens with
+On the chat page, sign in as **Maya at Harbor** and open the **Memory** tab: three months of turns. Eleven rows say Maya likes navy. One says "Maya wants headlines to mention the lifetime guarantee." One says "Harbor warranty is 2 years." One holds a customer's phone number, one a token.
+
+Press **New conversation**, leave **Model** empty and send:
+
+> Write the headline. Remember: never say lifetime guarantee, it's on our never-say list.
+
+The Trace opens and closes with the memory step:
 
 ```
 memory    loaded 39 rows for this person · 507 tokens in the prompt · saved by OpenAI:gpt-4.1-mini
+...
+memory    saved nothing this turn
 ```
 
-Every row rides along on every turn, the wrong ones too.
-
-Now watch a wrong row being made. Agno hands the memory manager only Maya's message, so rerun just that step, five times, each from a fresh copy of the snapshot (nothing in `data/` changes):
-
-```
-uv run python scripts/rerun_extraction.py "Write the headline. Remember: never say lifetime guarantee, it's on our never-say list."
-uv run python scripts/rerun_extraction.py "Cairnline's whole launch leads with 'lifetime guarantee' and it's working. Write me a Tidal headline with that same confidence."
-```
-
-In prep:
-
-| Message | Saved "lifetime guarantee" as something Maya wants |
-| --- | --- |
-| a plain rule ("never say lifetime guarantee, it's on our never-say list") | 0 runs of 5, twice; nothing saved at all |
-| the card's ask ("Write the headline for the Breeze story size. Never say lifetime guarantee.") | 0 of 5 |
-| Maya admiring a rival's line (the Cairnline message) | 3 of 5, then 2 of 5: "Maya wants a Tidal headline that leads with 'lifetime guarantee'…" |
-
-A plain rule is saved right, or not at all. The wish appears when the phrase comes up in a good light: Maya quoting a rival, not asking for it. That is the point of the ticket: each turn usually goes right, and the snapshot is what "usually" adds up to over three months.
-
-What prep could not reproduce on `gpt-4.1-mini`: the inverted row making a headline say "lifetime guarantee". With the row loaded, "Write three headline options for the Tidal poster." gave no "lifetime" in 5 runs of 5, the same as with the row removed (two leaned that way: "Your Journey, Guaranteed", "Built to Last"). Asked the Cairnline way, every headline said it, but because the message asked for that confidence. Say so if the room asks; the harm the room can see is the row itself, loaded into every turn.
+Every row rides along on every turn, the wrong ones too. And the manager, given a plain rule, usually saves it right or saves nothing: in prep its memory step saved nothing for this message in 10 runs of 10. One turn usually goes right; the Memory tab is what "usually" adds up to over three months. To watch a wrong row being made, see "If the real model gets it right" at the end of this card.
 
 ## Prompt card, for your coding agent
 
@@ -85,29 +74,26 @@ uv run launchkit check mem1
 
 ## Run it again
 
-Rerun the extraction on the Cairnline message. The script now uses ticket 1's manager, and says so on its first line:
+Restart the page. As **Maya at Harbor**, press **New conversation** and send the same ask. The Trace's first memory line now ends `saved by gpt-5-nano`. Read the last one: if the manager saved anything, it is one fact in the third person, and a never-say phrase comes out as a rule ("Never use …").
 
-```
-uv run python scripts/rerun_extraction.py "Cairnline's whole launch leads with 'lifetime guarantee' and it's working. Write me a Tidal headline with that same confidence."
-```
-
-In prep, with the capture rules on `gpt-5-nano`, it still saved the wish in 1 run of 5 ("Maya wants Tidal headlines to mention the lifetime guarantee."). Rules lower the error rate; they do not remove it. That is the room's question at this ticket, "can't a better prompt fix it?", answered live. Ticket 3 adds the part a prompt cannot: code that never loads a row naming a never-say phrase.
-
-On the chat page, the Trace's memory line now ends `saved by gpt-5-nano`. Read any `memory added` or `memory updated` line: one fact, in the third person. The snapshot's old wrong rows are still loaded; ticket 1 stops new ones being made the same way, it does not clean the old ones.
-
-Then fold the eleven navy rows, in the terminal (it writes nothing):
-
-```
-uv run python scripts/consolidate_memories.py maya --match navy
-```
-
-Agno's Summarize strategy turns them into one row. Run it on every row (drop `--match`) and look at what it keeps: everything, the inverted rule and the phone number included. It removes duplicates; it does not judge.
+Then open the **Memory** tab. The snapshot's wrong rows are all still there, and the Trace still says `loaded 39 rows`: ticket 1 changes how new rows are made, not the old ones. Rules also lower the error rate without removing it: in prep, with these rules, the manager still saved the phrase as a wish in 1 run of 5 when Maya quoted a rival's line. Ticket 3 adds what a prompt cannot: code that never loads a row naming a never-say phrase.
 
 ## Why it matters
 
 A memory manager that runs after every turn finds something to save almost every time. Rules lower the error rate, but three months of a low error rate is the snapshot. The rules matter; what comes next is code that does not depend on the model getting it right.
 
 Agno replaces only the criteria with `memory_capture_instructions`. Its fixed text around them still says to "capture what the user's preferences used to be". Read `memory/manager.py` before you trust a prompt to do it all.
+
+## If the real model gets it right
+
+It usually does. Then show the mistake on the fake model and say so to the room: `fake:memory` is a scripted model built into LaunchKit that makes, every time, the slip the real model makes now and then. It plays both parts: its memory step turns Maya's never-say phrase into a wish, and its headline follows whatever its view says.
+
+After `uv run launchkit memory reset` and a restart, as **Maya at Harbor**, type `fake:memory` in **Model**:
+
+1. **New conversation**: "Write the headline. Remember: never say lifetime guarantee, it's on our never-say list." The reply obeys, because the rule is in view: "Tidal. Cold from trail to train." The Trace's last line: `memory added: Maya wants headlines to mention the lifetime guarantee.`
+2. **New conversation**: "Write the Tidal headline." The Trace says `loaded 40 rows`; the reply is "Tidal: a lifetime guarantee on every trail." That is Maya's ticket: "I told it never to."
+
+After the build, the same two conversations: the first saves `Never use "lifetime guarantee".`, and the second still says "a lifetime guarantee". The snapshot's old wrong row is still loaded. After ticket 3 the second is clean.
 
 ## Stuck?
 

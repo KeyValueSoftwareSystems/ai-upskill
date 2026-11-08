@@ -92,3 +92,7 @@ def model_name(model) -> str:
 from launchkit.adapters.fakes import ToolsModel  # noqa: E402  Session 2's fake for the main agent
 
 FAKES["tools"] = ToolsModel
+
+from launchkit.adapters.fakes import MemoryModel  # noqa: E402  Session 3's fake for ticket 1
+
+FAKES["memory"] = MemoryModel

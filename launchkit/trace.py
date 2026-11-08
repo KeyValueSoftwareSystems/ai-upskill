@@ -118,6 +118,8 @@ class Trace:
             case "validation":
                 return f"check     attempt {d['attempt']}: " + ("; ".join(d["errors"]) if d["errors"] else "spec is clean")
             case "memory":
+                if d["change"] == "none":
+                    return "memory    saved nothing this turn"
                 if d["change"] == "loaded":
                     by = f" · saved by {d['by']}" if d.get("by") else ""
                     held = f" · held back {d['held']} that name a brand fact or personal data" if d.get("held") else ""

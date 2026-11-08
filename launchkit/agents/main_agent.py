@@ -162,13 +162,16 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     agent = build_main_agent(ws, ctx, model, settings, trace, catalogue, pictures, req.user_id, session)
     before = user_memories(session_db(settings), req.user_id)
     held = [m for m in before if held_back(m.memory, settings)]
-    trace.memory("loaded", rows=len(before) - len(held), held=len(held), tokens=next(r["tokens"] for r in ctx.report() if r["section"] == "memory"), by=settings.memory_model if built(memory_manager) else model_name(model))
+    trace.memory("loaded", rows=len(before) - len(held), held=len(held), tokens=next(r["tokens"] for r in ctx.report() if r["section"] == "memory"), by=settings.memory_model if built(memory_manager) and not isinstance(model, FakeModel) else model_name(model))
     started = time.perf_counter()
     run = agent.run(req.text, session_id=session, user_id=req.user_id)
     raise_if_failed(run)
     trace.model("main", model_name(model), run.metrics)
-    for change, text in memory_changes(before, user_memories(session_db(settings), req.user_id)):
+    changes = memory_changes(before, user_memories(session_db(settings), req.user_id))
+    for change, text in changes:
         trace.memory(change, text=text)
+    if not changes:
+        trace.memory("none")
     result = MainResult(trace=trace, runs=[run])
     turn = main_turn(run.content)
     if turn.kind == "poster" and turn.spec is not None:
