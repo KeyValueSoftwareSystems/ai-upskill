@@ -18,7 +18,9 @@ from agno.db.sqlite import SqliteDb
 from agno.knowledge.embedder.sentence_transformer import SentenceTransformerEmbedder
 from agno.knowledge.knowledge import Knowledge
 from agno.learn import LearningMachine
+from agno.db.base import SessionType
 from agno.memory import MemoryManager
+from agno.session.summary import SessionSummaryManager
 from agno.vectordb.lancedb import LanceDb
 
 from launchkit.adapters.fakes import FakeModel
@@ -41,10 +43,25 @@ CAPTURE = """Save only facts about the person you are talking with that will sti
 - If nothing in the message is worth keeping, change nothing."""
 
 
+def cheap_model(settings, trace, main_model):
+    """LAUNCHKIT_MEMORY_MODEL, for the jobs that only sort or shorten text. A fake run keeps its fake."""
+    return main_model if isinstance(main_model, FakeModel) else resolve_model(replace(settings, model=settings.memory_model), trace)
+
+
 def memory_manager(settings, trace, main_model) -> MemoryManager:
-    """The memory manager: Ticket 1's capture rules, on a cheaper model than the main agent's. A fake run keeps its fake."""
-    model = main_model if isinstance(main_model, FakeModel) else resolve_model(replace(settings, model=settings.memory_model), trace)
-    return MemoryManager(model=model, memory_capture_instructions=CAPTURE, db=session_db(settings))
+    """The memory manager: Ticket 1's capture rules, on a cheaper model than the main agent's."""
+    return MemoryManager(model=cheap_model(settings, trace, main_model), memory_capture_instructions=CAPTURE, db=session_db(settings))
+
+
+def summary_manager(settings, trace, main_model) -> SessionSummaryManager:
+    """Ticket 4: a running summary of one conversation, kept on the session, on the cheaper model."""
+    return SessionSummaryManager(model=cheap_model(settings, trace, main_model))
+
+
+def summary_text(settings, session_id: str) -> str:
+    """This conversation's summary so far. Agno would add it to its own system message; LaunchKit writes its own."""
+    session = session_db(settings).get_session(session_id, SessionType.AGENT) if session_id else None
+    return f"Summary of this conversation so far (older turns are not in view):\n{session.summary.summary}" if session and session.summary else ""
 
 
 def learnings(settings) -> Knowledge:

@@ -27,7 +27,7 @@ from launchkit.mcp.client import closes_its_mcp_links
 from launchkit.mcp.servers import server_entries
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.chat_history import session_db
-from launchkit.memory.long_term import memory_changes, memory_manager, memory_text, user_memories
+from launchkit.memory.long_term import memory_changes, memory_manager, memory_text, summary_manager, summary_text, user_memories
 from launchkit.memory.scope import held_back
 from launchkit.tools.save_memory import memory_entries
 from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
@@ -86,6 +86,7 @@ class MainResult:
     seconds: float = 0.0
     view_tokens: int = 0
     history_tokens: int = 0
+    memory_tokens: int = 0
     kept: list[Path] = field(default_factory=list)
 
 
@@ -94,7 +95,7 @@ def placements_text(ws) -> str:
     return "This brand's placements (every size): " + ", ".join(sizes) + "." if sizes else ""
 
 
-def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue, pictures: Pictures | None = None, user_id: str = "") -> Agent:
+def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue, pictures: Pictures | None = None, user_id: str = "", session_id: str = "") -> Agent:
     ctx.set("rules", f"{ws.soul}\n\n{ws.agents}\n\n{placements_text(ws)}")
     warnings = " ".join(e.detail["text"] for e in trace.events if e.kind == "warning")
     ctx.set("facts", f"Today is {date.today():%-d %B %Y}. {warnings} {pictures.describe() if pictures else ''}".strip())
@@ -103,14 +104,18 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
         # Several tool calls in one model message lose run_tool's name, so the agent with the doors calls one at a time.
         model = replace(model, request_params={**(model.request_params or {}), "parallel_tool_calls": False})
     # Ticket 3: a row that names a brand fact is held back. Brand facts come from the brand's files and get_brand_facts.
-    ctx.set("memory", memory_text([m for m in user_memories(session_db(settings), user_id) if not held_back(m.memory, settings)]))
+    rows = memory_text([m for m in user_memories(session_db(settings), user_id) if not held_back(m.memory, settings)])
+    ctx.set("memory", "\n\n".join(part for part in (summary_text(settings, session_id), rows) if part))
     return Agent(
         model=model,
         system_message=ctx.render(),
         output_schema=MainTurn,
         db=session_db(settings),
         add_history_to_context=True,
-        num_history_runs=5,
+        # Ticket 4: the last 3 turns word for word, and a running summary of the rest, so a long job keeps its brief.
+        num_history_runs=3,
+        # The fakes are scripted for the conversation only, so a fake run keeps no summary.
+        session_summary_manager=summary_manager(settings, trace, model) if model is not None and not isinstance(model, FakeModel) else None,
         # Ticket 2b: no write after every run and no learning tools beside the doors. Memory is written only through
         # save_memory and save_learning in the catalogue, and run_tool asks first.
         update_memory_on_run=False,
@@ -158,12 +163,12 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
         pictures.attach(Path(picture))
     catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures)
     ctx = ContextBuilder(settings.budgets)
-    agent = build_main_agent(ws, ctx, model, settings, trace, catalogue, pictures, req.user_id)
+    session = f"{wid}:{req.user_id}:{req.session_id}:main"
+    agent = build_main_agent(ws, ctx, model, settings, trace, catalogue, pictures, req.user_id, session)
     before = user_memories(session_db(settings), req.user_id)
     held = [m for m in before if held_back(m.memory, settings)]
     trace.memory("loaded", rows=len(before) - len(held), held=len(held), tokens=next(r["tokens"] for r in ctx.report() if r["section"] == "memory"), by=settings.memory_model)
     started = time.perf_counter()
-    session = f"{wid}:{req.user_id}:{req.session_id}:main"
     run = agent.run(req.text, session_id=session, user_id=req.user_id)
     raise_if_failed(run)
     trace.model("main", model_name(model), run.metrics)
@@ -182,6 +187,7 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     result.seconds = time.perf_counter() - started
     result.view_tokens = tool_result_size(run)[0]
     result.history_tokens = history_size(run)[0]
+    result.memory_tokens = next(r["tokens"] for r in ctx.report() if r["section"] == "memory")
     return result
 
 
