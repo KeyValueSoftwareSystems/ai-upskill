@@ -59,18 +59,18 @@ def _learnings(data_dir: Path) -> Knowledge:
     return Knowledge(vector_db=vectors, contents_db=SqliteDb(db_file=str(data_dir / "sessions.db")))
 
 
-def learning_machine(settings) -> LearningMachine:
-    """Learned knowledge, entity memory and the decision log, every one shared in the global namespace (Agno's default)."""
-    return LearningMachine(db=session_db(settings), knowledge=learnings(settings), learned_knowledge=True, entity_memory=True, decision_log=True)
+def learning_machine(settings, namespace: str = "global") -> LearningMachine:
+    """Learned knowledge, entity memory and the decision log. Ticket 3: learned knowledge and entity memory are shared
+    within one namespace, the brand's id; Agno's default, "global", shares them with every brand."""
+    return LearningMachine(db=session_db(settings), knowledge=learnings(settings), learned_knowledge=True, entity_memory=True, decision_log=True, namespace=namespace)
 
 
 def user_memories(db: SqliteDb, user_id: str) -> list:
     return sorted(db.get_user_memories(user_id=user_id) or [], key=lambda m: m.updated_at or 0)
 
 
-def memory_text(db: SqliteDb, user_id: str) -> str:
-    """Every memory saved for this person, the way Agno would add them to its own system message."""
-    rows = user_memories(db, user_id)
+def memory_text(rows: list) -> str:
+    """These memory rows, the way Agno would add them to its own system message."""
     if not rows:
         return ""
     lines = "\n".join(f"- {m.memory}" for m in rows)

@@ -38,7 +38,7 @@ def test_a_learning_asks_first_with_the_planned_change_and_a_no_saves_nothing(se
     asked = []
     run_tool = build_catalogue(settings, Trace(), lambda name, plan: asked.append((name, plan)) or False).make_run_tool()
     reply = run_tool("save_learning", {"title": "Rivals", "learning": "Cairnline offers a lifetime guarantee."})
-    assert asked == [("save_learning", {"store": "learned knowledge", "namespace": "global", "source": "maya", "title": "Rivals", "learning": "Cairnline offers a lifetime guarantee."})]
+    assert asked == [("save_learning", {"store": "learned knowledge", "namespace": "harbor", "source": "maya", "title": "Rivals", "learning": "Cairnline offers a lifetime guarantee."})]
     assert "did not allow" in reply
     with sqlite3.connect(settings.data_dir / "sessions.db") as con:
         assert con.execute("select count(*) from sqlite_master where name = 'agno_knowledge'").fetchone()[0] == 0 or \

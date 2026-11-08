@@ -120,7 +120,8 @@ class Trace:
             case "memory":
                 if d["change"] == "loaded":
                     by = f" · saved by {d['by']}" if d.get("by") else ""
-                    return f"memory    loaded {d['rows']} rows for this person · {d['tokens']} tokens in the prompt{by}"
+                    held = f" · held back {d['held']} that name a brand fact" if d.get("held") else ""
+                    return f"memory    loaded {d['rows']} rows for this person{held} · {d['tokens']} tokens in the prompt{by}"
                 return f"memory    {d['change']}: {_short(d['text'], 110)}"
             case "stop":
                 return f"stop      {d['reason']}"

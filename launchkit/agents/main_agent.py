@@ -28,6 +28,7 @@ from launchkit.mcp.servers import server_entries
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.chat_history import session_db
 from launchkit.memory.long_term import memory_changes, memory_manager, memory_text, user_memories
+from launchkit.memory.scope import held_back
 from launchkit.tools.save_memory import memory_entries
 from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
 from launchkit.tools.check_copy import make_check_copy
@@ -57,7 +58,8 @@ Every job beyond a greeting is done with the skills and tools find_tool lists, n
 Never say something is made, cut, attached or posted unless a tool did it in this turn.
 When the marketer asks for sizes, a picture or a voice-over, they want files a tool makes, not text in your reply. Sizes are the picture in this conversation cut to each of the brand's placements, one file each.
 When the marketer tells you how they like to work and it will matter in a later conversation, call
-run_tool("save_memory", {"note": "..."}). Every memory write asks the marketer first.
+run_tool("save_memory", {"note": "..."}); a new value for a brand fact, such as the warranty, goes to propose_brand_fact.
+Every memory write asks the marketer first.
 Answer in plain words, in the brand's voice."""
 
 DIRECT_TASK = """You work for the marketer you are talking with. Decide what each request needs and use your tools for it.
@@ -100,7 +102,8 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
     if catalogue.lookup and isinstance(model, OpenAIChat):
         # Several tool calls in one model message lose run_tool's name, so the agent with the doors calls one at a time.
         model = replace(model, request_params={**(model.request_params or {}), "parallel_tool_calls": False})
-    ctx.set("memory", memory_text(session_db(settings), user_id))
+    # Ticket 3: a row that names a brand fact is held back. Brand facts come from the brand's files and get_brand_facts.
+    ctx.set("memory", memory_text([m for m in user_memories(session_db(settings), user_id) if not held_back(m.memory, settings)]))
     return Agent(
         model=model,
         system_message=ctx.render(),
@@ -131,7 +134,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
         text_to_speech_entry(settings, model),
         *(board.entries() if board else server_entries(settings, trace, user)),
         *make_research_entries(model, settings, trace),
-        *memory_entries(settings, lambda: memory_manager(settings, trace, model), user),
+        *memory_entries(settings, lambda: memory_manager(settings, trace, model), user, namespace=ws.id),
     ]
     catalogue = Catalogue(entries, load_skills(), trace, approve)
     catalogue.leash = make_leash(replace(settings.limits, step_cap=10_000), trace)
@@ -157,7 +160,8 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     ctx = ContextBuilder(settings.budgets)
     agent = build_main_agent(ws, ctx, model, settings, trace, catalogue, pictures, req.user_id)
     before = user_memories(session_db(settings), req.user_id)
-    trace.memory("loaded", rows=len(before), tokens=next(r["tokens"] for r in ctx.report() if r["section"] == "memory"), by=settings.memory_model)
+    held = [m for m in before if held_back(m.memory, settings)]
+    trace.memory("loaded", rows=len(before) - len(held), held=len(held), tokens=next(r["tokens"] for r in ctx.report() if r["section"] == "memory"), by=settings.memory_model)
     started = time.perf_counter()
     session = f"{wid}:{req.user_id}:{req.session_id}:main"
     run = agent.run(req.text, session_id=session, user_id=req.user_id)

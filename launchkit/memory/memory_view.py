@@ -47,6 +47,7 @@ def _rows(con, sql: str, *args) -> list[sqlite3.Row]:
 
 def memory_view(settings, user_id: str, workspace_id: str = "") -> dict:
     from launchkit.knowledge.brand_facts import all_brand_facts
+    from launchkit.memory.scope import held_back
 
     path = settings.data_dir / "sessions.db"
     facts = all_brand_facts(settings, workspace_id) if workspace_id else []
@@ -54,7 +55,7 @@ def memory_view(settings, user_id: str, workspace_id: str = "") -> dict:
         return {"memories": [], "summaries": [], "learnings": [], "entities": [], "decisions": [], "brand_facts": facts}
     with sqlite3.connect(path) as con:
         con.row_factory = sqlite3.Row
-        memories = [{"memory": r["memory"], "topics": json.loads(r["topics"] or "[]"), "updated": _day(r["updated_at"])}
+        memories = [{"memory": r["memory"], "topics": json.loads(r["topics"] or "[]"), "updated": _day(r["updated_at"]), "held_back": held_back(r["memory"], settings) or ""}
                     for r in _rows(con, "select memory, topics, updated_at from agno_memories where user_id = ? order by updated_at", user_id)]
         summaries = [{"session": r["session_id"], "summary": json.loads(r["summary"])["summary"], "updated": _day(r["updated_at"])}
                      for r in _rows(con, "select session_id, summary, updated_at from agno_sessions where user_id = ? and summary is not null", user_id)]

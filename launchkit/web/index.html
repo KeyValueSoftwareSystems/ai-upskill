@@ -315,7 +315,7 @@ async function loadMemory(){
     : '<p class="empty">Nothing stored.</p>');
   const facts = m.brand_facts.map(f => ({ ...f, valid_to: f.valid_to || "still true", today: f.true_today ? "yes" : "no" }));
   $("memory").innerHTML = table(`${w.workspace_id}'s brand facts`, facts, [["subject", "subject"], ["value", "value"], ["valid_from", "valid from"], ["valid_to", "valid to"], ["today", "true today"], ["source", "source"]], "Owned by LaunchKit. get_brand_facts returns only the rows true today.")
-    + table(`${w.user_id}'s memories`, m.memories, [["updated", "updated"], ["memory", "memory"], ["topics", "topics"]], "Kept by user id, across every brand and conversation.")
+    + table(`${w.user_id}'s memories`, m.memories, [["updated", "updated"], ["memory", "memory"], ["topics", "topics"], ["held_back", "not loaded because"]], "Kept by user id, across every brand and conversation. A row with a reason is never put in the prompt.")
     + table("Session summaries", m.summaries, [["updated", "updated"], ["session", "conversation"], ["summary", "summary"]])
     + table("Shared learnings", m.learnings, [["updated", "updated"], ["title", "title"], ["namespace", "namespace"], ["tags", "tags"]], "Shared with every person who can read this namespace.")
     + table("Entity memory", m.entities, [["entity", "entity"], ["namespace", "namespace"], ["facts", "facts"]])
