@@ -19,9 +19,11 @@ def reset_to_snapshot(settings) -> list[str]:
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     db, learnings = settings.data_dir / "sessions.db", settings.data_dir / "learnings"
     kept = []
-    if db.exists():
-        shutil.copyfile(db, db.with_suffix(".db.bak"))
-        kept.append(str(db.with_suffix(".db.bak")))
+    if db.exists():  # every reset keeps its own copy, named by the time, so no earlier copy is ever overwritten
+        backup = db.with_name(f"sessions-{datetime.now():%Y%m%d-%H%M%S}.db.bak")
+        with sqlite3.connect(db) as source, sqlite3.connect(backup) as target:
+            source.backup(target)
+        kept.append(str(backup))
     for extra in (db.with_suffix(".db-wal"), db.with_suffix(".db-shm")):
         extra.unlink(missing_ok=True)
     shutil.copyfile(SNAPSHOT, db)
