@@ -27,6 +27,7 @@ from launchkit.mcp.client import closes_its_mcp_links
 from launchkit.mcp.servers import server_entries
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.chat_history import session_db
+from launchkit.memory.brand_facts import BrandFacts, brand_facts_section, record_brand_fact_entry
 from launchkit.memory.store import MemoryStore, capture_rules, memory_section, memory_tokens, open_store, rows_for
 from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
 from launchkit.tools.check_copy import make_check_copy
@@ -97,6 +98,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
     ctx.set("task", MAIN_TASK if catalogue.lookup else "\n\n".join(part for part in (DIRECT_TASK, catalogue.skills_text()) if part))
     if store is not None:
         ctx.set("memory", memory_section(rows_for(store, ws.id, store.user_id)))
+        ctx.set("brand_facts", brand_facts_section(BrandFacts(store.db_file).current(ws.id, date.today())))
     if catalogue.lookup and isinstance(model, OpenAIChat):
         # Several tool calls in one model message lose run_tool's name, so the agent with the doors calls one at a time.
         model = replace(model, request_params={**(model.request_params or {}), "parallel_tool_calls": False})
@@ -126,6 +128,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
         Entry("generate_image", "make a new poster picture from a scene description, only when no photo is given", "read", make_generate_image(make_images(settings), ws.colours, trace, pictures.made if pictures else None)),
         *desk.entries(),
         Entry("check_copy", "check a headline, subheadline and body against the brand's word limits and banned claims", "read", make_check_copy(ws)),
+        Entry("record_brand_fact", "record a fact about the brand or its product that is true from today, such as a new warranty", "write", record_brand_fact_entry(BrandFacts(str(settings.data_dir / "sessions.db")), ws.id)),
         search_entry(settings),
         describe_image_entry(settings, model, desk),
         text_to_speech_entry(settings, model),

@@ -79,3 +79,41 @@ def test_the_prompt_has_brand_facts_and_memory_sections():
 
     assert ORDER == ("rules", "task", "brand_facts", "memory", "facts")
     assert HEADERS["memory"] == "# Memory" and HEADERS["brand_facts"] == "# Brand facts"
+
+
+@pytest.fixture
+def facts_for(tmp_path):
+    """A BrandFacts table on a fresh SQLite file."""
+    from launchkit.memory.brand_facts import BrandFacts
+
+    return BrandFacts(str(tmp_path / "f.db"))
+
+
+def test_a_brand_fact_is_read_back_for_its_brand_only(facts_for):
+    """ready: a recorded brand fact comes back for its own brand and for no other"""
+    from datetime import date
+
+    facts_for.record("harbor", "warranty", "5 years", source="chat", valid_from=date(2026, 10, 1))
+    today = date(2026, 11, 1)
+    assert [(f.subject, f.value) for f in facts_for.current("harbor", today)] == [("warranty", "5 years")]
+    assert facts_for.current("alder", today) == []
+
+
+def test_placeholder_keeps_both_warranty_rows_open(facts_for):
+    """ready: on the participant branch two rows for one subject both stay current, which is ticket 2 as the room sees it"""
+    from datetime import date
+
+    facts_for.record("harbor", "warranty", "2 years", source="chat", valid_from=date(2026, 2, 1))
+    facts_for.record("harbor", "warranty", "5 years", source="chat", valid_from=date(2026, 10, 1))
+    values = sorted(f.value for f in facts_for.current("harbor", date(2026, 11, 1)) if f.subject == "warranty")
+    assert values == ["2 years", "5 years"]
+
+
+def test_brand_facts_section_lists_each_fact_with_its_date(facts_for):
+    """ready: the brand facts section of the prompt has one line per fact with the date it became true"""
+    from datetime import date
+
+    from launchkit.memory.brand_facts import brand_facts_section
+
+    facts_for.record("harbor", "warranty", "5 years", source="chat", valid_from=date(2026, 10, 1))
+    assert brand_facts_section(facts_for.current("harbor", date(2026, 11, 1))) == "- warranty: 5 years  (since 2026-10-01)"
