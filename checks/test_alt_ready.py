@@ -1,7 +1,8 @@
 """Checks for the ready-made plumbing of the Session 3 alternative branch.
 
 These pass on the participant branch, where every slot still holds its placeholder. The tests marked
-`answer` describe what a slot does once a participant has built it; they pass on the answer branches only.
+`placeholder` pin how an unbuilt slot behaves and are left out on the answer branches; the tests marked
+`answer` (in the build files) describe what a slot does once built and pass on the answer branches only.
 """
 
 import pytest
@@ -99,6 +100,7 @@ def test_a_brand_fact_is_read_back_for_its_brand_only(facts_for):
     assert facts_for.current("alder", today) == []
 
 
+@pytest.mark.placeholder
 def test_placeholder_keeps_both_warranty_rows_open(facts_for):
     """ready: on the participant branch two rows for one subject both stay current, which is ticket 2 as the room sees it"""
     from datetime import date
@@ -169,6 +171,7 @@ def test_an_answer_can_carry_a_choice(page):
     assert answer == {"allow": True, "choice": "Everyone at the brand"}
 
 
+@pytest.mark.placeholder
 def test_the_placeholder_door_keeps_everything():
     """ready: on the participant branch the write door keeps every row and never asks"""
     from launchkit.memory.write_door import decide_save
@@ -179,6 +182,7 @@ def test_the_placeholder_door_keeps_everything():
     assert decision.keep is True and decision.scope is None and asked == []
 
 
+@pytest.mark.placeholder
 def test_the_research_helper_can_save_a_learning_everyone_reads(tmp_path):
     """ready: the research helper has a save tool, and what it saves lands as a brand row from the web"""
     from launchkit.adapters.fakes import GoodModel
@@ -196,6 +200,7 @@ def test_the_research_helper_can_save_a_learning_everyone_reads(tmp_path):
     assert {"scope:brand:harbor", "source:web", "author:research-helper"} <= set(row.topics)
 
 
+@pytest.mark.placeholder
 def test_the_placeholder_index_is_every_row_in_full(store_for):
     """ready: on the participant branch the memory index is the full list of rows, so the prompt grows with every save"""
     from launchkit.memory.index import memory_index
@@ -217,6 +222,7 @@ def test_recall_is_a_read_tool_in_the_catalogue(tmp_path):
     assert "no rows" in entry.fn("photography").lower()
 
 
+@pytest.mark.placeholder
 def test_the_placeholder_retention_prunes_nothing(store_for):
     """ready: on the participant branch retention removes no row, however old"""
     from datetime import date
@@ -229,6 +235,7 @@ def test_the_placeholder_retention_prunes_nothing(store_for):
     assert len(store.get_user_memories(user_id="maya")) == 1
 
 
+@pytest.mark.placeholder
 def test_the_placeholder_forget_misses_the_copies(page, tmp_path):
     """ready: on the participant branch forgetting a phone number removes Maya's row and leaves the copy in the chat summary"""
     from launchkit.memory.forget import forget
@@ -258,6 +265,7 @@ def test_a_models_total_is_its_weighted_scores(ranking_file):
     assert rank_list("short_text", current) == ["cheap-model", "mid-model", "strong-model"]
 
 
+@pytest.mark.placeholder
 def test_the_placeholder_route_returns_one_model_even_with_no_setting(ranking_file):
     """ready: on the participant branch every job gets the one configured model, and with LAUNCHKIT_MODEL empty the default"""
     from dataclasses import replace
