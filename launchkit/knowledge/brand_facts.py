@@ -64,4 +64,5 @@ def make_get_brand_facts(settings, ws):
         return "\n".join(f"[brand_facts/{ws.id}/{r['subject']}] {r['subject']}: {r['value']} (true since {r['valid_from']}; source: {r['source']})" for r in rows)
 
     get_brand_facts_tool.__name__ = "get_brand_facts"
+    get_brand_facts_tool.todo = getattr(get_brand_facts, "todo", False)  # the catalogue leaves it out until it is built
     return get_brand_facts_tool

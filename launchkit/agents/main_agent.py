@@ -30,7 +30,7 @@ from launchkit.memory.chat_history import session_db
 from launchkit.memory.long_term import memory_changes, memory_manager, memory_text, summary_manager, summary_text, user_memories
 from launchkit.memory.scope import held_back
 from launchkit.tools.save_memory import memory_entries
-from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
+from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, built, load_skills
 from launchkit.tools.check_copy import make_check_copy
 from launchkit.tools.describe_image import describe_image_entry
 from launchkit.tools.get_brand_details import make_get_brand_details
@@ -167,7 +167,7 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     agent = build_main_agent(ws, ctx, model, settings, trace, catalogue, pictures, req.user_id, session)
     before = user_memories(session_db(settings), req.user_id)
     held = [m for m in before if held_back(m.memory, settings)]
-    trace.memory("loaded", rows=len(before) - len(held), held=len(held), tokens=next(r["tokens"] for r in ctx.report() if r["section"] == "memory"), by=settings.memory_model)
+    trace.memory("loaded", rows=len(before) - len(held), held=len(held), tokens=next(r["tokens"] for r in ctx.report() if r["section"] == "memory"), by=settings.memory_model if built(memory_manager) else model_name(model))
     started = time.perf_counter()
     run = agent.run(req.text, session_id=session, user_id=req.user_id)
     raise_if_failed(run)
