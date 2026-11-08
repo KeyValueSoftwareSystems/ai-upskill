@@ -64,4 +64,8 @@ packages = ["launchkit"]
 [tool.pytest.ini_options]
 testpaths = ["checks"]
 addopts = "-p no:cacheprovider"
-markers = ["answer: passes only once a participant slot is built; run on the answer branches"]
+markers = [
+  "answer: passes only once a participant slot is built; run on the answer branches",
+  "fork_a: the answer branch that took path A at the forks",
+  "fork_b: the answer branch that took path B at the forks",
+]

@@ -167,3 +167,30 @@ def test_an_answer_can_carry_a_choice(page):
     web.ASKS[ask_id] = (answered, answer)
     assert page.post(f"/answer/{ask_id}", json={"allow": True, "choice": "Everyone at the brand"}).json() == {"ok": True}
     assert answer == {"allow": True, "choice": "Everyone at the brand"}
+
+
+def test_the_placeholder_door_keeps_everything():
+    """ready: on the participant branch the write door keeps every row and never asks"""
+    from launchkit.memory.write_door import decide_save
+    from launchkit.settings import settings
+
+    asked = []
+    decision = decide_save("the customer is on 555-0142", ["kind:fact"], approve=lambda name, inputs: asked.append(name) or "Don't keep", settings=settings)
+    assert decision.keep is True and decision.scope is None and asked == []
+
+
+def test_the_research_helper_can_save_a_learning_everyone_reads(tmp_path):
+    """ready: the research helper has a save tool, and what it saves lands as a brand row from the web"""
+    from launchkit.adapters.fakes import GoodModel
+    from launchkit.memory.store import MemoryStore
+    from launchkit.orchestration.research_team import build_research_agent
+    from launchkit.settings import settings as base
+    from dataclasses import replace
+
+    store = MemoryStore(str(tmp_path / "s.db"), "harbor", "research-helper", Trace())
+    agent = build_research_agent(GoodModel(), replace(base, search="saved"), Trace(), store=store)
+    save = next(t for t in agent.tools if getattr(t, "__name__", "") == "save_learning")
+    save("a lifetime guarantee sells")
+    row = store.get_user_memories(user_id="harbor:brand")[0]
+    assert row.memory == "a lifetime guarantee sells"
+    assert {"scope:brand:harbor", "source:web", "author:research-helper"} <= set(row.topics)

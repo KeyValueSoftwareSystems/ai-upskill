@@ -29,6 +29,7 @@ from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.chat_history import session_db
 from launchkit.memory.brand_facts import BrandFacts, brand_facts_section, record_brand_fact_entry
 from launchkit.memory.store import MemoryStore, capture_rules, memory_section, memory_tokens, open_store, rows_for
+from launchkit.memory.write_door import decide_save
 from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
 from launchkit.tools.check_copy import make_check_copy
 from launchkit.tools.describe_image import describe_image_entry
@@ -120,7 +121,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
     )
 
 
-def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya", pictures: Pictures | None = None) -> Catalogue:
+def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya", pictures: Pictures | None = None, helper_store: MemoryStore | None = None) -> Catalogue:
     ws = ws or load_workspace("harbor", settings, trace)
     desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None)
     entries: list[Entry] = [
@@ -133,7 +134,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
         describe_image_entry(settings, model, desk),
         text_to_speech_entry(settings, model),
         *(board.entries() if board else server_entries(settings, trace, user)),
-        *make_research_entries(model, settings, trace),
+        *make_research_entries(model, settings, trace, helper_store),
     ]
     catalogue = Catalogue(entries, load_skills(), trace, approve)
     catalogue.leash = make_leash(replace(settings.limits, step_cap=10_000), trace)
@@ -155,8 +156,12 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     for picture in attach:
         trace.note(f"attached {Path(picture).name} to this conversation")
         pictures.attach(Path(picture))
-    catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures)
-    store = open_store(settings, wid, req.user_id, trace)
+    # Every save passes the write door. The person's own agent and the research helper each open the
+    # store as themselves, so a row says who wrote it.
+    door = lambda text, topics: decide_save(text, topics, approve, settings)  # noqa: E731
+    store = open_store(settings, wid, req.user_id, trace, decide=door)
+    helper_store = open_store(settings, wid, "research-helper", trace, decide=door)
+    catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures, helper_store)
     ctx = ContextBuilder(settings.budgets)
     agent = build_main_agent(ws, ctx, model, settings, trace, catalogue, pictures, store)
     started = time.perf_counter()
