@@ -17,6 +17,8 @@ def _env(name: str, default: str) -> str:
 @dataclass(frozen=True)
 class Settings:
     model: str = field(default_factory=lambda: _env("LAUNCHKIT_MODEL", "gpt-4.1-mini"))
+    # The memory manager's model: it only sorts one message into rows, so a cheaper model does it (Session 3, ticket 1).
+    memory_model: str = field(default_factory=lambda: _env("LAUNCHKIT_MEMORY_MODEL", "gpt-5-nano"))
     image_mode: str = field(default_factory=lambda: _env("LAUNCHKIT_IMAGE", "real"))
     image_model: str = field(default_factory=lambda: _env("LAUNCHKIT_IMAGE_MODEL", "gpt-image-2"))
     image_size: str = field(default_factory=lambda: _env("LAUNCHKIT_IMAGE_SIZE", "1024x1536"))

@@ -26,7 +26,7 @@ from launchkit.mcp.client import closes_its_mcp_links
 from launchkit.mcp.servers import server_entries
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.chat_history import session_db
-from launchkit.memory.long_term import learning_machine, memory_changes, memory_text, user_memories
+from launchkit.memory.long_term import learning_machine, memory_changes, memory_manager, memory_text, user_memories
 from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
 from launchkit.tools.check_copy import make_check_copy
 from launchkit.tools.describe_image import describe_image_entry
@@ -106,6 +106,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
         num_history_runs=5,
         # Session 3's starting state: memory went on six months ago, in one line, keyed by user_id.
         update_memory_on_run=True,
+        memory_manager=memory_manager(settings, trace, model),
         learning=learning_machine(settings),
         tools=loose(catalogue.agent_tools()),
         tool_hooks=[make_leash(replace(settings.limits, step_cap=MAIN_STEP_CAP), trace)],
@@ -151,7 +152,7 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     ctx = ContextBuilder(settings.budgets)
     agent = build_main_agent(ws, ctx, model, settings, trace, catalogue, pictures, req.user_id)
     before = user_memories(session_db(settings), req.user_id)
-    trace.memory("loaded", rows=len(before), tokens=next(r["tokens"] for r in ctx.report() if r["section"] == "memory"))
+    trace.memory("loaded", rows=len(before), tokens=next(r["tokens"] for r in ctx.report() if r["section"] == "memory"), by=model_name(agent.memory_manager.model))
     started = time.perf_counter()
     session = f"{wid}:{req.user_id}:{req.session_id}:main"
     run = agent.run(req.text, session_id=session, user_id=req.user_id)

@@ -119,7 +119,8 @@ class Trace:
                 return f"check     attempt {d['attempt']}: " + ("; ".join(d["errors"]) if d["errors"] else "spec is clean")
             case "memory":
                 if d["change"] == "loaded":
-                    return f"memory    loaded {d['rows']} rows for this person · {d['tokens']} tokens in the prompt"
+                    by = f" · saved by {d['by']}" if d.get("by") else ""
+                    return f"memory    loaded {d['rows']} rows for this person · {d['tokens']} tokens in the prompt{by}"
                 return f"memory    {d['change']}: {_short(d['text'], 110)}"
             case "stop":
                 return f"stop      {d['reason']}"

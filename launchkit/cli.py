@@ -209,6 +209,7 @@ def cmd_explain(args):
 RAG_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_rag*.py"))
 TOOLS_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_tools*.py"))
 ORCH_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_orch*.py"))
+MEM_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_mem*.py"))
 ORCH_GATE = ORCH_STEPS + [name for name in TOOLS_STEPS if name in ("tools3", "tools4", "tools5")]
 
 
@@ -220,8 +221,10 @@ def cmd_check(args):
         names = RAG_STEPS
     elif args.step == "orch":
         names = ORCH_GATE
+    elif args.step == "mem":
+        names = MEM_STEPS
     else:
-        names = [args.step if args.step in extra + RAG_STEPS + TOOLS_STEPS + ORCH_STEPS else f"step{args.step}"]
+        names = [args.step if args.step in extra + RAG_STEPS + TOOLS_STEPS + ORCH_STEPS + MEM_STEPS else f"step{args.step}"]
     targets = [ROOT / "checks" / f"test_{name}.py" for name in names]
     command = [sys.executable, "-m", "pytest", "-q", "--tb=no", "-rN", "-p", "no:cacheprovider", *map(str, targets)]
     proc = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
@@ -315,7 +318,7 @@ def main(argv=None):
     explain.set_defaults(func=cmd_explain)
 
     check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all; retrieval: check rag1.. or rag; orchestration: check orch0.. or orch")
-    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch"])
+    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch", *MEM_STEPS, "mem"])
     check.set_defaults(func=cmd_check)
 
     memory = sub.add_parser("memory", help="long-term memory: reset it to the checked-in snapshot, or show what is stored for a person")

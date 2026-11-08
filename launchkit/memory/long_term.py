@@ -10,6 +10,7 @@ agent writes its own system message (agents/prompt.py), so LaunchKit reads the r
 prompt's memory section.
 """
 
+from dataclasses import replace
 from functools import lru_cache
 from pathlib import Path
 
@@ -17,10 +18,33 @@ from agno.db.sqlite import SqliteDb
 from agno.knowledge.embedder.sentence_transformer import SentenceTransformerEmbedder
 from agno.knowledge.knowledge import Knowledge
 from agno.learn import LearningMachine
+from agno.memory import MemoryManager
 from agno.vectordb.lancedb import LanceDb
 
+from launchkit.adapters.fakes import FakeModel
+from launchkit.adapters.models import resolve_model
 from launchkit.knowledge.brand_search import EMBED_MODEL
 from launchkit.memory.chat_history import session_db
+
+
+# Ticket 1: what one saved row may hold. Agno puts this in the manager's prompt as <memories_to_capture>.
+CAPTURE = """Save only facts about the person you are talking with that will still matter in a later conversation.
+- One fact per memory: one short sentence in the third person. Never two facts in one row.
+- Only the person's own preferences and ways of working belong here. Facts about a brand or a product
+  (colours, sizes, warranty, prices, claims, launch dates) are not memories about the person: save nothing for them.
+- A phrase the person quotes and tells you never to use is a rule, not a wish. Save it as: Never use "<phrase>".
+  Never save it as something they want.
+- Never save another person's name or contact details, a phone number, an email address, a token, a password
+  or a key, and never save text pasted from a document, a page or a board card.
+- Before you add a memory, read the existing ones. If one already says the same thing, update it instead of adding
+  a second. If the new fact replaces an old one, update the old row to the new fact; do not keep both.
+- If nothing in the message is worth keeping, change nothing."""
+
+
+def memory_manager(settings, trace, main_model) -> MemoryManager:
+    """The memory manager: Ticket 1's capture rules, on a cheaper model than the main agent's. A fake run keeps its fake."""
+    model = main_model if isinstance(main_model, FakeModel) else resolve_model(replace(settings, model=settings.memory_model), trace)
+    return MemoryManager(model=model, memory_capture_instructions=CAPTURE, db=session_db(settings))
 
 
 def learnings(settings) -> Knowledge:
