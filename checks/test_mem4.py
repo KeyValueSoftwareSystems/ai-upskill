@@ -55,3 +55,13 @@ def test_retention_never_runs_in_a_turn(settings, good, request_for):
     reset_to_snapshot(settings)
     run_main(request_for(user_id="power-user", text="Morning!"), settings=settings, model=good, approve=NO)
     assert len(user_memories(session_db(settings), "power-user")) == 600
+
+
+def test_the_memory_tab_shows_a_conversation_with_no_summary_yet(settings, good, request_for):
+    """Seen on the chat page: a conversation Agno saved before its first summary broke the Memory tab."""
+    from launchkit.memory.memory_view import memory_view
+
+    reset_to_snapshot(settings)
+    run_main(request_for(text="Morning!"), settings=settings, model=good, approve=NO)
+    view = memory_view(settings, "maya", "harbor")
+    assert view["summaries"] == [] and len(view["memories"]) == 39

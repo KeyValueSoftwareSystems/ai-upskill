@@ -59,8 +59,10 @@ def memory_view(settings, user_id: str, workspace_id: str = "") -> dict:
         con.row_factory = sqlite3.Row
         memories = [{"memory": r["memory"], "topics": json.loads(r["topics"] or "[]"), "updated": _day(r["updated_at"]), "held_back": held_back(r["memory"], settings) or ""}
                     for r in _rows(con, "select memory, topics, updated_at from agno_memories where user_id = ? order by updated_at", user_id)]
-        summaries = [{"session": r["session_id"], "summary": json.loads(r["summary"])["summary"], "updated": _day(r["updated_at"])}
-                     for r in _rows(con, "select session_id, summary, updated_at from agno_sessions where user_id = ? and summary is not null", user_id)]
+        # Agno writes a conversation with no summary yet as the JSON text "null", which SQL's "is not null" lets through.
+        summaries = [{"session": r["session_id"], "summary": s["summary"], "updated": _day(r["updated_at"])}
+                     for r in _rows(con, "select session_id, summary, updated_at from agno_sessions where user_id = ?", user_id)
+                     if (s := json.loads(r["summary"] or "null")) and s.get("summary")]
         learnings = [{"title": r["name"], **{k: v for k, v in json.loads(r["metadata"] or "{}").items() if k in ("namespace", "tags")}, "updated": _day(r["updated_at"])}
                      for r in _rows(con, "select name, metadata, updated_at from agno_knowledge order by updated_at")]
         entities = [{"entity": json.loads(r["content"]).get("name") or r["entity_id"], "namespace": r["namespace"],
