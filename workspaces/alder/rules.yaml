@@ -1,0 +1,8 @@
+colours:
+  moss: "#4F6B4A"
+  slate: "#5A6670"
+  birch: "#E9E2D0"
+placements:
+  feed: ["1080x1080"]
+  story: ["1080x1920"]
+  poster: ["2480x3508"]

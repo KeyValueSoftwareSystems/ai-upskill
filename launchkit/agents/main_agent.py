@@ -26,6 +26,7 @@ from launchkit.mcp.client import closes_its_mcp_links
 from launchkit.mcp.servers import server_entries
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.chat_history import session_db
+from launchkit.memory.long_term import learning_machine, memory_changes, memory_text, user_memories
 from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, load_skills
 from launchkit.tools.check_copy import make_check_copy
 from launchkit.tools.describe_image import describe_image_entry
@@ -87,7 +88,7 @@ def placements_text(ws) -> str:
     return "This brand's placements (every size): " + ", ".join(sizes) + "." if sizes else ""
 
 
-def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue, pictures: Pictures | None = None) -> Agent:
+def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue, pictures: Pictures | None = None, user_id: str = "") -> Agent:
     ctx.set("rules", f"{ws.soul}\n\n{ws.agents}\n\n{placements_text(ws)}")
     warnings = " ".join(e.detail["text"] for e in trace.events if e.kind == "warning")
     ctx.set("facts", f"Today is {date.today():%-d %B %Y}. {warnings} {pictures.describe() if pictures else ''}".strip())
@@ -95,6 +96,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
     if catalogue.lookup and isinstance(model, OpenAIChat):
         # Several tool calls in one model message lose run_tool's name, so the agent with the doors calls one at a time.
         model = replace(model, request_params={**(model.request_params or {}), "parallel_tool_calls": False})
+    ctx.set("memory", memory_text(session_db(settings), user_id))
     return Agent(
         model=model,
         system_message=ctx.render(),
@@ -102,6 +104,9 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
         db=session_db(settings),
         add_history_to_context=True,
         num_history_runs=5,
+        # Session 3's starting state: memory went on six months ago, in one line, keyed by user_id.
+        update_memory_on_run=True,
+        learning=learning_machine(settings),
         tools=loose(catalogue.agent_tools()),
         tool_hooks=[make_leash(replace(settings.limits, step_cap=MAIN_STEP_CAP), trace)],
         telemetry=False,
@@ -143,12 +148,17 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
         trace.note(f"attached {Path(picture).name} to this conversation")
         pictures.attach(Path(picture))
     catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures)
-    agent = build_main_agent(ws, ContextBuilder(settings.budgets), model, settings, trace, catalogue, pictures)
+    ctx = ContextBuilder(settings.budgets)
+    agent = build_main_agent(ws, ctx, model, settings, trace, catalogue, pictures, req.user_id)
+    before = user_memories(session_db(settings), req.user_id)
+    trace.memory("loaded", rows=len(before), tokens=next(r["tokens"] for r in ctx.report() if r["section"] == "memory"))
     started = time.perf_counter()
     session = f"{wid}:{req.user_id}:{req.session_id}:main"
     run = agent.run(req.text, session_id=session, user_id=req.user_id)
     raise_if_failed(run)
     trace.model("main", model_name(model), run.metrics)
+    for change, text in memory_changes(before, user_memories(session_db(settings), req.user_id)):
+        trace.memory(change, text=text)
     result = MainResult(trace=trace, runs=[run])
     turn = main_turn(run.content)
     if turn.kind == "poster" and turn.spec is not None:

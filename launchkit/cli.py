@@ -237,6 +237,24 @@ def cmd_check(args):
     return proc.returncode
 
 
+def cmd_memory(args):
+    from launchkit.memory.memory_view import memory_view, reset_to_snapshot
+
+    if args.action == "reset":
+        kept = reset_to_snapshot(settings)
+        console.print("Memory is back to the snapshot (fixtures/memory-snapshot.db): the morning the queue filled." + (f" The old database is kept as {kept[0]}." if kept else ""))
+        return 0
+    view = memory_view(settings, args.user)
+    console.print(f"[bold]{args.user}: {len(view['memories'])} memories[/bold]")
+    for row in view["memories"]:
+        console.print(f"  {row['updated']}  {row['memory']}  [dim]{', '.join(row['topics'])}[/dim]", highlight=False)
+    for name in ("summaries", "learnings", "entities", "decisions"):
+        console.print(f"\n[bold]{name}[/bold]")
+        for row in view[name]:
+            console.print(f"  {json.dumps(row, ensure_ascii=False)}", highlight=False)
+    return 0
+
+
 def cmd_ui(args):
     import uvicorn
 
@@ -299,6 +317,11 @@ def main(argv=None):
     check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all; retrieval: check rag1.. or rag; orchestration: check orch0.. or orch")
     check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch"])
     check.set_defaults(func=cmd_check)
+
+    memory = sub.add_parser("memory", help="long-term memory: reset it to the checked-in snapshot, or show what is stored for a person")
+    memory.add_argument("action", choices=["reset", "show"])
+    memory.add_argument("--user", default="maya", help="whose memory to show")
+    memory.set_defaults(func=cmd_memory)
 
     ui = sub.add_parser("ui", help="start the chat page")
     ui.add_argument("--port", type=int, default=8000)

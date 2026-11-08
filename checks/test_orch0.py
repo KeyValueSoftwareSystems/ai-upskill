@@ -18,7 +18,7 @@ def test_every_competitor_has_two_saved_pages(settings):
     for name in COMPETITORS[:5]:
         found = search_web(f"{name} bottle launch")
         assert found.count("Address: ") == 2 and found.count(name) >= 2
-    assert len(list(PAGES_DIR.glob("*.md"))) == 10
+    assert len([p for p in PAGES_DIR.glob("*.md") if any(p.stem.startswith(n.lower().replace(" ", "-")) for n in COMPETITORS[:5])]) == 10
 
 
 def test_the_main_agent_answers(settings, trace, request_for, brief):

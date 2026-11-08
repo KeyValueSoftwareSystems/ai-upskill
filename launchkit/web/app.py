@@ -23,6 +23,7 @@ from launchkit.guardrails.poster_check import SpecError
 from launchkit.knowledge.brand_library import asset_path, read_library, workspace_root
 from launchkit.mcp.servers.notion import NotionServer, connected, log_in
 from launchkit.memory.attached_pictures import Pictures
+from launchkit.memory.memory_view import memory_view
 from launchkit.settings import settings
 from launchkit.trace import Trace
 
@@ -374,6 +375,12 @@ def notion_callback(code: str = "", state: str = "", error: str = ""):
     else:
         loop.call_soon_threadsafe(future.set_exception, PermissionError(error or "Notion said no"))
     return "<p>Notion is connected. Go back to LaunchKit; you can close this tab.</p>"
+
+
+@app.get("/memory/{workspace_id}/{user_id}")
+def memory(workspace_id: str, user_id: str = UrlPart(pattern=USER_ID)):
+    """The Memory tab: what is stored for this person, and what is shared with everyone, straight from the store."""
+    return {"workspace_id": workspace_id, "user_id": user_id, **memory_view(settings, user_id)}
 
 
 @app.get("/explain")

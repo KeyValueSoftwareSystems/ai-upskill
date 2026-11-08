@@ -6,3 +6,9 @@ users:
   - id: sam
     name: Sam
     role: intern
+  - id: agency-manager
+    name: Dana
+    role: agency manager (Fieldnote Agency)
+  - id: power-user
+    name: Tomas
+    role: marketer

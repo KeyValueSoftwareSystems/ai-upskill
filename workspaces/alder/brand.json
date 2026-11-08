@@ -1,0 +1,19 @@
+{
+  "workspace": "alder",
+  "name": "Alder",
+  "product": "Ridge Skillet, spring range",
+  "voice": "Warm, plain and unhurried. Short sentences. No jargon, no emoji.",
+  "colours": {"moss": "#4F6B4A", "slate": "#5A6670", "birch": "#E9E2D0"},
+  "facts": [
+    "26 cm cast iron with an alder-wood handle",
+    "Pre-seasoned",
+    "Oven-safe to 260 °C without the handle sleeve",
+    "10-year warranty on the pan, 2 years on the handle"
+  ],
+  "copy_limits": {"headline": 8, "subheadline": 14, "body": 30},
+  "placements": {
+    "feed_square": [1080, 1080],
+    "story": [1080, 1920],
+    "poster_a4": [2480, 3508]
+  }
+}

@@ -60,6 +60,10 @@ class Trace:
     def validation(self, errors: list[str], attempt: int):
         self.add("validation", errors=errors, attempt=attempt)
 
+    def memory(self, change: str, **detail):
+        """Long-term memory: what this turn loaded into the prompt, and what the run added, updated or deleted."""
+        self.add("memory", change=change, **detail)
+
     def stop(self, reason: str):
         self.add("stop", reason=reason)
 
@@ -113,6 +117,10 @@ class Trace:
                 return f'draft     headline "{d["headline"]}" ({_words(d["headline"])} words) · subheadline {_words(d["subheadline"])} words · body {_words(d["body"])} words'
             case "validation":
                 return f"check     attempt {d['attempt']}: " + ("; ".join(d["errors"]) if d["errors"] else "spec is clean")
+            case "memory":
+                if d["change"] == "loaded":
+                    return f"memory    loaded {d['rows']} rows for this person · {d['tokens']} tokens in the prompt"
+                return f"memory    {d['change']}: {_short(d['text'], 110)}"
             case "stop":
                 return f"stop      {d['reason']}"
             case "picture":
