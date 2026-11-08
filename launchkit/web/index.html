@@ -202,7 +202,33 @@ function loadLogins(select){
     fillPeople(); showNotion(); if (!$("library").hidden) loadLibrary(); return loadConversation();
   });
 }
-loadLogins("harbor");
+// Reload after a code change: /boot changes when the server restarts or index.html changes. The page waits for a run
+// to finish, then reloads and puts back who is signed in, the conversation, the Model box, the draft, the open tab
+// and the trace.
+const KEEP = "launchkit-reload";
+let BOOT = null, RELOAD_DUE = false, KEPT = null;
+try { KEPT = JSON.parse(sessionStorage.getItem(KEEP)); sessionStorage.removeItem(KEEP); } catch {}
+function reloadNow(){
+  try { sessionStorage.setItem(KEEP, JSON.stringify({ brand: $("brand").value, person: $("person").value, session, model: $("model").value,
+    text: $("text").value, tab: (document.querySelector(".tabs button.on") || {}).dataset?.tab, trace: $("trace").innerHTML })); } catch {}
+  location.reload();
+}
+setInterval(async () => {
+  try {
+    const { id } = await (await fetch("/boot", { cache: "no-store" })).json();
+    if (BOOT && id !== BOOT) RELOAD_DUE = true;
+    BOOT = BOOT || id;
+  } catch { return; }  // the server is restarting: try again next time
+  if (RELOAD_DUE && !$("send").disabled) reloadNow();
+}, 1500);
+loadLogins(KEPT ? KEPT.brand : "harbor").then(async () => {
+  if (!KEPT) return;
+  if ([...$("person").options].some(o => o.value === KEPT.person)) $("person").value = KEPT.person;
+  await loadConversation(KEPT.session); showNotion();
+  $("model").value = KEPT.model || ""; $("text").value = KEPT.text || "";
+  if (KEPT.trace) $("trace").innerHTML = KEPT.trace;
+  const tab = document.querySelector(`.tabs button[data-tab="${KEPT.tab}"]`); if (tab) tab.click();
+});
 $("brand").onchange = () => { fillPeople(); showNotion(); loadConversation(); if (!$("library").hidden) loadLibrary(); };
 $("person").onchange = () => { loadConversation(); showNotion(); if ($("memory").classList.contains("on")) loadMemory(); };
 async function showNotion(){

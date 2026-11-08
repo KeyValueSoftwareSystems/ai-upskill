@@ -57,6 +57,15 @@ class Person(BaseModel):
     user_id: str = Field(pattern=USER_ID)
 
 
+BOOT = uuid.uuid4().hex  # new each time the server starts, so the page can tell it restarted
+
+
+@app.get("/boot")
+def boot():
+    """What the page polls to reload itself: changes when the server restarts after a code change, or index.html changes."""
+    return {"id": f"{BOOT}-{(HERE / 'index.html').stat().st_mtime_ns}"}
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
     return (HERE / "index.html").read_text(encoding="utf-8")

@@ -262,7 +262,13 @@ def cmd_ui(args):
     import uvicorn
 
     console.print(f"LaunchKit chat page: http://localhost:{args.port}")
-    uvicorn.run("launchkit.web.app:app", host="127.0.0.1", port=args.port, log_level="warning")
+    if args.no_reload:
+        uvicorn.run("launchkit.web.app:app", host="127.0.0.1", port=args.port, log_level="warning")
+        return 0
+    # A change to any .py file under launchkit/ restarts the server; the page notices and reloads itself (see /boot).
+    # A run in progress when the server restarts is lost, so the page waits for it to end before reloading.
+    console.print("[dim]Reloads itself when code under launchkit/ changes. --no-reload to turn that off.[/dim]")
+    uvicorn.run("launchkit.web.app:app", host="127.0.0.1", port=args.port, log_level="warning", reload=True, reload_dirs=[str(ROOT / "launchkit")])
     return 0
 
 
@@ -328,6 +334,7 @@ def main(argv=None):
 
     ui = sub.add_parser("ui", help="start the chat page")
     ui.add_argument("--port", type=int, default=8000)
+    ui.add_argument("--no-reload", action="store_true", help="do not restart the server and reload the page when code changes")
     ui.set_defaults(func=cmd_ui)
 
     args = parser.parse_args(argv)
