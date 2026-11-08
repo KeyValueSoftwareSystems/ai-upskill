@@ -35,6 +35,12 @@ class Skill:
     hides: tuple[str, ...] = ()
 
 
+def todo(fn: Callable) -> Callable:
+    """Marks a slot the room builds. The catalogue leaves it out, and its check fails, until the mark is removed."""
+    fn.todo = True
+    return fn
+
+
 def built(fn: Callable) -> bool:
     return not getattr(fn, "todo", False)
 
