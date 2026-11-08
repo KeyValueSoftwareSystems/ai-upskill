@@ -104,6 +104,7 @@ header button.quiet.on{color:var(--accent);border-color:var(--accent);background
   <button class="quiet" id="new">New conversation</button>
   <button class="quiet" id="onboardToggle">Onboard a brand</button>
   <button class="quiet" id="libraryToggle">Brand library</button>
+  <button class="quiet" id="memoryToggle">Memory</button>
   <button class="quiet" id="notion" hidden>Connect Notion</button>
 </header>
 <section class="onboard" id="onboard" hidden>
@@ -126,6 +127,13 @@ header button.quiet.on{color:var(--accent);border-color:var(--accent);background
     </form>
   </div>
   <div id="libraryBody"></div>
+</section>
+<section class="library" id="memory" hidden>
+  <div class="head">
+    <h2 id="memoryTitle"></h2>
+    <span class="status"><a href="https://github.com/KeyValueSoftwareSystems/ai-upskill/blob/session-03-alt/READY-MADE.md#memory-panel" target="_blank">how this panel works</a></span>
+  </div>
+  <div id="memoryBody"></div>
 </section>
 <main>
   <section class="chat">
@@ -199,7 +207,7 @@ function loadLogins(select){
   });
 }
 loadLogins("harbor");
-$("brand").onchange = () => { fillPeople(); showNotion(); loadConversation(); if (!$("library").hidden) loadLibrary(); };
+$("brand").onchange = () => { fillPeople(); showNotion(); loadConversation(); if (!$("library").hidden) loadLibrary(); if (!$("memory").hidden) loadMemory(); };
 $("person").onchange = () => { loadConversation(); showNotion(); };
 async function showNotion(){
   const w = who(); if (!w.user_id) return;
@@ -230,11 +238,27 @@ $("new").onclick = async () => {
 };
 $("session").onchange = () => loadConversation($("session").value);
 function showTop(id){
-  ["onboard", "library"].forEach(x => { const open = x === id && $(x).hidden; $(x).hidden = !open; $(x + "Toggle").classList.toggle("on", open); });
+  ["onboard", "library", "memory"].forEach(x => { const open = x === id && $(x).hidden; $(x).hidden = !open; $(x + "Toggle").classList.toggle("on", open); });
   if (!$("library").hidden) loadLibrary();
+  if (!$("memory").hidden) loadMemory();
 }
 $("onboardToggle").onclick = () => showTop("onboard");
 $("libraryToggle").onclick = () => showTop("library");
+$("memoryToggle").onclick = () => showTop("memory");
+async function loadMemory(){
+  const w = who(); if (!w.workspace_id || !w.user_id) return;
+  const body = await (await fetch(`/memories/${encodeURIComponent(w.workspace_id)}/${encodeURIComponent(w.user_id)}`)).json();
+  $("memoryTitle").innerHTML = `What the agent remembers for ${esc(w.user_id)} at ${esc(w.workspace_id)}<small>${body.rows.length} rows · about ${body.tokens} tokens in every prompt</small>`;
+  const rows = body.rows.map(r => `<tr><td>${esc(r.memory)}</td><td>${esc(r.kind)}</td><td>${esc(r.scope)}</td><td>${esc(r.source)} · ${esc(r.author)}</td><td>${esc(r.since)}</td><td><button class="quiet" data-forget="${esc(r.id)}">Forget</button></td></tr>`).join("");
+  const facts = body.brand_facts.map(f => `<tr><td>${esc(f.subject)}</td><td>${esc(f.value)}</td><td>${esc(f.since)}${f.until ? " to " + esc(f.until) : ""}</td></tr>`).join("");
+  $("memoryBody").innerHTML = `<table class="brand-table"><tr><th>Saved row</th><th>Kind</th><th>Who may read it</th><th>Source · said by</th><th>Since</th><th></th></tr>${rows || "<tr><td colspan=6 class=empty>Nothing saved yet.</td></tr>"}</table>
+    <h3>Brand facts, as the agent reads them today</h3><table class="brand-table"><tr><th>Subject</th><th>Value</th><th>Valid</th></tr>${facts || "<tr><td colspan=3 class=empty>None.</td></tr>"}</table>`;
+  $("memoryBody").querySelectorAll("button[data-forget]").forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    await fetch(`/memories/${encodeURIComponent(w.workspace_id)}/${encodeURIComponent(b.dataset.forget)}`, { method: "DELETE" });
+    loadMemory();
+  });
+}
 $("onboardClose").onclick = () => { $("onboard").hidden = true; $("onboardToggle").classList.remove("on"); };
 async function loadLibrary(){
   const id = $("brand").value; if (!id) return;
@@ -306,19 +330,27 @@ function traceLine(ev){ const d = document.createElement("div"); d.className = e
 function showView(x){
   $("context").innerHTML = `<table><tr><th>main agent's view, this turn</th><th class="n">tokens</th></tr>
     <tr><td>tool results</td><td class="n">${x.tool_tokens}</td></tr>
-    <tr><td>history carried in</td><td class="n">${x.history_tokens}</td></tr></table>
+    <tr><td>history carried in</td><td class="n">${x.history_tokens}</td></tr>
+    <tr><td>memory in the prompt</td><td class="n">${x.memory_tokens ?? 0}</td></tr></table>
     <p>took ${x.seconds} s</p><p class="empty">Everything a tool returns stays in the main agent's view and rides along on later turns.</p>`;
 }
 function askHtml(ev){
+  const choices = ev.inputs && ev.inputs.choices;
+  if (choices) {
+    const shown = Object.fromEntries(Object.entries(ev.inputs).filter(([k]) => k !== "choices"));
+    return `<b>${esc(ev.name.replaceAll("_", " "))}</b><pre>${esc(JSON.stringify(shown, null, 2))}</pre><div class="row">${choices.map((c, i) => `<button class="${i ? "quiet" : ""}" data-choice="${esc(c)}">${esc(c)}</button>`).join("")}</div>`;
+  }
   return `<b>The agent wants to ${esc(ev.name)}</b><pre>${esc(JSON.stringify(ev.inputs, null, 2))}</pre><div class="row"><button data-allow="1">Allow</button><button class="quiet" data-allow="0">Deny</button></div>`;
 }
 function showAsk(ev){
   const d = add("ask", askHtml(ev));
   d.querySelectorAll("button").forEach(b => b.onclick = async () => {
-    const allow = b.dataset.allow === "1";
+    const choice = b.dataset.choice ?? null;
+    const allow = choice !== null ? true : b.dataset.allow === "1";
     d.querySelectorAll("button").forEach(x => x.disabled = true);
-    await fetch(`/answer/${ev.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ allow }) });
-    d.querySelector(".row").outerHTML = `<div>${allow ? "Allowed." : "Denied."}</div>`;
+    await fetch(`/answer/${ev.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ allow, choice }) });
+    d.querySelector(".row").outerHTML = `<div>${choice !== null ? esc(choice) + "." : (allow ? "Allowed." : "Denied.")}</div>`;
+    if (!$("memory").hidden) loadMemory();
   });
 }
 let ATTACHED = [];
@@ -358,7 +390,7 @@ $("form").onsubmit = async e => {
     if (ev.type === "trace" && ev.kind === "warning") { add("error", esc(ev.detail.text)); showNotion(); }
     if (ev.type === "result" || ev.type === "error") answered = true;
     if (ev.type === "ask") showAsk(ev);
-    if (ev.type === "result") { renderTurn({ role: "assistant", reply: ev.reply, files: ev.files }); showView(ev.view); }
+    if (ev.type === "result") { renderTurn({ role: "assistant", reply: ev.reply, files: ev.files }); showView(ev.view); if (!$("memory").hidden) loadMemory(); }
     if (ev.type === "error") sendAgain(add("error", `<b>${esc(ev.kind)}</b>\n${esc(ev.message)}`));
   };
   es.addEventListener("done", () => { es.close(); finish(); refreshSessions(); });

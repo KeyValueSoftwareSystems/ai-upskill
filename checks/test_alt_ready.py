@@ -117,3 +117,53 @@ def test_brand_facts_section_lists_each_fact_with_its_date(facts_for):
 
     facts_for.record("harbor", "warranty", "5 years", source="chat", valid_from=date(2026, 10, 1))
     assert brand_facts_section(facts_for.current("harbor", date(2026, 11, 1))) == "- warranty: 5 years  (since 2026-10-01)"
+
+
+@pytest.fixture
+def page(tmp_path, monkeypatch):
+    """The chat page's app, pointed at a copy of the seeded database."""
+    import shutil
+    from dataclasses import replace
+
+    from fastapi.testclient import TestClient
+
+    from launchkit.settings import ROOT, settings
+    from launchkit.web import app as web
+
+    data = tmp_path / "data"
+    data.mkdir()
+    shutil.copyfile(ROOT / "samples" / "memory" / "seed.db", data / "sessions.db")
+    monkeypatch.setattr(web, "settings", replace(settings, data_dir=data))
+    return TestClient(web.app)
+
+
+def test_the_memory_panel_lists_a_persons_rows_with_their_labels(page):
+    """ready: GET /memories/{brand}/{person} returns each row with its kind, scope, source and date, the brand facts, and the token count"""
+    body = page.get("/memories/harbor/maya").json()
+    row = next(r for r in body["rows"] if "shoot photos" in r["memory"])
+    assert row["kind"] == "preference" and row["scope"] == "user:maya" and row["source"] == "chat" and row["since"] == "2026-04-22"
+    assert {"id", "memory", "kind", "scope", "source", "since", "author"} <= set(row)
+    assert any(f["subject"] == "warranty" for f in body["brand_facts"])
+    assert body["tokens"] > 0
+
+
+def test_forget_removes_one_row_from_the_panel(page):
+    """ready: DELETE /memories/{brand}/{id} removes that row and nothing else"""
+    before = page.get("/memories/harbor/maya").json()["rows"]
+    target = next(r for r in before if "555-0142" in r["memory"])
+    assert page.delete(f"/memories/harbor/{target['id']}").json() == {"deleted": True}
+    after = page.get("/memories/harbor/maya").json()["rows"]
+    assert len(after) == len(before) - 1 and all(r["id"] != target["id"] for r in after)
+
+
+def test_an_answer_can_carry_a_choice(page):
+    """ready: POST /answer/{id} accepts a choice, and the page's question gets that choice back"""
+    import threading
+
+    from launchkit.web import app as web
+
+    ask_id = "t1"
+    answered, answer = threading.Event(), {"allow": False, "choice": None}
+    web.ASKS[ask_id] = (answered, answer)
+    assert page.post(f"/answer/{ask_id}", json={"allow": True, "choice": "Everyone at the brand"}).json() == {"ok": True}
+    assert answer == {"allow": True, "choice": "Everyone at the brand"}

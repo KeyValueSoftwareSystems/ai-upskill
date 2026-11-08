@@ -5,6 +5,7 @@ import threading
 import time
 import uuid
 from dataclasses import replace
+from datetime import date
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 from queue import Queue
@@ -23,6 +24,8 @@ from launchkit.guardrails.poster_check import SpecError
 from launchkit.knowledge.brand_library import asset_path, read_library, workspace_root
 from launchkit.mcp.servers.notion import NotionServer, connected, log_in
 from launchkit.memory.attached_pictures import Pictures
+from launchkit.memory.brand_facts import BrandFacts
+from launchkit.memory.store import memory_section, memory_tokens, open_store, rows_for, topic_value
 from launchkit.settings import settings
 from launchkit.trace import Trace
 
@@ -49,6 +52,7 @@ class RunBody(BaseModel):
 
 class Answer(BaseModel):
     allow: bool
+    choice: str | None = None
 
 
 class Person(BaseModel):
@@ -139,13 +143,16 @@ def ask_on_page(queue: Queue):
     """The page's version of ask_in_terminal: the run stops, the chat shows Allow and Deny, and the answer comes back
     through /answer. No answer in five minutes counts as no."""
 
-    def approve(name: str, inputs: dict) -> bool:
+    def approve(name: str, inputs: dict):
+        """Allow or Deny as a bool. When the question offers `choices`, the chosen text instead, or None for no answer."""
         ask_id = uuid.uuid4().hex[:8]
-        answered, answer = threading.Event(), {"allow": False}
+        answered, answer = threading.Event(), {"allow": False, "choice": None}
         ASKS[ask_id] = (answered, answer)
         queue.put({"type": "ask", "id": ask_id, "name": name, "inputs": inputs})
         answered.wait(ASK_WAIT)
         ASKS.pop(ask_id, None)
+        if "choices" in inputs:
+            return answer["choice"]
         return answer["allow"]
 
     return approve
@@ -157,6 +164,7 @@ def answer(ask_id: str, body: Answer):
         raise HTTPException(404, "that question is no longer open")
     answered, answer = ASKS[ask_id]
     answer["allow"] = body.allow
+    answer["choice"] = body.choice
     answered.set()
     return {"ok": True}
 
@@ -202,7 +210,7 @@ def _worker(body: RunBody, queue: Queue):
             "type": "result",
             "reply": result.reply,
             "files": new_files(current, started) + [f"/files/{p.relative_to(current.data_dir).as_posix()}" for p in result.kept],
-            "view": {"tool_tokens": result.view_tokens, "history_tokens": result.history_tokens, "seconds": round(result.seconds, 1)},
+            "view": {"tool_tokens": result.view_tokens, "history_tokens": result.history_tokens, "memory_tokens": result.memory_tokens, "seconds": round(result.seconds, 1)},
         }
         conversation["turns"].append({"role": "assistant", "reply": answer["reply"], "files": answer["files"]})
         queue.put(answer)
@@ -268,6 +276,42 @@ def _onboard_worker(path: Path, workspace_id: str | None, model: str | None, que
         queue.put({"type": "error", "kind": type(error).__name__, "message": str(error)})
     finally:
         queue.put(DONE)
+
+
+@app.get("/memories/{workspace_id}/{user_id}")
+def memories(workspace_id: str, user_id: str = UrlPart(pattern=USER_ID)):
+    """The Memory panel: what the store holds for this person at this brand, the brand's facts, and what it costs per turn."""
+    store = open_store(settings, workspace_id, user_id, Trace())
+    rows = rows_for(store, workspace_id, user_id)
+    today = date.today()
+    facts = BrandFacts(store.db_file).current(workspace_id, today)
+    return {
+        "rows": [
+            {
+                "id": r.memory_id,
+                "memory": r.memory,
+                "kind": topic_value(r.topics or [], "kind:", "fact"),
+                "scope": topic_value(r.topics or [], "scope:", f"user:{r.user_id}"),
+                "source": topic_value(r.topics or [], "source:", "unknown"),
+                "since": topic_value(r.topics or [], "valid_from:", ""),
+                "author": topic_value(r.topics or [], "author:", r.user_id or ""),
+            }
+            for r in rows
+        ],
+        "brand_facts": [
+            {"subject": f.subject, "value": f.value, "since": f.valid_from.isoformat(), "until": f.valid_to.isoformat() if f.valid_to else None}
+            for f in facts
+        ],
+        "tokens": memory_tokens(memory_section(rows)),
+    }
+
+
+@app.delete("/memories/{workspace_id}/{memory_id}")
+def forget_one(workspace_id: str, memory_id: str):
+    """The Forget button: remove one row. Only the row; a copy elsewhere stays, which is ticket 6."""
+    store = open_store(settings, workspace_id, "page", Trace())
+    store.delete_user_memory(memory_id)
+    return {"deleted": True}
 
 
 @app.get("/library/{workspace_id}")
