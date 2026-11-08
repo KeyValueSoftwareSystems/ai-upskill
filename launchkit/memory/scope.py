@@ -14,7 +14,6 @@ from pathlib import Path
 
 import yaml
 
-from launchkit.tools.catalogue import todo
 
 def held_back(text: str, settings) -> str | None:
     """Why this row is not a memory about the person, or None when it is one."""
@@ -53,8 +52,13 @@ PERSONAL = [
 ]
 
 
-@todo
 def personal_data(text: str) -> str | None:
-    """Ticket 6: not built yet. The reason, when the text holds a phone number (10 digits or more, so a date is not
-    one), an email address or a token; else None."""
+    """The reason, when the text holds a phone number (10 digits or more, so a date is not one), an email address or a
+    token; else None."""
+    for kind, pattern in PERSONAL:
+        found = [m.group() for m in pattern.finditer(text)]
+        if kind == "a phone number":
+            found = [f for f in found if sum(ch.isdigit() for ch in f) >= 10]
+        if found:
+            return f"personal data ({kind}): never kept in memory"
     return None

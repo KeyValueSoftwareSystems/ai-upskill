@@ -129,7 +129,12 @@ class Catalogue:
                 inspect.signature(entry.fn).bind(**inputs)
             except TypeError as error:
                 return f"Wrong inputs for {name}: {error}. Check the skill's steps or call find_tool."
-            if entry.kind == "write" and not self.approve(name, inputs):
+            # Ticket 4: ask with the planned change, not the raw inputs. A str plan is a refusal: nobody is asked.
+            planned = entry.plan(inputs) if entry.plan else inputs
+            if isinstance(planned, str):
+                self.trace.refused(name, planned)
+                return planned
+            if entry.kind == "write" and not self.approve(name, planned):
                 self.trace.refused(name, "Maya said no")
                 return f"Maya did not allow {name}. Do not try it again; tell her what you wanted to do."
             if self.leash is None:

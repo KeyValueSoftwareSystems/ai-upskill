@@ -27,7 +27,7 @@ from launchkit.mcp.client import closes_its_mcp_links
 from launchkit.mcp.servers import server_entries
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.chat_history import session_db
-from launchkit.memory.long_term import learning_machine, memory_changes, memory_manager, memory_text, summary_manager, summary_text, user_memories
+from launchkit.memory.long_term import memory_changes, memory_manager, memory_text, summary_manager, summary_text, user_memories
 from launchkit.memory.scope import held_back
 from launchkit.tools.save_memory import memory_entries
 from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, built, load_skills
@@ -57,6 +57,7 @@ run_tool("<a tool find_tool listed>", {"<input>": "..."}).
 Every job beyond a greeting is done with the skills and tools find_tool lists, never from your own knowledge. A question is a job too: you know nothing about this season, the web or the competitors until a tool tells you.
 Never say something is made, cut, attached or posted unless a tool did it in this turn.
 When the marketer asks for sizes, a picture or a voice-over, they want files a tool makes, not text in your reply. Sizes are the picture in this conversation cut to each of the brand's placements, one file each.
+When the marketer tells you how they like to work and it will matter in a later conversation, call run_tool("save_memory", {"note": "..."}); a new value for a brand fact, such as the warranty, goes to propose_brand_fact. Every memory write asks the marketer first.
 Answer in plain words, in the brand's voice."""
 
 DIRECT_TASK = """You work for the marketer you are talking with. Decide what each request needs and use your tools for it.
@@ -109,12 +110,12 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
         output_schema=MainTurn,
         db=session_db(settings),
         add_history_to_context=True,
-        num_history_runs=5,
-        # Memory went on six months ago, in one line, keyed by user_id: a write after every run, and learning tools
-        # beside the three doors.
-        update_memory_on_run=True,
-        memory_manager=memory_manager(settings, trace, model),
-        learning=learning_machine(settings, namespace=ws.id),
+        num_history_runs=3,
+        # Ticket 5: a running summary of the older turns, on the cheaper model. The fakes are scripted for the conversation only.
+        session_summary_manager=summary_manager(settings, trace, model) if model is not None and not isinstance(model, FakeModel) else None,
+        # Ticket 4: no write after every run and no learning tools beside the three doors. Every memory write is a
+        # catalogue tool of kind "write", so it goes through run_tool and asks first.
+        update_memory_on_run=False,
         tools=loose(catalogue.agent_tools()),
         tool_hooks=[make_leash(replace(settings.limits, step_cap=MAIN_STEP_CAP), trace)],
         telemetry=False,
@@ -135,6 +136,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
         text_to_speech_entry(settings, model),
         *(board.entries() if board else server_entries(settings, trace, user)),
         *make_research_entries(model, settings, trace),
+        *memory_entries(settings, lambda: memory_manager(settings, trace, model), user, namespace=ws.id),
     ]
     catalogue = Catalogue(entries, load_skills(), trace, approve)
     catalogue.leash = make_leash(replace(settings.limits, step_cap=10_000), trace)

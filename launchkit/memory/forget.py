@@ -10,7 +10,6 @@ from contextlib import closing
 import lancedb
 
 from launchkit.memory.long_term import learnings
-from launchkit.tools.catalogue import todo
 
 TABLES = [  # (what, table, the column that holds the person)
     ("memories", "agno_memories", "user_id"),
@@ -43,7 +42,39 @@ def still_naming(settings, user_id: str, names: list[str]) -> list[str]:
     return found + [f"files: {p.relative_to(settings.data_dir)}" for p in _files(settings, user_id)]
 
 
-@todo
 def delete_user(settings, user_id: str, apply: bool) -> list[tuple[str, int]]:
-    """Ticket 6: not built yet. What the cascade removes (or would remove, without apply), one line per store."""
-    return []
+    """What the cascade removes (or would remove, without apply), one line per store. A table not made yet is skipped."""
+    removed = []
+    with closing(sqlite3.connect(settings.data_dir / "sessions.db")) as con, con:
+        for what, table, column in TABLES:
+            try:
+                count = con.execute(f"select count(*) from {table} where {column} = ?", (user_id,)).fetchone()[0]
+            except sqlite3.OperationalError:
+                continue
+            if apply:
+                con.execute(f"delete from {table} where {column} = ?", (user_id,))
+            removed.append((what, count))
+        try:  # Agno keeps no user_id on a shared learning: save_learning tags it source:<user_id>
+            proposed = [row_id for row_id, metadata in con.execute("select id, metadata from agno_knowledge")
+                        if f"source:{user_id}" in (json.loads(metadata or "{}").get("tags") or [])]
+        except sqlite3.OperationalError:
+            proposed = None
+        try:  # the fact stays true for the brand; only who proposed it goes
+            facts = con.execute("select count(*) from brand_facts where source = ?", (user_id,)).fetchone()[0]
+            if apply:
+                con.execute("update brand_facts set source = 'removed user' where source = ?", (user_id,))
+        except sqlite3.OperationalError:
+            facts = None
+    if proposed is not None:  # after the connection above is closed: removing a learning writes to the same database
+        if apply:
+            for row_id in proposed:
+                learnings(settings).remove_content_by_id(row_id)
+        removed.append((f"shared learnings they proposed (tag source:{user_id})", len(proposed)))
+    if facts is not None:
+        removed.append(("brand facts they proposed (kept, source set to 'removed user')", facts))
+    folders = _files(settings, user_id)
+    if apply:
+        for folder in folders:
+            shutil.rmtree(folder)
+    removed.append(("chat page folders (conversations and pictures)", len(folders)))
+    return removed
