@@ -6,10 +6,10 @@ import sqlite3
 from contextlib import closing
 from datetime import date, timedelta
 
-# Harbor's warranty, as two rows: two years until it changed in March, five years from April and still true.
+# Harbor's warranty, as two rows: two years when memory went on in May, five years from September and still true.
 SEED = [
-    ("harbor", "warranty", "2 years", "brand", "Harbor product sheet, 2025", "2025-01-01", "2026-03-31"),
-    ("harbor", "warranty", "5 years", "brand", "Harbor product sheet, April 2026", "2026-04-01", None),
+    ("harbor", "warranty", "2 years", "brand", "Harbor product sheet, 2025", "2025-01-01", "2026-08-31"),
+    ("harbor", "warranty", "5 years", "brand", "Harbor product sheet, September 2026", "2026-09-01", None),
 ]
 
 

@@ -10,9 +10,9 @@ NO = lambda name, inputs: False
 
 
 def test_the_warranty_is_two_rows_and_only_one_is_true_today(settings):
-    """Two years, closed in March; five years, open. Today only five years comes back."""
+    """Two years, closed at the end of August; five years, open. Today only five years comes back."""
     rows = all_brand_facts(settings, "harbor")
-    assert [(r["value"], r["valid_to"]) for r in rows if r["subject"] == "warranty"] == [("2 years", "2026-03-31"), ("5 years", None)]
+    assert [(r["value"], r["valid_to"]) for r in rows if r["subject"] == "warranty"] == [("2 years", "2026-08-31"), ("5 years", None)]
     assert [(r["subject"], r["value"]) for r in get_brand_facts(settings, "harbor")] == [("warranty", "5 years")]
 
 
@@ -25,7 +25,7 @@ def test_updating_a_fact_closes_the_old_row_and_opens_a_new_one(settings):
     """Nothing is overwritten: the old row gets an end date, the new row starts today."""
     set_brand_fact(settings, "harbor", "warranty", "7 years", source="maya", today=date(2027, 1, 10))
     rows = [r for r in all_brand_facts(settings, "harbor", today=date(2027, 1, 10)) if r["subject"] == "warranty"]
-    assert [(r["value"], r["valid_to"], r["true_today"]) for r in rows] == [("2 years", "2026-03-31", False), ("5 years", "2027-01-09", False), ("7 years", None, True)]
+    assert [(r["value"], r["valid_to"], r["true_today"]) for r in rows] == [("2 years", "2026-08-31", False), ("5 years", "2027-01-09", False), ("7 years", None, True)]
 
 
 def test_get_brand_facts_is_a_read_tool_bound_to_the_request_brand(settings):
