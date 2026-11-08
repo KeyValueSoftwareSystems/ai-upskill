@@ -69,6 +69,8 @@ class MemoryStore(SqliteDb):
             topics.append(f"scope:user:{memory.user_id or self.user_id}")
         if not has(topics, "valid_from:"):
             topics.append(f"valid_from:{date.today():%Y-%m-%d}")
+        if not has(topics, "brand:"):
+            topics.append(f"brand:{self.workspace_id}")
 
         if self.decide is not None:
             decision = self.decide(memory.memory, topics)
@@ -111,9 +113,11 @@ def rows_for(store: MemoryStore, workspace_id: str, user_id: str) -> list[UserMe
     id, whatever brand they were saved at, plus the brand's shared rows. The brand label on a row is
     never read, which is how Dana's Harbor rows reach her Alder chats.
     """
-    own = list(store.get_user_memories(user_id=user_id) or [])
+    own = store.get_user_memories(user_id=user_id) or []
+    # A row with no brand label was saved before the label existed. It stays the person's, at every brand.
+    mine = [r for r in own if topic_value(r.topics or [], "brand:", workspace_id) == workspace_id]
     shared = list(store.get_user_memories(user_id=brand_owner(workspace_id)) or [])
-    return own + shared
+    return mine + shared
 
 
 def memory_section(rows: list[UserMemory]) -> str:

@@ -39,7 +39,15 @@ def memory_index(rows: list[UserMemory]) -> str:
     Build B fills this in: one line per topic, `- <topic>: <n> rows · recall("<topic>")`, each line at
     most LINE_CAP characters, topics in alphabetical order. Built by code, no model call.
     """
-    return memory_section(rows)
+    by_topic: dict[str, list[UserMemory]] = {}
+    for row in rows:
+        by_topic.setdefault(topic_of(row), []).append(row)
+    lines = []
+    for topic in sorted(by_topic):
+        count = len(by_topic[topic])
+        line = f'- {topic}: {count} row{"s" if count != 1 else ""} · recall("{topic}")'
+        lines.append(line[:LINE_CAP])
+    return "\n".join(lines)
 
 
 def recall(rows: list[UserMemory], topic: str) -> str:
@@ -48,7 +56,12 @@ def recall(rows: list[UserMemory], topic: str) -> str:
     Build B fills this in. When no row matches, say so and list the topics that exist, so the agent can
     ask again with a topic that does.
     """
-    return f"No rows about {topic}. Recall is not built yet; the full memory is in the prompt."
+    wanted = topic.strip().lower()
+    hits = [r for r in rows if topic_of(r) == wanted]
+    if not hits:
+        topics = sorted({topic_of(r) for r in rows})
+        return f"No rows about {topic}. Topics that exist: {', '.join(topics)}."
+    return "\n".join(f"- {r.memory}  ({topic_value(r.topics or [], 'kind:', 'fact')})" for r in hits)
 
 
 def recall_entry(store: MemoryStore, workspace_id: str, user_id: str) -> Entry:

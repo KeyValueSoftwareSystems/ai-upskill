@@ -19,4 +19,20 @@ def prune(store: MemoryStore, workspace_id: str, today: date, max_age_days: int 
     Build B fills this in. Brand rows (`scope:brand:...`) are kept: they are the brand's, not one
     person's, and they end through the brand facts table instead.
     """
-    return 0
+    from datetime import timedelta
+
+    from launchkit.memory.store import topic_value
+
+    limit = today - timedelta(days=max_age_days)
+    gone = 0
+    for row in store.get_user_memories() or []:
+        topics = row.topics or []
+        if topic_value(topics, "scope:", "").startswith("brand:"):
+            continue
+        if topic_value(topics, "brand:", workspace_id) != workspace_id:
+            continue
+        since = topic_value(topics, "valid_from:", "")
+        if since and date.fromisoformat(since) < limit:
+            store.delete_user_memory(row.memory_id, user_id=row.user_id)
+            gone += 1
+    return gone

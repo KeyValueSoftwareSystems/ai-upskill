@@ -21,8 +21,35 @@ def forget(store: MemoryStore, workspace_id: str, user_id: str, text: str) -> di
     """
     if not text.strip():
         raise ValueError("say what to forget; an empty text would match every row")
+    import re
+    import sqlite3
+
+    from launchkit.memory.store import brand_owner, topic_value
+
+    # The person's own rows at this brand. Rows saved at another brand are that brand's business.
     rows = store.get_user_memories(user_id=user_id) or []
-    hits = [r.memory_id for r in rows if text in r.memory]
+    hits = [r.memory_id for r in rows if text in r.memory and topic_value(r.topics or [], "brand:", workspace_id) == workspace_id]
     if hits:
         store.delete_user_memories(hits, user_id=user_id)
-    return {"memories": len(hits), "summaries": 0, "learnings": 0}
+
+    # Chat summaries at this brand that still carry the text. The chat stays; the sentence goes.
+    summaries = 0
+    for session in store.get_sessions() or []:
+        summary = session.summary.summary if session.summary else ""
+        if text in (summary or "") and str(session.session_id).startswith(f"{workspace_id}:"):
+            sentences = re.split(r"(?<=[.!?])\s+", summary)
+            session.summary.summary = " ".join(s for s in sentences if text not in s)
+            store.upsert_session(session)
+            summaries += 1
+
+    # The brand's shared rows, which every chat at the brand reads.
+    shared = store.get_user_memories(user_id=brand_owner(workspace_id)) or []
+    learning_hits = [r.memory_id for r in shared if text in r.memory]
+    if learning_hits:
+        store.delete_user_memories(learning_hits, user_id=brand_owner(workspace_id))
+
+    # SQLite keeps deleted bytes in free pages until the file is compacted. Forgotten means gone from the file.
+    with sqlite3.connect(store.db_file) as db:
+        db.execute("VACUUM")
+
+    return {"memories": len(hits), "summaries": summaries, "learnings": len(learning_hits)}

@@ -60,6 +60,11 @@ class BrandFacts:
         so two values for one subject both look current.
         """
         with self._connect() as db:
+            # The new value ends the old one on the day it became true. The old row stays, so the history can be read.
+            db.execute(
+                "UPDATE brand_facts SET valid_to = ? WHERE workspace_id = ? AND subject = ? AND valid_to IS NULL",
+                (valid_from.isoformat(), workspace_id, subject),
+            )
             db.execute(
                 "INSERT INTO brand_facts (workspace_id, subject, value, scope, source, valid_from, valid_to) VALUES (?, ?, ?, ?, ?, ?, NULL)",
                 (workspace_id, subject, value, f"brand:{workspace_id}", source, valid_from.isoformat()),
@@ -71,7 +76,7 @@ class BrandFacts:
         Build A, ticket 2, fills this in: a fact is current when valid_from is on or before the day and
         valid_to is empty or after it. The placeholder returns every row of the brand.
         """
-        return self.history(workspace_id)
+        return [f for f in self.history(workspace_id) if f.valid_from <= today and (f.valid_to is None or f.valid_to > today)]
 
     def history(self, workspace_id: str, subject: str | None = None) -> list[Fact]:
         """Every row ever recorded for a brand, oldest first; one subject when given."""

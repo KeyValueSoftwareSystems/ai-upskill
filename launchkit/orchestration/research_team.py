@@ -18,7 +18,7 @@ from launchkit.trace import Trace
 
 RESEARCH_TASK = """You research one question for a marketing team. Call search_web with a short query and read the pages that come back.
 Reply with a short report and nothing else: one paragraph of at most 60 words on the message, the channels and what to avoid copying,
-then the addresses of the pages you used. When a page states something the whole brand should remember, call save_learning with it."""
+then the addresses of the pages you used."""
 
 
 def make_save_learning(store: MemoryStore):
@@ -40,9 +40,8 @@ def make_save_learning(store: MemoryStore):
 def build_research_agent(model, settings, trace: Trace, store: MemoryStore | None = None) -> Agent | None:
     """Orchestration step 2: the research subagent. RESEARCH_TASK, search_web, no session store and no chat history.
     With a memory store it also carries save_learning, which is how the helper came to write to memory."""
+    # The helper reads; it does not write to memory. Whatever is worth keeping, the agent that asked decides to keep.
     tools = [make_search_web(settings)]
-    if store is not None:
-        tools.append(make_save_learning(store))
     return Agent(
         model=model,
         system_message=RESEARCH_TASK,

@@ -44,4 +44,13 @@ def decide_save(text: str, topics: list[str], approve: Callable[[str, dict], obj
     box: pass it a name and inputs; with `choices` in inputs it returns the chosen text. `trace` is the
     run's trace, so a model call made here lands on the scoreboard.
     """
-    return Decision(keep=True, scope=None)
+    if "source:web" in topics:
+        # A page the helper read can say anything, and a saved row outlives the page.
+        return Decision(keep=False, scope=None)
+    kind = next((t.split(":", 1)[1] for t in topics if t.startswith("kind:")), "fact")
+    answer = approve("keep_in_memory", {"memory": text, "kind": kind, "choices": ["Just me", "Everyone at the brand", "Don't keep"]})
+    if answer == "Just me":
+        return Decision(keep=True, scope="user")
+    if answer == "Everyone at the brand":
+        return Decision(keep=True, scope="brand")
+    return Decision(keep=False, scope=None)

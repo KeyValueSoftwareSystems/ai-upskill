@@ -13,7 +13,10 @@ placeholders do.
 
 from __future__ import annotations
 
-from launchkit.settings import DEFAULT_MODEL
+from launchkit.adapters.ranking import rank_list
+
+MAIN_JOBS = ("long_text", "short_text")
+SHORT_QUESTION_WORDS = 12
 
 
 def route(job: str, settings, ask: str | None = None, pick: str | None = None, skill: str | None = None) -> tuple[str, list[tuple[str, str]]]:
@@ -28,7 +31,18 @@ def route(job: str, settings, ask: str | None = None, pick: str | None = None, s
     from ranking.json with disabled models left out, reasons "pick", "skill", "rank 1", "rank 2", ...
     The placeholder gives every job the one configured model.
     """
-    return job, [(pick or settings.model or DEFAULT_MODEL, "the one setting")]
+    if job == "long_text" and ask and ask.strip().endswith("?") and len(ask.split()) <= SHORT_QUESTION_WORDS:
+        job = "short_text"
+    choices: list[tuple[str, str]] = []
+    if pick and job in MAIN_JOBS:
+        choices.append((pick, "pick"))
+    if skill:
+        choices.append((skill, "skill"))
+    for rank, model in enumerate(rank_list(job, settings), 1):
+        choices.append((model, f"rank {rank}"))
+    seen: set[str] = set()
+    ordered = [(m, r) for m, r in choices if not (m in seen or seen.add(m)) and m not in settings.disabled_models]
+    return job, ordered
 
 
 def on_failure(job: str, tried: list[str], remaining: list[str], error: Exception) -> str | None:
@@ -38,4 +52,5 @@ def on_failure(job: str, tried: list[str], remaining: list[str], error: Exceptio
     on and the trace says "fallback". Path B: the same model once more, then None, so the run stops with
     an error the person can read. The placeholder stops at once.
     """
-    return None
+    # Path A: the launch carries on. The next model on the list takes the job, and the trace says fallback.
+    return remaining[0] if remaining else None
