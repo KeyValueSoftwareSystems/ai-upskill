@@ -1,0 +1,12 @@
+# Harbor's facts that change over time, each with when it was true and where it came from.
+# One entry per value: from is the first day it was true, to the last (leave it out while it is still true).
+# LaunchKit loads these into its brand_facts table (ticket 2a). After that, a change goes through
+# propose_brand_fact and a yes, or through this file.
+warranty:
+  - value: 2 years
+    from: 2025-01-01
+    to: 2026-08-31
+    source: Harbor product sheet, 2025
+  - value: 5 years
+    from: 2026-09-01
+    source: Harbor product sheet, September 2026

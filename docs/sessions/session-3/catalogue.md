@@ -65,7 +65,7 @@ All in the project database, `data/sessions.db`, except the two vector folders. 
 | Learned knowledge (`data/learnings/` + `agno_knowledge`) | learnings for a team, tagged `source:<user_id>` | the brand's namespace | save_learning, after a yes | Session 3 start (namespace: ticket 3) |
 | Entity memory (`agno_learnings`) | facts about companies, products | the brand's namespace | nothing after ticket 2b (snapshot rows only) | Session 3 start |
 | Decision log (`agno_learnings`) | every allowed memory write: who allowed what | user_id | the memory tools | Session 3 start (audit: ticket 2b) |
-| **Brand facts** (`brand_facts`) | dated brand facts: subject, value, scope, source, valid_from, valid_to | brand | propose_brand_fact, after a yes | Ticket 2a |
+| **Brand facts** (`brand_facts`) | dated brand facts: subject, value, scope, source, valid_from, valid_to | brand | loaded from `workspaces/<brand>/brand_facts.yaml`; then propose_brand_fact, after a yes | Ticket 2a |
 | Brand store (`data/brand-store/`) | brand book chunks for get_brand_details | brand | `launchkit index` | Session 1 |
 
 ## Scripts (prep and operations, never run by the agent)
@@ -85,7 +85,7 @@ New since `session-02-orchestration-step2`:
 
 ```
 launchkit/
-  knowledge/brand_facts.py      ticket 2a: the dated brand facts table and get_brand_facts
+  knowledge/brand_facts.py      ticket 2a: the dated brand facts table, loaded from the brand's file, and get_brand_facts
   memory/long_term.py           memory on: the learnings store, the capture rules, the cheaper model, the summary
   memory/memory_view.py         the Memory tab, and the snapshot reset
   memory/scope.py               tickets 3 and 5: what is never a memory about a person

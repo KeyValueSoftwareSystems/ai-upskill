@@ -74,12 +74,13 @@ Also: Alder workspace (`workspaces/alder/`, no never-say list, `brand.json` besi
 
 On the page: the Trace's memory line names the model that saves.
 
-### Ticket 2a · `0821961` (82 harness lines; room builds `get_brand_facts` and `set_brand_fact`, about 25)
+### Ticket 2a · `0821961` (82 harness lines; room builds `load_brand_facts`, `get_brand_facts` and `set_brand_fact`, about 35)
 
 | Old | New |
 | --- | --- |
 | "Harbor warranty is 2 years." as a user-memory row, `updated_at` 2026-05-12, no end | `brand_facts` table in the project database: `brand, subject, value, scope, source, valid_from, valid_to` |
 | — | seeded: `warranty 2 years 2025-01-01 → 2026-08-31`, `warranty 5 years 2026-09-01 → (open)` (2 years when memory went on in May; 5 years before the queue filled) |
+| Harbor's warranty in its files only as today's value (`facts.md`: "Warranty: 5 years.") | `workspaces/harbor/brand_facts.yaml`: the warranty's two values with dates and sources. `load_brand_facts(settings, brand)` copies them into the table once (brand, subject, valid_from as the key); before ticket 2a the table is empty |
 | — | `get_brand_facts(settings, brand, today=None)`: rows true today. `set_brand_fact(...)` closes today's row (ends yesterday), opens a new one |
 | `on_brand_copy` uses `get_brand_details, check_copy` | uses `get_brand_details, get_brand_facts, check_copy`; "a fact from get_brand_facts wins over the brand guide and over anything remembered" |
 
@@ -102,7 +103,7 @@ On the page: Allow / Deny in the chat with `{"store": "learned knowledge", "name
 | Old | New |
 | --- | --- |
 | `LearningMachine(...)`, namespace `"global"` | `LearningMachine(..., namespace=ws.id)`: learned knowledge and entity memory per brand |
-| every memory row of the person loaded, on every brand | `memory/scope.py`: a row naming any brand's colour, size or never-say phrase, or a `brand_facts` subject, is held back from the prompt |
+| every memory row of the person loaded, on every brand | `memory/scope.py`: a row naming any brand's colour, size or never-say phrase, or a subject in a brand's `brand_facts.yaml`, is held back from the prompt |
 | a brand fact could be saved as a person's memory | `save_memory`'s plan refuses it in code, before anyone is asked; `propose_brand_fact(subject, value)` **write** shows `from` and `to`, then closes the old row |
 
 On the page: the Trace says `held back N`; the Memory tab has a "not loaded because" column; Allow / Deny for a brand fact.

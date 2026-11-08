@@ -9,7 +9,7 @@ Memory is kept by `user_id`. Dana, the agency manager at Fieldnote, is one `user
 - `launchkit/memory/scope.py` · `brand_fact`. Today it returns None for every row.
 - `launchkit/agents/main_agent.py` · `build_main_agent`: the main agent's `learning_machine(settings)` gets the brand's namespace.
 
-`brand_words(workspaces_dir)` is ready-made: every never-say phrase, colour name and code, and size in every brand's `rules.yaml`, and the subjects the brand facts table owns. The main agent already leaves out any row `held_back` names, and the Trace and the Memory tab already show it.
+`brand_words(workspaces_dir)` is ready-made: every never-say phrase, colour name and code, and size in every brand's `rules.yaml`, and every subject in a brand's `brand_facts.yaml`. The main agent already leaves out any row `held_back` names, and the Trace and the Memory tab already show it.
 
 ## Break it first
 

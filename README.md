@@ -160,7 +160,7 @@ Prompts go on the chat page with the real model (Model empty). The **Memory** ta
 | Checkpoint | Ticket | Slot | Check | Card |
 | --- | --- | --- | --- | --- |
 | A · what one fact holds | 1 · what one row may hold | `memory/long_term.py` `CAPTURE`, `memory_manager` | `check mem1` | `docs/mem-1.md` |
-| | 2a · a fact carries when it was true | `knowledge/brand_facts.py` `get_brand_facts`, `set_brand_fact`; the `on_brand_copy` skill | `check mem2a` | `docs/mem-2a.md` |
+| | 2a · a fact carries when it was true | `knowledge/brand_facts.py` `load_brand_facts`, `get_brand_facts`, `set_brand_fact`; the `on_brand_copy` skill | `check mem2a` | `docs/mem-2a.md` |
 | | 3 · a brand is a namespace | `memory/scope.py` `brand_fact`; the main agent's namespace | `check mem3` | `docs/mem-3.md` |
 | B · who writes, reads, how long | 2b · who may write | `tools/catalogue.py` `run_tool`; the research helper; the main agent's writers | `check mem2b` | `docs/mem-2b.md` |
 | | 4 · how much is read, for how long | `memory/retention.py` `retain`; history runs and the session summary | `check mem4` | `docs/mem-4.md` |
@@ -232,7 +232,7 @@ launchkit/
   settings.py                            .env, paths, limits
   trace.py                               what the Trace tab shows
 approach_llm/, approach_graph/   the opener's two approaches
-workspaces/   one folder per brand: SOUL.md, AGENTS.md, rules.yaml, facts.md, users.yaml, assets/
+workspaces/   one folder per brand: SOUL.md, AGENTS.md, rules.yaml, facts.md, brand_facts.yaml (dated facts, Session 3), users.yaml, assets/
 samples/      pictures, photos and brand packs to try
 checks/       one pytest file per step; `launchkit check` wraps them
 docs/         setup, glossary, one card per step

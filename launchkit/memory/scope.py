@@ -16,9 +16,6 @@ import yaml
 
 from launchkit.tools.catalogue import todo
 
-FACT_SUBJECTS = ("warranty",)  # subjects the brand_facts table owns
-
-
 def held_back(text: str, settings) -> str | None:
     """Why this row is not a memory about the person, or None when it is one."""
     return personal_data(text) or brand_fact(text, settings)
@@ -26,8 +23,10 @@ def held_back(text: str, settings) -> str | None:
 
 @lru_cache(maxsize=8)
 def brand_words(workspaces_dir: Path) -> tuple[str, ...]:
-    """Every word a brand file owns: never-say phrases, colour names and codes, sizes, and the brand facts' subjects."""
-    words = set(FACT_SUBJECTS)
+    """Every word a brand file owns: never-say phrases, colour names and codes, sizes, and the subjects in brand_facts.yaml."""
+    words = set()
+    for facts_file in sorted(workspaces_dir.glob("*/brand_facts.yaml")):
+        words |= {subject.lower() for subject in (yaml.safe_load(facts_file.read_text(encoding="utf-8")) or {})}
     for rules_file in sorted(workspaces_dir.glob("*/rules.yaml")):
         rules = yaml.safe_load(rules_file.read_text(encoding="utf-8")) or {}
         words |= {claim.lower() for claim in rules.get("banned_claims", [])}

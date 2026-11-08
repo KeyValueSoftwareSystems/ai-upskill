@@ -6,11 +6,12 @@ When memory went on, Harbor's warranty was two years, and a row said so: "Harbor
 
 ## The slot
 
+- `launchkit/knowledge/brand_facts.py` · `load_brand_facts`. Today it loads nothing.
 - `launchkit/knowledge/brand_facts.py` · `get_brand_facts`. Today it returns nothing.
 - `launchkit/knowledge/brand_facts.py` · `set_brand_fact`. Today it changes nothing.
 - `launchkit/skills/on_brand_copy/skill.md`: one line in `Uses:` and one step.
 
-The table is ready-made: `brand_facts` in the project database, one row per fact (`brand, subject, value, scope, source, valid_from, valid_to`), with Harbor's warranty seeded as two rows. `_open(settings)` makes and seeds it. The catalogue already lists `get_brand_facts` as a read tool once the slot is built, with the brand bound from the request, as in Session 1: the model never names it.
+The facts come from the brand, not from LaunchKit: `workspaces/harbor/brand_facts.yaml` is the dated part of Harbor's product sheet, two entries for the warranty, each with when it was true and its source. The table is ready-made and empty: `brand_facts` in the project database, one row per fact (`brand, subject, value, scope, source, valid_from, valid_to`). `_open(settings)` makes it; `brand_file_facts(settings, brand)` reads the brand's file. The catalogue already lists `get_brand_facts` as a read tool once the slot is built, with the brand bound from the request, as in Session 1: the model never names it.
 
 ## Break it first
 
@@ -18,20 +19,26 @@ The table is ready-made: `brand_facts` in the project database, one row per fact
 
 > The warranty is five years now, redo the Tidal headline.
 
-Watch the Trace's `memory` lines. In prep, 3 runs of 3 rewrote the 2-year row in place ("Harbor warranty is 5 years now, updated from 2 years."). None added a second row, and no headline cited both. The room may see all three outcomes; prep saw one. Open the **Memory** tab and look for any date on the row that says when it became true: there is only `updated`.
+Watch the Trace's `memory` lines. In prep, 3 runs of 3 rewrote the 2-year row in place ("Harbor warranty is 5 years now, updated from 2 years."). None added a second row, and no headline cited both. The room may see all three outcomes; prep saw one. Open the **Memory** tab and look for any date on the row that says when it became true: there is only `updated`. Above it, Harbor's brand facts table is empty: Harbor's file says when the warranty changed, and LaunchKit has never read it.
 
 ## Prompt card, for your coding agent
 
 ```
 In launchkit/knowledge/brand_facts.py:
 
+load_brand_facts(settings, brand) -> int: copy the brand's entries from brand_file_facts(settings, brand)
+into the table, skipping an entry whose brand, subject and valid_from are already there, so loading
+twice adds nothing and a row closed later by set_brand_fact stays closed. Return how many rows were
+added. Open the table with _open(settings) inside contextlib.closing. Remove the @todo mark.
+
 get_brand_facts(settings, brand, today=None) -> list[dict]: the brand's rows true on `today` (default
-date.today()): valid_from <= today and (valid_to is null or valid_to >= today), ordered by subject.
+date.today()): call load_brand_facts(settings, brand) first, then the rows with valid_from <= today and
+(valid_to is null or valid_to >= today), ordered by subject.
 Each row as a dict with subject, value, scope, source, valid_from. Open the table with _open(settings)
 inside contextlib.closing. Remove the @todo mark.
 
-set_brand_fact(settings, brand, subject, value, source, scope="brand", today=None) -> dict: never
-overwrite. In one transaction, close the open row for that brand and subject (valid_to = the day before
+set_brand_fact(settings, brand, subject, value, source, scope="brand", today=None) -> dict: call
+load_brand_facts(settings, brand) first, then never overwrite. In one transaction, close the open row for that brand and subject (valid_to = the day before
 `today`) and insert a new row from `today` with valid_to null. Return brand, subject, value, source,
 valid_from. Remove the @todo mark.
 
@@ -48,6 +55,7 @@ earlier conversations.
 uv run launchkit check mem2a
 ```
 
+- The rows come from Harbor's `brand_facts.yaml`, and loading twice adds nothing.
 - The warranty is two rows, and only one is true today.
 - A date inside the old window gets the old value.
 - Updating a fact closes the old row and opens a new one.
@@ -55,7 +63,7 @@ uv run launchkit check mem2a
 
 ## Run it again
 
-Restart the page. The **Memory** tab now opens with Harbor's brand facts: 2 years from 2025-01-01 to 2026-08-31, 5 years from 2026-09-01, still true, "true today: yes". Send the same ask in a new conversation. The Trace shows:
+Restart the page. The **Memory** tab now opens with Harbor's brand facts, loaded from its file the first time anything reads the table: 2 years from 2025-01-01 to 2026-08-31, 5 years from 2026-09-01, still true, "true today: yes". Send the same ask in a new conversation. The Trace shows:
 
 ```
 tool      get_brand_facts() → [brand_facts/harbor/warranty] warranty: 5 years (true since 2026-09-01; source: …
