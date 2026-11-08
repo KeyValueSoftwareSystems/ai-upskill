@@ -141,6 +141,32 @@ Cards: `docs/tools-1.md` … `docs/tools-5.md`.
 
 Cards: `docs/orch-1.md`, `docs/orch-2.md`.
 
+## Session 3 (alternative format): before you start
+
+Session 3 runs on one branch, `session-03-alt`. The same `.env` as Session 2 works; nothing new to sign up for. Do this once, before the day:
+
+```
+git checkout session-03-alt
+uv sync
+uv run launchkit setup       # copies the seeded database into place and checks the brands and the rank file
+uv run launchkit ui --reload # the chat page on http://localhost:8000; it restarts when you change a file under launchkit/
+```
+
+`setup` ends with `Setup complete`. If it stops, bring the line it printed to the session.
+
+The tickets you work through are in `TICKETS.md`. The pieces that are already built, and what each does, are in `READY-MADE.md`. Write each decision you make in `DECISIONS.md`.
+
+## If something breaks
+
+| What you see | What to do |
+| --- | --- |
+| The page shows an old version of your code | The page restarts itself only when started with `--reload`. Stop it and start it again with `uv run launchkit ui --reload`. |
+| The model times out or answers with an error | The proxy is slow or down. Wait a minute and send the message again. If it keeps happening, tell the trainer. |
+| The Memory panel is empty on a fresh clone | `uv run launchkit setup` was not run, or `data/sessions.db` was deleted. Run `setup` again; it copies the seeded start only when the file is missing. |
+| A row you expected is not in the Memory panel | The extractor decides what to save, and it does not save the same thing every time. Send the message again, or read what it did save. |
+| Your edit did nothing | Check that the file you changed is the one named in the ticket's hint, and that the page restarted (the terminal prints `Reloading...`). |
+| You are stuck on a ticket | Move to the next one. Every piece ships with a placeholder that runs, so the later tickets do not depend on the earlier ones being done. |
+
 ## Layout
 
 ```

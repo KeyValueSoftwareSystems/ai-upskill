@@ -211,18 +211,35 @@ TOOLS_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glo
 ORCH_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_orch*.py"))
 ORCH_GATE = ORCH_STEPS + [name for name in TOOLS_STEPS if name in ("tools3", "tools4", "tools5")]
 
+# Session 3 (alternative format). Participants never run these; they are the
+# trainers' proof that the ready-made plumbing and the answer branches work.
+ALT_CHECKS = ("alt-setup", "alt-ready", "alt-build-a", "alt-build-b", "alt-build-c")
+CHECK_NAMES = ("0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch", *ALT_CHECKS, "alt")
+COMMANDS = ("run", "main", "lookup", "chunks", "index", "onboard", "notion", "explain", "check", "ui", "setup")
+
+
+def check_targets(step: str) -> list[Path]:
+    """The test files `launchkit check <step>` runs, in order."""
+    extra = ["onboard", "setup"]
+    if step == "all":
+        names = [f"step{n}" for n in range(5)] + extra
+    elif step == "rag":
+        names = RAG_STEPS
+    elif step == "orch":
+        names = ORCH_GATE
+    elif step == "alt":
+        names = ["alt_setup", "alt_ready"]
+    elif step in ALT_CHECKS:
+        names = [step.replace("-", "_")]
+    elif step in extra + RAG_STEPS + TOOLS_STEPS + ORCH_STEPS:
+        names = [step]
+    else:
+        names = [f"step{step}"]
+    return [ROOT / "checks" / f"test_{name}.py" for name in names]
+
 
 def cmd_check(args):
-    extra = ["onboard", "setup"]
-    if args.step == "all":
-        names = [f"step{n}" for n in range(5)] + extra
-    elif args.step == "rag":
-        names = RAG_STEPS
-    elif args.step == "orch":
-        names = ORCH_GATE
-    else:
-        names = [args.step if args.step in extra + RAG_STEPS + TOOLS_STEPS + ORCH_STEPS else f"step{args.step}"]
-    targets = [ROOT / "checks" / f"test_{name}.py" for name in names]
+    targets = check_targets(args.step)
     command = [sys.executable, "-m", "pytest", "-q", "--tb=no", "-rN", "-p", "no:cacheprovider", *map(str, targets)]
     proc = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
     for line in proc.stdout.splitlines():
@@ -241,7 +258,53 @@ def cmd_ui(args):
     import uvicorn
 
     console.print(f"LaunchKit chat page: http://localhost:{args.port}")
-    uvicorn.run("launchkit.web.app:app", host="127.0.0.1", port=args.port, log_level="warning")
+    # --reload restarts the server when a file under launchkit/ changes, so a
+    # participant sees their edit without stopping and starting the page.
+    uvicorn.run(
+        "launchkit.web.app:app",
+        host="127.0.0.1",
+        port=args.port,
+        log_level="warning",
+        reload=args.reload,
+        reload_dirs=[str(ROOT / "launchkit")] if args.reload else None,
+    )
+    return 0
+
+
+def cmd_setup(args):
+    """Prepare a fresh clone for Session 3: the seeded database, the Alder brand and the rank file.
+
+    Runs once. It copies nothing over an existing database, so running it
+    again is safe.
+    """
+    import shutil
+
+    problems = []
+    seed = ROOT / "samples" / "memory" / "seed.db"
+    target = settings.data_dir / "sessions.db"
+    if target.exists():
+        console.print(f"database      {target.relative_to(ROOT)} already there, left as it is")
+    elif seed.exists():
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(seed, target)
+        console.print(f"database      copied the seeded start to {target.relative_to(ROOT)}")
+    else:
+        problems.append(f"the seeded database is missing: {seed.relative_to(ROOT)}")
+    alder = settings.workspaces_dir / "alder" / "users.yaml"
+    if alder.exists():
+        console.print("brands        Harbor, Ember and Alder")
+    else:
+        problems.append(f"the Alder brand is missing: {alder}")
+    ranking = ROOT / "launchkit" / "ranking.json"
+    try:
+        json.loads(ranking.read_text(encoding="utf-8"))
+        console.print(f"models        {ranking.relative_to(ROOT)} reads")
+    except (OSError, ValueError) as error:
+        problems.append(f"the rank file does not read: {error}")
+    if problems:
+        console.print(f"\n[red]Setup stopped[/red]  {problems[0]}")
+        return 1
+    console.print("\n[green]Setup complete[/green]  start the chat page with: uv run launchkit ui")
     return 0
 
 
@@ -297,12 +360,16 @@ def main(argv=None):
     explain.set_defaults(func=cmd_explain)
 
     check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all; retrieval: check rag1.. or rag; orchestration: check orch0.. or orch")
-    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch"])
+    check.add_argument("step", choices=list(CHECK_NAMES))
     check.set_defaults(func=cmd_check)
 
     ui = sub.add_parser("ui", help="start the chat page")
     ui.add_argument("--port", type=int, default=8000)
+    ui.add_argument("--reload", action="store_true", help="restart the page when a file under launchkit/ changes")
     ui.set_defaults(func=cmd_ui)
+
+    setup = sub.add_parser("setup", help="prepare a fresh clone for Session 3: the seeded database, the brands, the rank file")
+    setup.set_defaults(func=cmd_setup)
 
     args = parser.parse_args(argv)
     return args.func(args)
