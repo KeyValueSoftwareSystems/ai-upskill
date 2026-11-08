@@ -1,58 +1,67 @@
-"""Session 3, ticket 5: personal data never kept, and a delete that cascades by user_id and says what is left."""
+"""Session 3, ticket 5: how much is read, and for how long it is kept."""
 
-from launchkit.agents.main_agent import build_catalogue, build_main_agent
+import time
+
+from launchkit.agents.main_agent import build_catalogue, build_main_agent, run_main
 from launchkit.agents.prompt import ContextBuilder
 from launchkit.brands.workspace import load_workspace
-from launchkit.memory.chat_history import session_db
-from launchkit.memory.forget import delete_user, still_naming
-from launchkit.memory.long_term import user_memories
+from launchkit.memory.long_term import memory_manager, user_memories
 from launchkit.memory.memory_view import reset_to_snapshot
-from launchkit.memory.scope import held_back
+from launchkit.memory.retention import retain
+from launchkit.memory.chat_history import session_db
 from launchkit.trace import Trace
 
 NO = lambda name, inputs: False
-PHONE, TOKEN = "07700 900461", "lkdemo-board-token-7f3a91c2e8b4d605"
+QUEUE_FILLED = 1793606400  # 2026-11-02 08:00 UTC, the snapshot's morning
 
 
-def test_a_phone_number_and_a_token_are_personal_data_and_a_date_is_not(settings):
-    assert held_back(f"Call Callum on {PHONE}.", settings).startswith("personal data")
-    assert held_back(f"The board key is {TOKEN}.", settings).startswith("personal data")
-    assert held_back("Maya reviews drafts on 2026-03-31 and on Fridays.", settings) is None
+def test_the_main_agent_keeps_three_turns_and_a_summary(settings, monkeypatch):
+    """The last 3 turns word for word, and a running session summary for the rest, written by the cheaper model."""
+    from launchkit.adapters.models import resolve_model
 
-
-def test_the_snapshots_phone_number_and_token_never_reach_the_prompt(settings, good):
-    """They are still in the snapshot's rows (the delete is what removes them), but never loaded."""
-    reset_to_snapshot(settings)
-    assert any(PHONE in m.memory for m in user_memories(session_db(settings), "maya"))
+    monkeypatch.setenv("LITELLM_API_KEY", "test")
+    monkeypatch.setenv("LITELLM_BASE_URL", "http://localhost:9")
     ws = load_workspace("harbor", settings, Trace())
-    prompt = build_main_agent(ws, ContextBuilder(settings.budgets), good, settings, Trace(), build_catalogue(settings, Trace(), NO), user_id="maya").system_message
-    assert PHONE not in prompt and TOKEN not in prompt
+    agent = build_main_agent(ws, ContextBuilder(settings.budgets), resolve_model(settings, Trace()), settings, Trace(), build_catalogue(settings, Trace(), NO), user_id="maya")
+    assert agent.num_history_runs == 3 and agent.enable_session_summaries
+    assert agent.session_summary_manager.model.id == settings.memory_model
 
 
-def test_a_note_with_personal_data_is_refused_before_anyone_is_asked(settings):
-    asked = []
-    reply = build_catalogue(settings, Trace(), lambda name, plan: asked.append(name) or True).make_run_tool()("save_memory", {"note": f"Customer Callum Ferris, {PHONE}."})
-    assert asked == [] and "personal data" in reply
+def test_the_summary_is_put_in_the_prompt(settings, good, request_for):
+    """Agno skips the summary when an agent writes its own system message, so LaunchKit adds it to the memory section."""
+    from agno.session.summary import SessionSummary
+    from agno.session.agent import AgentSession
+
+    session_db(settings).upsert_session(AgentSession(session_id="harbor:maya:t1:main", user_id="maya", summary=SessionSummary(summary="The Tidal brief: four tasks, sizes due Friday.")))
+    ws = load_workspace("harbor", settings, Trace())
+    agent = build_main_agent(ws, ContextBuilder(settings.budgets), good, settings, Trace(), build_catalogue(settings, Trace(), NO), user_id="maya", session_id="harbor:maya:t1:main")
+    assert "sizes due Friday" in agent.system_message
 
 
-def test_the_delete_cascades_and_leaves_everyone_else(settings):
-    """Memories, summaries and decision log by user_id, and a learning they proposed by its source tag. Maya is untouched."""
+def test_retention_prunes_by_age_and_writes_nothing_without_apply(settings, good):
+    """The power user's 600 rows: a dry run reports, writes nothing; --apply deletes the rows older than 90 days."""
     reset_to_snapshot(settings)
-    build_catalogue(settings, Trace(), lambda name, plan: True, user="agency-manager").make_run_tool()("save_learning", {"title": "Client days", "learning": "Files go to clients on Mondays."})
-    removed = dict(delete_user(settings, "agency-manager", apply=True))
-    assert removed["memories"] == 18 and removed["conversations and their summaries"] == 2 and removed["shared learnings they proposed (tag source:agency-manager)"] == 1
-    assert user_memories(session_db(settings), "agency-manager") == [] and len(user_memories(session_db(settings), "maya")) == 39
+    manager = memory_manager(settings, Trace(), good)
+    dry = {r["user"]: r for r in retain(manager, 90, 10_000, apply=False, now=QUEUE_FILLED)}
+    assert dry["power-user"]["before"] == 600 and 0 < dry["power-user"]["pruned"] < 600
+    assert len(user_memories(manager.db, "power-user")) == 600
+    retain(manager, 90, 10_000, apply=True, now=QUEUE_FILLED)
+    left = user_memories(manager.db, "power-user")
+    assert len(left) == 600 - dry["power-user"]["pruned"] and min(m.updated_at for m in left) >= QUEUE_FILLED - 90 * 86_400
 
 
-def test_what_still_names_her_is_listed(settings):
-    """The learning seeded before the fix carries no source, so the cascade cannot find it by id: the search shows it."""
+def test_retention_never_runs_in_a_turn(settings, good, request_for):
+    """A turn reads memory and never prunes it: the job is scheduled, not per run."""
     reset_to_snapshot(settings)
-    delete_user(settings, "agency-manager", apply=True)
-    left = still_naming(settings, "agency-manager", ["Dana Whitlock"])
-    assert left and all("Dana Whitlock's tip" in line for line in left)
+    run_main(request_for(user_id="power-user", text="Morning!"), settings=settings, model=good, approve=NO)
+    assert len(user_memories(session_db(settings), "power-user")) == 600
 
 
-def test_without_apply_nothing_is_deleted(settings):
+def test_the_memory_tab_shows_a_conversation_with_no_summary_yet(settings, good, request_for):
+    """Seen on the chat page: a conversation Agno saved before its first summary broke the Memory tab."""
+    from launchkit.memory.memory_view import memory_view
+
     reset_to_snapshot(settings)
-    delete_user(settings, "agency-manager", apply=False)
-    assert len(user_memories(session_db(settings), "agency-manager")) == 18
+    run_main(request_for(text="Morning!"), settings=settings, model=good, approve=NO)
+    view = memory_view(settings, "maya", "harbor")
+    assert view["summaries"] == [] and len(view["memories"]) == 39

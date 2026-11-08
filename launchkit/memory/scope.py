@@ -5,7 +5,7 @@ new note it holds back before anyone is asked.
 
 brand_fact     ticket 3: a row naming any brand's colour, size or never-say phrase, or a subject the brand facts table
                owns, belongs to a brand, not a person. Brand facts go in through propose_brand_fact.
-personal_data  ticket 5: a phone number, an email address or a token. Code backs up the capture rules.
+personal_data  ticket 6: a phone number, an email address or a token. Code backs up the capture rules.
 """
 
 import re
@@ -51,6 +51,6 @@ PERSONAL = [
 
 @todo
 def personal_data(text: str) -> str | None:
-    """Ticket 5: not built yet. The reason, when the text holds a phone number (10 digits or more, so a date is not
+    """Ticket 6: not built yet. The reason, when the text holds a phone number (10 digits or more, so a date is not
     one), an email address or a token; else None."""
     return None

@@ -1,4 +1,4 @@
-"""Ticket 5: forget one person. A delete that cascades by user_id across every place LaunchKit keeps something about
+"""Ticket 6: forget one person. A delete that cascades by user_id across every place LaunchKit keeps something about
 them, then a search for what still names them. Agno's stores are deleted through their own tables; a shared learning
 is found by the tag source:<user_id> that save_learning adds, because Agno keeps no user_id on a shared learning."""
 
@@ -45,5 +45,5 @@ def still_naming(settings, user_id: str, names: list[str]) -> list[str]:
 
 @todo
 def delete_user(settings, user_id: str, apply: bool) -> list[tuple[str, int]]:
-    """Ticket 5: not built yet. What the cascade removes (or would remove, without apply), one line per store."""
+    """Ticket 6: not built yet. What the cascade removes (or would remove, without apply), one line per store."""
     return []

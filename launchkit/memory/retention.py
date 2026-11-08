@@ -1,4 +1,4 @@
-"""Ticket 4: how long a memory lives. A scheduled job, never part of a run: prune each person's rows older than N days,
+"""Ticket 5: how long a memory lives. A scheduled job, never part of a run: prune each person's rows older than N days,
 then fold what is left into one row with Agno's Summarize strategy when a person still has too many."""
 
 import time
@@ -16,5 +16,5 @@ def tokens(rows) -> int:
 
 @todo
 def retain(manager, days: int, summarise_over: int, apply: bool, now: float | None = None) -> list[dict]:
-    """Ticket 4: not built yet. One line per person: rows and tokens before, rows pruned, rows and tokens after."""
+    """Ticket 5: not built yet. One line per person: rows and tokens before, rows pruned, rows and tokens after."""
     return []

@@ -1,5 +1,5 @@
 {
-  "pain": "t2b",
+  "pain": "t4",
   "label": "before",
   "code": "/tmp/claude-1001/-home-riyajoseph-Downloads-launchkit-opener/b0df7463-679a-4fa9-af81-49cd7ffd461f/scratchpad/before",
   "model": "gpt-4.1-mini",
@@ -9,8 +9,8 @@
       "run": 1,
       "turns": [
         {
-          "text": "How is Cairnline launching its Summit bottle this season? One paragraph: message, channels, what to avoid copying.",
-          "reply": "Cairnline launches its Summit bottle this November with the message \"One bottle. Every trail. A lifetime guarantee.\" Their approach is bold and loud, focusing on durability and replacement promise. Channels used include video platforms for a hero film, trail-running clubs as ambassadors, refill stations at national park visitor centres, and early email subscriber access. Avoid copying their heavy use of lifetime guarantee claims and the very loud tone.",
+          "text": "How is Brook launching its Summit bottle this season? One paragraph: message, channels, what to avoid copying.",
+          "reply": "Brook launches its Summit bottle this November with the message \"One bottle. Every trail. A lifetime guarantee.\" Their approach is bold and loud, focusing on durability and replacement promise. Channels used include video platforms for a hero film, trail-running clubs as ambassadors, refill stations at national park visitor centres, and early email subscriber access. Avoid copying their heavy use of lifetime guarantee claims and the very loud tone.",
           "spec": null,
           "error": null,
           "seconds": 14.5,
@@ -21,11 +21,11 @@
           ],
           "trace": [
             "memory    loaded 39 rows for this person · 507 tokens in the prompt",
-            "tool      find_tool(\"competitor research Cairnline Summit bottle launch\") → skill competitor_research: the job is to find out how compe… · 225 tokens back",
+            "tool      find_tool(\"competitor research Brook Summit bottle launch\") → skill competitor_research: the job is to find out how compe… · 225 tokens back",
             "tool      run_skill(\"competitor_research\") → # competitor_research Pick me when: the job is to find out … · 286 tokens back",
-            "tool      search_web(\"Cairnline bottle launch November 2026\") → # Cairnline Summit bottle: built for a lifetime outdoors Ad… · 1271 tokens back",
+            "tool      search_web(\"Brook bottle launch November 2026\") → # Brook Summit bottle: built for a lifetime outdoors Ad… · 1271 tokens back",
             "model     research phase · OpenAI:gpt-4.1-mini · sent 4032 tokens, 1280 of them from cache, got back 158",
-            "tool      research_many(['How is Cairnline launching bottles this season (November …) → ['Cairnline is launching the Summit bottle this November 20… · 166 tokens back",
+            "tool      research_many(['How is Brook launching bottles this season (November …) → ['Brook is launching the Summit bottle this November 20… · 166 tokens back",
             "model     main phase · OpenAI:gpt-4.1-mini · sent 15182 tokens, 12928 of them from cache, got back 314"
           ]
         }
@@ -46,8 +46,8 @@
       "run": 2,
       "turns": [
         {
-          "text": "How is Cairnline launching its Summit bottle this season? One paragraph: message, channels, what to avoid copying.",
-          "reply": "Cairnline is launching the Summit bottle with the message \"One bottle. Every trail. A lifetime guarantee.\" They use a hero film on video platforms, trail-running club ambassadors, and refill stations at national park visitor centers, with early email subscriber access. Avoid their bold, loud tone, excessive exclamation marks, and heavy focus on the lifetime guarantee.",
+          "text": "How is Brook launching its Summit bottle this season? One paragraph: message, channels, what to avoid copying.",
+          "reply": "Brook is launching the Summit bottle with the message \"One bottle. Every trail. A lifetime guarantee.\" They use a hero film on video platforms, trail-running club ambassadors, and refill stations at national park visitor centers, with early email subscriber access. Avoid their bold, loud tone, excessive exclamation marks, and heavy focus on the lifetime guarantee.",
           "spec": null,
           "error": null,
           "seconds": 14.6,
@@ -58,11 +58,11 @@
           ],
           "trace": [
             "memory    loaded 39 rows for this person · 507 tokens in the prompt",
-            "tool      find_tool(\"Cairnline Summit bottle launch 2026\") → skill competitor_research: the job is to find out how compe… · 96 tokens back",
+            "tool      find_tool(\"Brook Summit bottle launch 2026\") → skill competitor_research: the job is to find out how compe… · 96 tokens back",
             "tool      run_skill(\"competitor_research\") → # competitor_research Pick me when: the job is to find out … · 286 tokens back",
-            "tool      search_web(\"Cairnline bottle launch November 2026\") → # Cairnline Summit bottle: built for a lifetime outdoors Ad… · 1271 tokens back",
+            "tool      search_web(\"Brook bottle launch November 2026\") → # Brook Summit bottle: built for a lifetime outdoors Ad… · 1271 tokens back",
             "model     research phase · OpenAI:gpt-4.1-mini · sent 4032 tokens, 2432 of them from cache, got back 143",
-            "tool      research_many(['How is Cairnline launching bottles this season (November …) → ['Cairnline is launching its Summit bottle this November 20… · 140 tokens back",
+            "tool      research_many(['How is Brook launching bottles this season (November …) → ['Brook is launching its Summit bottle this November 20… · 140 tokens back",
             "model     main phase · OpenAI:gpt-4.1-mini · sent 14828 tokens, 6912 of them from cache, got back 256"
           ]
         }
@@ -83,8 +83,8 @@
       "run": 3,
       "turns": [
         {
-          "text": "How is Cairnline launching its Summit bottle this season? One paragraph: message, channels, what to avoid copying.",
-          "reply": "Cairnline is launching its Summit bottle with the message \"One bottle. Every trail. A lifetime guarantee.\" They focus on video hero films, trail-running club ambassadors, refill stations at national parks, and early email subscriber access. Avoid copying their use of repeated claims about eco-friendliness, sustainability, and warranty promises.",
+          "text": "How is Brook launching its Summit bottle this season? One paragraph: message, channels, what to avoid copying.",
+          "reply": "Brook is launching its Summit bottle with the message \"One bottle. Every trail. A lifetime guarantee.\" They focus on video hero films, trail-running club ambassadors, refill stations at national parks, and early email subscriber access. Avoid copying their use of repeated claims about eco-friendliness, sustainability, and warranty promises.",
           "spec": null,
           "error": null,
           "seconds": 14.1,
@@ -95,11 +95,11 @@
           ],
           "trace": [
             "memory    loaded 39 rows for this person · 507 tokens in the prompt",
-            "tool      find_tool(\"competitor research Cairnline Summit bottle launch\") → skill competitor_research: the job is to find out how compe… · 225 tokens back",
+            "tool      find_tool(\"competitor research Brook Summit bottle launch\") → skill competitor_research: the job is to find out how compe… · 225 tokens back",
             "tool      run_skill(\"competitor_research\") → # competitor_research Pick me when: the job is to find out … · 286 tokens back",
-            "tool      search_web(\"Cairnline bottle launch November 2026\") → # Cairnline Summit bottle: built for a lifetime outdoors Ad… · 1271 tokens back",
+            "tool      search_web(\"Brook bottle launch November 2026\") → # Brook Summit bottle: built for a lifetime outdoors Ad… · 1271 tokens back",
             "model     research phase · OpenAI:gpt-4.1-mini · sent 4032 tokens, 3712 of them from cache, got back 145",
-            "tool      research_many(['How is Cairnline launching bottles this season (November …) → ['Cairnline is launching the Summit bottle this November 20… · 146 tokens back",
+            "tool      research_many(['How is Brook launching bottles this season (November …) → ['Brook is launching the Summit bottle this November 20… · 146 tokens back",
             "model     main phase · OpenAI:gpt-4.1-mini · sent 15169 tokens, 12928 of them from cache, got back 248"
           ]
         }

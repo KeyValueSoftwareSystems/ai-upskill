@@ -1,4 +1,4 @@
-# Ticket 5 evidence, 2026-11-08, no model call
+# Ticket 6 evidence, 2026-11-08, no model call
 
 grep -c -a on fixtures/memory-snapshot.db:
   07700 900461: 1

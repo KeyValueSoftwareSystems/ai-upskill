@@ -26,7 +26,7 @@ def test_the_memory_manager_runs_on_a_cheaper_model(settings, monkeypatch):
 
 
 def test_whatever_saves_memory_uses_that_manager(settings, good, monkeypatch):
-    """Until ticket 2b the main agent saves after every run, with this manager. From ticket 2b a note goes through
+    """Until ticket 4 the main agent saves after every run, with this manager. From ticket 4 a note goes through
     save_memory, which builds the same manager when Maya allows it."""
     import launchkit.agents.main_agent as main
 

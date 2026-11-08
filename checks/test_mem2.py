@@ -1,4 +1,4 @@
-"""Session 3, ticket 2a: a fact carries when it was true. Brand facts come from the brand's brand_facts.yaml into
+"""Session 3, ticket 2: a fact carries when it was true. Brand facts come from the brand's brand_facts.yaml into
 LaunchKit's own table, read in plain code."""
 
 from datetime import date

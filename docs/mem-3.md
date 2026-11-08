@@ -15,9 +15,17 @@ Memory is kept by `user_id`. Dana, the agency manager at Fieldnote, is one `user
 
 `uv run launchkit memory reset`, restart the page, pick **Brand: Alder** and **Person: Dana**, press **New conversation** and send:
 
-> Headline for Alder's spring poster.
+> Which phrases should I keep out of Alder's spring copy?
 
-The Trace says `memory loaded 18 rows`: all of hers, Harbor's included. In prep the model did not use Harbor navy or Harbor's never-say list in 3 runs. In 2 of 3 it sold an "Alder Bottle" ("Alder Bottle: Ready for Spring"). Alder makes cookware; her memory says "Bottle should always be shown whole". Open the **Memory** tab: "Prefers navy #1F3A5F as the lead colour.", "Sizes needed: 1080x1080, 1080x1350…", "Never say 'lifetime guarantee'…". Which brand are they about? The rows can't say.
+The reply lists Harbor's never-say list: "lifetime guarantee", "eco-friendly", "sustainable", "unbreakable", "cold forever", "fully dishwasher-safe". Alder has no never-say list; open `workspaces/alder/rules.yaml` and check.
+
+The Trace says `memory loaded 18 rows`: all of hers, Harbor's included. Open the **Memory** tab: "Never say 'lifetime guarantee', 'eco-friendly', …" is one of her rows, word for word the list in the reply. Beside it: "Prefers navy #1F3A5F as the lead colour.", "Sizes needed: 1080x1080, 1080x1350…". Which brand are they about? The rows can't say.
+
+A second ask shows the same leak in colours and sizes:
+
+> Which colour should lead Alder's spring poster, and which sizes do I need?
+
+Alder's poster size (2480x3508) in none, and navy #1F3A5F as the lead colour in 2. Alder's colours are moss, slate and birch.
 
 ## Prompt card, for your coding agent
 
@@ -33,6 +41,8 @@ learning=learning_machine(settings, namespace=ws.id), so learned knowledge and e
 per brand instead of in "global".
 ```
 
+
+
 ## Prove it
 
 ```
@@ -44,6 +54,8 @@ uv run launchkit check mem3
 - The main agent's learnings sit in the brand's namespace.
 - A brand namespace keeps learnings apart.
 
+
+
 ## Run it again
 
 Restart the page. Same brand, same person, new conversation, same ask. The Trace:
@@ -52,13 +64,13 @@ Restart the page. Same brand, same person, new conversation, same ask. The Trace
 memory    loaded 13 rows for this person · held back 5 that name a brand fact or personal data · 204 tokens in the prompt
 ```
 
-The **Memory** tab's "not loaded because" column names the word each held-back row matched. Switch to **Maya at Harbor**: 15 of her 39 rows are held back now, the eleven navy rows, the inverted rule and the 2-year warranty among them. Her phone and token rows still load; ticket 5 deals with them. Harbor's navy and never-say list still reach every Harbor turn, from Harbor's own files. In prep, on the finished branch, all 3 Alder headlines were about the Ridge Skillet, with no Harbor words.
+The **Memory** tab's "not loaded because" column names the word each held-back row matched. Switch to **Maya at Harbor**: 15 of her 39 rows are held back now, the eleven navy rows, the inverted rule and the 2-year warranty among them. Her phone and token rows still load; ticket 6 deals with them. Harbor's navy and never-say list still reach every Harbor turn, from Harbor's own files. In prep, on the finished branch, all 3 Alder headlines were about the Ridge Skillet, with no Harbor words.
 
 Not caught: "Headlines up to six words", "Audience is weekend hikers…". No word from a brand file is in them. Code holds back what the brand files name; a habit written in plain words still travels.
 
 ## Why it matters
 
-Three tickets, one cause: a row holds text, topics and a timestamp, and nothing about scope, source or time. Ticket 1 said what a row may hold, 2a gave a fact its time, and this one gives it its owner. Personal, shared, tenant: decide for every row which one it is.
+Three tickets, one cause: a row holds text, topics and a timestamp, and nothing about scope, source or time. Ticket 1 said what a row may hold, 2 gave a fact its time, and this one gives it its owner. Personal, shared, tenant: decide for every row which one it is.
 
 ## Stuck?
 

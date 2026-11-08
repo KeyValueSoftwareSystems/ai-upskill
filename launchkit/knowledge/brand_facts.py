@@ -1,10 +1,10 @@
-"""Ticket 2a: brand facts LaunchKit owns, in its own table in the project database. One row is one fact and when it was
+"""Ticket 2: brand facts LaunchKit owns, in its own table in the project database. One row is one fact and when it was
 true: subject, value, scope, source, valid_from, valid_to (empty while it is still true). Plain code reads it: no model.
 A new value never overwrites the old one: the old row is closed the day before, and a new row opens today.
 
 Where the rows come from: each brand's own workspaces/<brand>/brand_facts.yaml, the dated part of its product sheet.
 load_brand_facts copies the file's entries into the table; after that a change goes through propose_brand_fact and a
-yes (ticket 2b), or through the file. Until ticket 2a is built the table stays empty."""
+yes (ticket 4), or through the file. Until ticket 2 is built the table stays empty."""
 
 import sqlite3
 from contextlib import closing
@@ -37,13 +37,13 @@ def brand_file_facts(settings, brand: str) -> list[dict]:
 
 @todo
 def load_brand_facts(settings, brand: str) -> int:
-    """Ticket 2a: not built yet. Copy the brand's file entries into the table, skipping any already there; how many were added."""
+    """Ticket 2: not built yet. Copy the brand's file entries into the table, skipping any already there; how many were added."""
     return 0
 
 
 @todo
 def get_brand_facts(settings, brand: str, today: date | None = None) -> list[dict]:
-    """Ticket 2a: not built yet. The brand's facts that are true today, one per subject."""
+    """Ticket 2: not built yet. The brand's facts that are true today, one per subject."""
     return []
 
 
@@ -58,7 +58,7 @@ def all_brand_facts(settings, brand: str, today: date | None = None) -> list[dic
 
 @todo
 def set_brand_fact(settings, brand: str, subject: str, value: str, source: str, scope: str = "brand", today: date | None = None) -> dict:
-    """Ticket 2a: not built yet. Close the row that is true today (it ends yesterday) and open a new one from today."""
+    """Ticket 2: not built yet. Close the row that is true today (it ends yesterday) and open a new one from today."""
     return {}
 
 

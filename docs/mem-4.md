@@ -1,81 +1,115 @@
-# Memory ticket 4 · How much is read, and for how long
+# Memory ticket 4 · Who may write
 
-> "It got slow and expensive. Also it forgot the brief halfway through a long job."
+> "It saves notes for the whole team without asking anyone. And a draft said lifetime, which we never say."
 
-Every row about a person is loaded into every turn. Tomas, a heavy user, has 600 after three months: marketing trivia, none of it ever forgotten. And a long job is a different problem being solved with the same hammer: the brief from turn 1 leaves the history window, and only an accident keeps it.
+Tickets 1 to 3 said what a memory may hold. None of that stops a bad write: memory writes happen in three places, and none of them asks anyone:
+
+- the main agent's memory manager, after every turn (`update_memory_on_run=True`);
+- the main agent's learning tools (`save_learning`, `remember_about`, `log_decision` and others), which Agno adds beside the three doors at run time, so they never pass through `run_tool`;
+- the research helper, which reads competitor pages and was given the same learning tools.
+
+A competitor's page says "lifetime guarantee". Learned knowledge is shared with everyone by design.
+
+This is Session 2's question, "ask every time, or remember a yes?", coming back as a bill.
 
 ## The slot
 
-- `launchkit/memory/retention.py` · `retain`. Today it prunes nothing.
-- `launchkit/agents/main_agent.py` · `build_main_agent`: three history runs and a session summary.
+- `launchkit/tools/catalogue.py` · `run_tool`: ask with the planned change, not the raw inputs.
+- `launchkit/orchestration/research_team.py` · `build_research_agent`: no store, no learning.
+- `launchkit/agents/main_agent.py`: no write after every run, no learning tools; the memory doors go in the catalogue; one line in the task.
 
-Ready-made: `summary_manager` and `summary_text` in `launchkit/memory/long_term.py`. Agno skips the summary when an agent writes its own system message, so LaunchKit already adds it to the prompt's memory section once there is one. `scripts/retention_job.py` calls `retain` and prints the table.
+Ready-made in `launchkit/tools/save_memory.py`: `memory_entries` returns `save_memory`, `save_learning` and `propose_brand_fact` (all kind write, each with a `plan`), `search_learnings` (read), and logs every allowed write in the decision log. `Entry` already has an optional `plan` field.
 
 ## Break it first
 
-`uv run launchkit memory reset`, restart the page, sign in as **Tomas at Harbor**, new conversation:
+Brook is an invented rival, not on the live web, so start the page on the saved pages:
 
-> Write one headline for the Tidal poster.
+```
+uv run launchkit memory reset
+LAUNCHKIT_SEARCH=saved uv run launchkit ui
+```
 
-The Trace says `memory loaded 600 rows · about 11,300 tokens in the prompt`; so does the Context tab's memory row. In prep, before ticket 2b, that turn sent **39,611 tokens**: the main call, plus Agno's extraction call, which also carries all 600 rows. It took 7 to 9 s.
+As **Maya at Harbor**, in a new conversation:
 
-The long job: as **Maya at Harbor**, in one conversation, send these eight messages one by one (they are also in `scripts/memory_evidence.py`, `LONG_JOB`):
+> How is Brook launching its Summit bottle this season? One paragraph: message, channels, what to avoid copying.
 
-1. Here is the Tidal launch brief. Four tasks: 1) what hikers are talking about this season, 2) how five competitors are launching, 3) every Harbor size of the approved poster, 4) hand it back on the board. Deadline: Friday 13 November. Keep the lid out of all copy: it changes before launch. Just confirm you have it, nothing else yet.
-2. Which of our placements does the web banner go on?
-3. Give me three moods for a Breeze shoot.
-4. What is our headline word limit?
-5. Suggest a calm tagline for the Breeze colourway.
-6. What colours does Harbor use?
-7. Write one line for a Tuesday feed post about weekend hikes.
-8. Back to the Tidal brief: list its four tasks, the deadline and the copy rule.
+The Trace shows `competitor_research`, then `research_many`: the research helper reads Brook's page, "lifetime guarantee" and all. The reply quotes the line as research, something to avoid copying. That part is right.
 
-By turn 8, turn 1 has left the window of five turns. In prep, on the starting code, the brief still came back in 3 runs of 3: the after-every-turn extraction had saved the whole brief as a permanent row about Maya. The forgetting was hidden by keeping the brief in the wrong store, forever. After ticket 2b nothing saves on its own, and the window is all there is.
+Now look at what the helper was holding while it read. Beside `search_web` it had `save_learning`, which writes to the notes every Harbor user's agent reads. The model may chose not to write. Had it chosen otherwise, Brook's line would have joined the team's notes without passing `run_tool`, without an approval, and without a line in the Trace.
+
+So the room will most likely see nothing go wrong, and that is the ticket: the only thing between a rival's page and the team's memory is the model's judgement on the day.
+
+Then, in the terminal:
+
+```
+uv run launchkit check orch2
+```
+
+Session 2's check is red: "the research agent holds only search_web" fails, because the helper now has a store. Its tool list still says `search_web`: Agno adds learning tools at run time, not to `agent.tools`.
 
 ## Prompt card, for your coding agent
 
 ```
-In launchkit/memory/retention.py, retain(manager, days, summarise_over, apply, now=None) -> list[dict]:
-cutoff = (now or time.time()) - days * 86400. For every user_id in manager.db.get_user_memories():
-take that person's rows (user_memories(manager.db, user)); the old ones are those with updated_at
-before the cutoff. When apply, delete them: manager.db.delete_user_memories([ids], user_id=user).
-If more than summarise_over rows are left and apply, fold them with
-manager.optimize_memories(user_id=user, strategy=MemoryOptimizationStrategyType.SUMMARIZE, apply=True).
-Append {"user", "before", "tokens_before", "pruned", "after", "tokens_after"} (tokens() is in the
-file). Without apply, write nothing and report what it would do. Remove the @todo mark.
+Part 1, one door. In launchkit/tools/catalogue.py, run_tool: before the write check, work out
+planned = entry.plan(inputs) if entry.plan else inputs. If planned is a str, it is a refusal: record
+self.trace.refused(name, planned) and return it without asking. Then ask with planned instead of
+inputs: if entry.kind == "write" and not self.approve(name, planned): ... as before.
 
-In launchkit/agents/main_agent.py, build_main_agent: num_history_runs=3 (was 5), and add
-session_summary_manager=summary_manager(settings, trace, model) if model is not None and not
-isinstance(model, FakeModel) else None. The fakes are scripted for the conversation only.
+Part 2, no other writer. In launchkit/orchestration/research_team.py, build_research_agent: remove
+db= and learning=; the research agent is Session 2's again, search_web only. In
+launchkit/agents/main_agent.py, build_main_agent: set update_memory_on_run=False and remove the
+memory_manager= and learning= arguments. In build_catalogue, add
+*memory_entries(settings, lambda: memory_manager(settings, trace, model), user, namespace=ws.id)
+to the entries (memory_entries is in launchkit/tools/save_memory.py). In MAIN_TASK, before the last
+line, add: When the marketer tells you how they like to work and it will matter in a later
+conversation, call run_tool("save_memory", {"note": "..."}); a new value for a brand fact, such as the
+warranty, goes to propose_brand_fact. Every memory write asks the marketer first.
 ```
 
 ## Prove it
 
 ```
 uv run launchkit check mem4
+uv run launchkit check orch2
 ```
 
-- The main agent keeps three turns and a summary, written by the cheaper model.
-- The summary is put in the prompt.
-- Retention prunes by age, and writes nothing without `--apply`.
-- Retention never runs in a turn.
+- The research helper holds no memory and no learning tools; Session 2's orch2 check is green again.
+- The main agent writes nothing on its own: its tools are exactly `find_tool`, `run_skill`, `run_tool`.
+- Memory writes are write tools: they ask.
+- A learning asks first with the planned change, and a no saves nothing.
+- An allowed learning carries its source (`source:maya`) and is logged.
+- A brand fact is refused as a memory before anyone is asked.
+- A proposed brand fact is shared only after a yes; proposing the value already true changes nothing.
 
 ## Run it again
 
-The retention job, in the terminal: it runs on a schedule, never in a turn.
+Restart the page (still with `LAUNCHKIT_SEARCH=saved`). Same ask, new conversation: no write anywhere in the Trace. Then:
+
+> Save that as a learning for the team.
+
+When the agent calls `save_learning`, the chat asks, with exactly where it would go:
 
 ```
-uv run python scripts/retention_job.py --days 90           # what it would do; nothing written
-uv run python scripts/retention_job.py --days 90 --apply   # prune, then Summarize whoever still has more than 100 rows
+The agent wants to save_learning
+{ "store": "learned knowledge", "namespace": "harbor", "source": "maya", "title": "...", "learning": "..." }
+[ Allow ] [ Deny ]
 ```
 
-In prep: Tomas 600 rows → 309 pruned → 291 left → Summarize → one row of about 1,170 tokens. Restart the page and ask Tomas's headline again: `memory loaded 1 rows · about 1,200 tokens`. In prep that turn sent **2,361 tokens**, but took **about 13 s, not less**. The session summary runs after every turn on `gpt-5-nano`, a reasoning model, and Agno counts its tokens in the turn. Point at the tokens, not the clock: the small model is cheaper, not faster.
+Press **Deny**. Then:
 
-The long job again, in a new conversation: the **Memory** tab's session summaries show the running summary, and turn 8 reads from it. In prep, on the finished branch, the brief came back in full in 1 run of 3; twice the summary dropped the deadline or the lid rule. A summary is short because it leaves things out.
+> Remember: never say lifetime guarantee.
+
+If the agent calls `save_memory`, the Trace shows `refused save_memory: Not saved: a brand fact ("lifetime guarantee")…` and nobody is asked: it is Harbor's rule, and Harbor's files already hold it. And:
+
+> The warranty is seven years from today, update it.
+
+When the agent calls `propose_brand_fact`, the chat asks with `"from": "5 years", "to": "7 years"`. After **Allow**, the Memory tab shows the 5-year row closed yesterday and a 7-year row from today. Reset afterwards.
 
 ## Why it matters
 
-What is always loaded, what is searched, what is summarised, and when anything is forgotten are four decisions, not one switch. The 600 rows were a retention problem; the lost brief was a conversation problem. Ticket 4 gives each its own answer: a job on a schedule for the first, a summary on the session for the second.
+Every memory write now goes through the one door Session 2 built for outside writes. The rule is in code, so the model cannot talk its way past it, whatever a page tells it. Agno's propose mode is a prompt asking the agent to propose; it is not a gate. And the agent that reads the web holds no tool that writes.
+
+The price is a question every time something is saved. "Remember a yes" would need its own rule, and its own place to be written down.
 
 ## Stuck?
 

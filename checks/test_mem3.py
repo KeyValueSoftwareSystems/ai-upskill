@@ -25,15 +25,15 @@ def test_the_agency_managers_harbor_rows_stay_out_of_alder(settings, good):
 
 
 def test_mayas_inverted_rule_and_stale_warranty_are_not_loaded(settings, good):
-    """The rows ticket 1 and 2a are about name a brand fact, so they never reach the prompt."""
+    """The rows tickets 1 and 2 are about name a brand fact, so they never reach the prompt."""
     reset_to_snapshot(settings)
     memory = prompt_for(settings, good, "harbor", "maya").split("# memory", 1)[1]
     assert "lifetime guarantee" not in memory and "2 years" not in memory and "friday mornings" in memory
 
 
 def test_learnings_are_kept_per_brand(settings, good):
-    """The main agent's learnings sit in the brand's namespace, not "global". Until ticket 2b that is its LearningMachine;
-    from ticket 2b it is where save_learning writes."""
+    """The main agent's learnings sit in the brand's namespace, not "global". Until ticket 4 that is its LearningMachine;
+    from ticket 4 it is where save_learning writes."""
     ws = load_workspace("alder", settings, Trace())
     catalogue = build_catalogue(settings, Trace(), NO, ws=ws, user="agency-manager")
     agent = build_main_agent(ws, ContextBuilder(settings.budgets), good, settings, Trace(), catalogue, user_id="agency-manager")

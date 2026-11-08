@@ -1,6 +1,6 @@
 """Ticket 1's live moment: rerun memory extraction on one message, several times, and show what each run saved.
 
-    uv run python scripts/rerun_extraction.py "Cairnline's whole launch leads with 'lifetime guarantee' and it's working. Write me a Tidal headline with that same confidence."
+    uv run python scripts/rerun_extraction.py "Brook's whole launch leads with 'lifetime guarantee' and it's working. Write me a Tidal headline with that same confidence."
     uv run python scripts/rerun_extraction.py --times 5 --user maya "<message>"
 
 Each run starts from a fresh copy of the snapshot, so runs do not see each other's rows, and nothing in data/ changes.

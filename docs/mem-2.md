@@ -1,4 +1,4 @@
-# Memory ticket 2a · A fact carries when it was true
+# Memory ticket 2 · A fact carries when it was true
 
 > "The warranty is five years. It still says two. Sometimes it says both."
 
@@ -52,7 +52,7 @@ earlier conversations.
 ## Prove it
 
 ```
-uv run launchkit check mem2a
+uv run launchkit check mem2
 ```
 
 - The rows come from Harbor's `brand_facts.yaml`, and loading twice adds nothing.
@@ -69,7 +69,9 @@ Restart the page. The **Memory** tab now opens with Harbor's brand facts, loaded
 tool      get_brand_facts() → [brand_facts/harbor/warranty] warranty: 5 years (true since 2026-09-01; source: …
 ```
 
-The headline cites five years, with `brand_facts/harbor/warranty` as its source. The main agent still writes memory after every turn at this point, so a `memory` line may still change the old row. Ticket 2b closes that door.
+The headline cites five years, with `brand_facts/harbor/warranty` as its source. The main agent still writes memory after every turn at this point, so a `memory` line may still change the old row. Ticket 4 closes that door.
+
+Ask a plain question instead, "What is the warranty period?", and the answer may still be two years with no tool in the Trace: the remembered row "Harbor warranty is 2 years." is still in the prompt, and the agent answers from it without calling `get_brand_facts`. Ticket 3 holds that row back in code.
 
 ## Why it matters
 

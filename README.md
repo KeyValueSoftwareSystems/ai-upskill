@@ -160,13 +160,13 @@ Prompts go on the chat page with the real model (Model empty). The **Memory** ta
 | Checkpoint | Ticket | Slot | Check | Card |
 | --- | --- | --- | --- | --- |
 | A · what one fact holds | 1 · what one row may hold | `memory/long_term.py` `CAPTURE`, `memory_manager` | `check mem1` | `docs/mem-1.md` |
-| | 2a · a fact carries when it was true | `knowledge/brand_facts.py` `load_brand_facts`, `get_brand_facts`, `set_brand_fact`; the `on_brand_copy` skill | `check mem2a` | `docs/mem-2a.md` |
+| | 2 · a fact carries when it was true | `knowledge/brand_facts.py` `load_brand_facts`, `get_brand_facts`, `set_brand_fact`; the `on_brand_copy` skill | `check mem2` | `docs/mem-2.md` |
 | | 3 · a brand is a namespace | `memory/scope.py` `brand_fact`; the main agent's namespace | `check mem3` | `docs/mem-3.md` |
-| B · who writes, reads, how long | 2b · who may write | `tools/catalogue.py` `run_tool`; the research helper; the main agent's writers | `check mem2b` | `docs/mem-2b.md` |
-| | 4 · how much is read, for how long | `memory/retention.py` `retain`; history runs and the session summary | `check mem4` | `docs/mem-4.md` |
-| | 5 · personal data, and forgetting | `memory/scope.py` `personal_data`; `memory/forget.py` `delete_user` | `check mem5` | `docs/mem-5.md` |
+| B · who writes, reads, how long | 4 · who may write | `tools/catalogue.py` `run_tool`; the research helper; the main agent's writers | `check mem4` | `docs/mem-4.md` |
+| | 5 · how much is read, for how long | `memory/retention.py` `retain`; history runs and the session summary | `check mem5` | `docs/mem-5.md` |
+| | 6 · personal data, and forgetting | `memory/scope.py` `personal_data`; `memory/forget.py` `delete_user` | `check mem6` | `docs/mem-6.md` |
 
-`uv run launchkit check mem` runs all six. Ticket 6, "prove it's better now", is a discussion: the store choice, tested on tickets 1 to 5.
+`uv run launchkit check mem` runs all six. Ticket 7, "prove it's better now", is a discussion: the store choice, tested on tickets 1 to 6.
 
 ## Layout
 

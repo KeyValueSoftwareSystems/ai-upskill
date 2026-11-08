@@ -8,8 +8,8 @@ Trace's memory and tool lines, what was asked for approval, tokens, seconds, and
 docs/sessions/session-3/evidence/ is also the recorded run to show when the proxy is slow. An approval is answered the
 way Maya would: yes, unless the planned change says "lifetime".
 
-Pains: t1 t2a t2b t3 (one turn, three runs), t4a (the power user's turn; --retention first prunes and Summarizes),
-t4b (the long Tidal job: eight turns, then the brief is asked back).
+Pains: t1 t2 t4 t3 (one turn, three runs), t5a (the power user's turn; --retention first prunes and Summarizes),
+t5b (the long Tidal job: eight turns, then the brief is asked back).
 """
 
 import argparse
@@ -28,10 +28,10 @@ os.environ["LAUNCHKIT_IMAGE_PROVIDER"] = "placeholder"  # no picture matters to 
 
 ONE_TURN = {
     "t1": ("harbor", "maya", "Write the headline for the Breeze story size. Never say lifetime guarantee."),
-    "t2a": ("harbor", "maya", "The warranty is five years now, redo the Tidal headline."),
-    "t2b": ("harbor", "maya", "How is Cairnline launching its Summit bottle this season? One paragraph: message, channels, what to avoid copying."),
+    "t2": ("harbor", "maya", "The warranty is five years now, redo the Tidal headline."),
+    "t4": ("harbor", "maya", "How is Brook launching its Summit bottle this season? One paragraph: message, channels, what to avoid copying."),
     "t3": ("alder", "agency-manager", "Headline for Alder's spring poster."),
-    "t4a": ("harbor", "power-user", "Write one headline for the Tidal poster."),
+    "t5a": ("harbor", "power-user", "Write one headline for the Tidal poster."),
 }
 LONG_JOB = [
     "Here is the Tidal launch brief. Four tasks: 1) what hikers are talking about this season, 2) how five competitors are launching, "
@@ -104,11 +104,11 @@ def turn(settings, workspace, user, session, text, asked):
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("pain", choices=[*ONE_TURN, "t4b"])
+    parser.add_argument("pain", choices=[*ONE_TURN, "t5b"])
     parser.add_argument("--label", required=True)
     parser.add_argument("--code", type=Path, default=HERE, help="the checkout whose launchkit/ runs")
     parser.add_argument("--runs", type=int, default=3)
-    parser.add_argument("--retention", action="store_true", help="t4a: run the retention job (--days 90 --apply) on the snapshot first")
+    parser.add_argument("--retention", action="store_true", help="t5a: run the retention job (--days 90 --apply) on the snapshot first")
     args = parser.parse_args()
     sys.path.insert(0, str(args.code.resolve()))
     from launchkit.settings import settings as base
@@ -136,17 +136,17 @@ def main() -> int:
         for n in range(1, args.runs + 1):
             data = fresh(Path(tmp) / f"run{n}", start)
             settings = replace(base, data_dir=data, search="saved", board="local")
-            workspace, user = ("harbor", "maya") if args.pain == "t4b" else ONE_TURN[args.pain][:2]
+            workspace, user = ("harbor", "maya") if args.pain == "t5b" else ONE_TURN[args.pain][:2]
             before, asked = rows(data, user), []
             turns = [turn(settings, workspace, user, f"{args.pain}-{args.label}-{n}", text, asked)
-                     for text in (LONG_JOB if args.pain == "t4b" else [ONE_TURN[args.pain][2]])]
+                     for text in (LONG_JOB if args.pain == "t5b" else [ONE_TURN[args.pain][2]])]
             after = rows(data, user)
             run = {"run": n, "turns": turns, "asked": asked,
                    "memories_added": [m for m in after["memories"] if m not in before["memories"]],
                    "memories_removed": [m for m in before["memories"] if m not in after["memories"]],
                    "learnings_after": after["learnings"], "learning_text_with_lifetime": after["learning_text_with_lifetime"],
                    "brand_facts_after": after["brand_facts"]}
-            if args.pain == "t4b":
+            if args.pain == "t5b":
                 last = (turns[-1]["reply"] or "").lower()
                 run["recall"] = {k: any(w in last for w in words) for k, words in RECALL.items()}
             record["runs"].append(run)

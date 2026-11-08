@@ -1,4 +1,4 @@
-"""Ticket 4: the retention job. Run it on a schedule, never per run:
+"""Ticket 5: the retention job. Run it on a schedule, never per run:
 
     uv run python scripts/retention_job.py --days 90               # what it would do; nothing written
     uv run python scripts/retention_job.py --days 90 --apply       # prune, then Summarize whoever still has more than 100 rows

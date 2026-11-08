@@ -22,28 +22,28 @@ One line in Harbor's brief tied the whole queue together: the warranty. When mem
 
 ## The ticket queue
 
-Six tickets, worked in order. Tickets 1, 2a and 3 share one cause and one build; so do 2b, 4 and 5.
+Seven tickets, worked in order. Tickets 1, 2 and 3 share one cause and one build; so do 4, 5 and 6.
 
 | Ticket | In Maya's words | Checkpoint |
 | --- | --- | --- |
 | 1 | "It keeps putting 'lifetime guarantee' in headlines. I told it never to." | A · what one fact holds |
-| 2a | "The warranty is five years. It still says two. Sometimes it says both." | A · what one fact holds |
+| 2 | "The warranty is five years. It still says two. Sometimes it says both." | A · what one fact holds |
 | 3 | "Our agency manager saw Harbor's never-say list come up while working on another brand." | A · what one fact holds |
-| 2b | "…and it says lifetime, which we never say." | B · who writes, reads, how long |
-| 4 | "It got slow and expensive. Also it forgot the brief halfway through a long job." | B · who writes, reads, how long |
-| 5 | "A customer's phone number is in a headline draft. And legal wants everything about one user deleted by Friday." | B · who writes, reads, how long |
-| 6 | "Prove it's better now." | Test, then discussion |
+| 4 | "It saves notes for the whole team without asking anyone. And a draft said lifetime, which we never say." | B · who writes, reads, how long |
+| 5 | "It got slow and expensive. Also it forgot the brief halfway through a long job." | B · who writes, reads, how long |
+| 6 | "A customer's phone number is in a headline draft. And legal wants everything about one user deleted by Friday." | B · who writes, reads, how long |
+| 7 | "Prove it's better now." | Test, then discussion |
 
 ### Ticket 1 · Formation
 
 - **What is actually wrong.** Automatic extraction after every run saved the quoted phrase from the never-say list as a preference. It also saved eleven near-duplicate lines about Harbor navy. Automatic learning tends to find something every time it runs.
 - **Agno concept.** `update_memory_on_run` vs `enable_agentic_memory`; MemoryManager capture instructions; the memory data model, one row = one fact with topics and `updated_at`.
 - **Live moment.** Rerun extraction on her message. Then read the rows.
-- **The build (shared with 2a and 3).** Capture instructions: one fact per row, preferences only in user memory, a quoted never-say phrase is a rule, not a wish, no personal data. The Summarize strategy shown on the duplicates, not written.
+- **The build (shared with 2 and 3).** Capture instructions: one fact per row, preferences only in user memory, a quoted never-say phrase is a rule, not a wish, no personal data. The Summarize strategy shown on the duplicates, not written.
 - **Topics it opens.** Formation · writing style of a fact · consolidating · the four kinds with LaunchKit examples (a preference, the Tidal launch, the warranty, "always attach PNG and PDF") · when a fact is saved.
 - **Alternative that would have changed it.** Mem0's extract, compare, merge pass; a filesystem MEMORY.md a human can read line by line.
 
-### Ticket 2a · Fact validity
+### Ticket 2 · Fact validity
 
 - **What is actually wrong.** Two rows, no dates, no winner. Memory stored "is", not "was true from". The extraction model usually updates the old row and sometimes leaves both standing; that variance is the demo.
 - **Agno concept.** A memory carries `updated_at` but no validity window. Entity memory has dated events (`add_event`) but a fact has no valid-from / valid-to and no "superseded by".
@@ -61,16 +61,16 @@ Six tickets, worked in order. Tickets 1, 2a and 3 share one cause and one build;
 - **Topics it opens.** Personal vs shared vs tenant · how memory is shared · user, tenant, product.
 - **Alternative that would have changed it.** Honcho's per-app, per-user model; multi-tenant keys in Mem0.
 
-### Ticket 2b · Poisoning (same ticket as 2a, second cause)
+### Ticket 4 · Poisoning
 
 - **What is actually wrong.** The research subagent read a saved competitor page that says "lifetime guarantee" and wrote it back as a learning. Learned knowledge is shared across users by design.
 - **Agno concept.** Propose mode is intended for learned knowledge only, and is not an approval control on its own; enforce approval in application code.
 - **Live moment.** Run the competitor skill from Session 2 with `save_learning` in reach; show the poisoned row.
-- **The build (shared with 4 and 5).** Every memory write goes through the same "needs approval" branch in `run_tool` as Session 2's outside writes. The subagent keeps `search_web` and loses `save_learning`. A proposed brand fact needs the brand owner's yes.
+- **The build (shared with 5 and 6).** Every memory write goes through the same "needs approval" branch in `run_tool` as Session 2's outside writes. The subagent keeps `search_web` and loses `save_learning`. A proposed brand fact needs the brand owner's yes.
 - **Topics it opens.** Memory poisoning · sharing memory with subagents · the approval gate, which pays Session 2's parked question "ask every time, or remember a yes?"
 - **Alternative that would have changed it.** None fixes it alone; the gate is yours in every store.
 
-### Ticket 4 · Scale and cost
+### Ticket 5 · Scale and cost
 
 - **What is actually wrong.** All of a user's memories are loaded into every turn, and a power user has 600 rows after three months. Session history and summaries are a separate problem being solved with the same hammer.
 - **Agno concept.** `num_history_runs`, session summaries, session context; memory optimisation strategies (Summarize); a cheaper model on the MemoryManager; prune by age.
@@ -79,7 +79,7 @@ Six tickets, worked in order. Tickets 1, 2a and 3 share one cause and one build;
 - **Topics it opens.** Tiers (always-loaded profile · searched memory · outside provider) · compaction · retention · cost per turn · what loads into the system prompt.
 - **Alternative that would have changed it.** File tiers; a bigger context window, and why not.
 
-### Ticket 5 · Personal data and deletion
+### Ticket 6 · Personal data and deletion
 
 - **What is actually wrong.** Personal data extracted from a pasted board card; a token Maya pasted once lives in a memory; deleting a user's memories does not delete the session summaries, the decision log or the shared learning they seeded.
 - **Agno concept.** Redaction via manager instructions; deletes honour `user_id`; the decision log as an audit trail; the learnings as the deletion surface.
@@ -88,7 +88,7 @@ Six tickets, worked in order. Tickets 1, 2a and 3 share one cause and one build;
 - **Topics it opens.** Personal data and credentials in memory · deletion cascade · what "forgotten" must mean in a contract.
 - **Alternative that would have changed it.** Providers with deletion APIs vs a filesystem you grep; two systems means two deletions.
 
-### Ticket 6 · Benchmarking and the store choice
+### Ticket 7 · Benchmarking and the store choice
 
 - **What is actually wrong.** No eval. Nobody can say whether the fixes made recall better or just cheaper.
 - **Agno concept.** `get_user_memories` for a debug view. Evals sit outside the framework.
@@ -97,8 +97,8 @@ Six tickets, worked in order. Tickets 1, 2a and 3 share one cause and one build;
 
 ## Two checkpoints and a test
 
-- **A · What one fact holds** (tickets 1, 2a, 3; about 35 minutes). One cause: a saved row holds text, topics and a timestamp, and nothing about scope, source or time. Build: the fact schema (subject, value, scope, source, valid-from, valid-to) and the writing rule in the capture instructions. Show: Summarize on the navy duplicates.
-- **B · Who writes, who reads, how long** (tickets 2b, 4, 5; about 35 minutes). One cause: anyone could write, everything was read, nothing was ever forgotten. Build: one write door through `run_tool` approval, and a retention rule with a cascading delete. Show: the 600-row turn before and after, measured in prep. Pays Session 2's parked "remember a yes?" question.
-- **The test · Ticket 6** (about 15 minutes, then the close). Choosing a store is a test on your own tickets, not a feature tour.
+- **A · What one fact holds** (tickets 1, 2, 3; about 35 minutes). One cause: a saved row holds text, topics and a timestamp, and nothing about scope, source or time. Build: the fact schema (subject, value, scope, source, valid-from, valid-to) and the writing rule in the capture instructions. Show: Summarize on the navy duplicates.
+- **B · Who writes, who reads, how long** (tickets 5, 5, 6; about 35 minutes). One cause: anyone could write, everything was read, nothing was ever forgotten. Build: one write door through `run_tool` approval, and a retention rule with a cascading delete. Show: the 600-row turn before and after, measured in prep. Pays Session 2's parked "remember a yes?" question.
+- **The test · Ticket 7** (about 15 minutes, then the close). Choosing a store is a test on your own tickets, not a feature tour.
 
 The question the room will ask hardest, at ticket 1: can't a better prompt fix it? Instructions lower the error rate; the snapshot shows what three months of a low error rate looks like.

@@ -1,56 +1,52 @@
-# Memory ticket 5 · Personal data, and forgetting on demand
+# Memory ticket 5 · How much is read, and for how long
 
-> "A customer's phone number is in a headline draft. And legal wants everything about one user deleted by Friday."
+> "It got slow and expensive. Also it forgot the brief halfway through a long job."
 
-Maya once pasted a board card with a customer's name and phone number, and once a token. Both became rows about her and were loaded into every turn. Then legal asked for the agency manager to be deleted. Deleting her memories is one query. Her session summaries, the decision log and the shared learning that names her are somewhere else.
+Every row about a person is loaded into every turn. Tomas, a heavy user, has 600 after three months: marketing trivia, none of it ever forgotten. And a long job is a different problem being solved with the same hammer: the brief from turn 1 leaves the history window, and only an accident keeps it.
 
 ## The slot
 
-- `launchkit/memory/scope.py` · `personal_data`. Today it finds nothing.
-- `launchkit/memory/forget.py` · `delete_user`. Today it deletes nothing.
+- `launchkit/memory/retention.py` · `retain`. Today it prunes nothing.
+- `launchkit/agents/main_agent.py` · `build_main_agent`: three history runs and a session summary.
 
-Ready-made: `held_back` already asks `personal_data` first, so a row it names is left out of the prompt and a note it names is refused by `save_memory`. `still_naming` in `forget.py` lists every place a person's id or name still appears. `scripts/delete_user.py` calls both.
+Ready-made: `summary_manager` and `summary_text` in `launchkit/memory/long_term.py`. Agno skips the summary when an agent writes its own system message, so LaunchKit already adds it to the prompt's memory section once there is one. `scripts/retention_job.py` calls `retain` and prints the table.
 
 ## Break it first
 
-`uv run launchkit memory reset`, restart the page, sign in as **Maya at Harbor** and open the **Memory** tab. One row holds "Callum Ferris (07700 900461)", another "lkdemo-board-token-…". The Trace of any turn says they are loaded. In the terminal:
+`uv run launchkit memory reset`, restart the page, sign in as **Tomas at Harbor**, new conversation:
 
-```
-grep -c -a "07700 900461" data/sessions.db
-```
+> Write one headline for the Tidal poster.
 
-In a new conversation:
+The Trace says `memory loaded 600 rows · about 11,300 tokens in the prompt`; so does the Context tab's memory row. In prep, before ticket 4, that turn sent **39,611 tokens**: the main call, plus Agno's extraction call, which also carries all 600 rows. It took 7 to 9 s.
 
-> Note this customer for a follow-up: Callum Ferris, 07700 900461.
+The long job: as **Maya at Harbor**, in one conversation, send these eight messages one by one (they are also in `scripts/memory_evidence.py`, `LONG_JOB`):
 
-If the agent calls `save_memory`, the chat asks whether to save it. Nothing in code says no; only the capture rules from ticket 1 might.
+1. Here is the Tidal launch brief. Four tasks: 1) what hikers are talking about this season, 2) how five competitors are launching, 3) every Harbor size of the approved poster, 4) hand it back on the board. Deadline: Friday 13 November. Keep the lid out of all copy: it changes before launch. Just confirm you have it, nothing else yet.
+2. Which of our placements does the web banner go on?
+3. Give me three moods for a Breeze shoot.
+4. What is our headline word limit?
+5. Suggest a calm tagline for the Breeze colourway.
+6. What colours does Harbor use?
+7. Write one line for a Tuesday feed post about weekend hikes.
+8. Back to the Tidal brief: list its four tasks, the deadline and the copy rule.
 
-Then legal's ask, in the terminal:
-
-```
-uv run python scripts/delete_user.py agency-manager --name "Dana Whitlock"
-```
-
-It lists where she appears: 18 memories, 2 session summaries, 2 decision-log rows, a shared learning (its title and its text), her chat folders. The delete itself does nothing yet.
+By turn 8, turn 1 has left the window of five turns. In prep, on the starting code, the brief still came back in 3 runs of 3: the after-every-turn extraction had saved the whole brief as a permanent row about Maya. The forgetting was hidden by keeping the brief in the wrong store, forever. After ticket 4 nothing saves on its own, and the window is all there is.
 
 ## Prompt card, for your coding agent
 
 ```
-In launchkit/memory/scope.py, personal_data(text) -> str | None: for each (kind, pattern) in PERSONAL
-(already written: a phone number, an email address, a token or key), if the pattern finds something,
-return f"personal data ({kind}): never kept in memory". A phone number counts only with 10 digits or
-more, so a date is not one. Else return None. Remove the @todo mark.
+In launchkit/memory/retention.py, retain(manager, days, summarise_over, apply, now=None) -> list[dict]:
+cutoff = (now or time.time()) - days * 86400. For every user_id in manager.db.get_user_memories():
+take that person's rows (user_memories(manager.db, user)); the old ones are those with updated_at
+before the cutoff. When apply, delete them: manager.db.delete_user_memories([ids], user_id=user).
+If more than summarise_over rows are left and apply, fold them with
+manager.optimize_memories(user_id=user, strategy=MemoryOptimizationStrategyType.SUMMARIZE, apply=True).
+Append {"user", "before", "tokens_before", "pruned", "after", "tokens_after"} (tokens() is in the
+file). Without apply, write nothing and report what it would do. Remove the @todo mark.
 
-In launchkit/memory/forget.py, delete_user(settings, user_id, apply) -> list[tuple[str, int]]: one
-(what, count) per store, deleting only when apply:
-- for each (what, table, column) in TABLES, count and delete the rows where column = user_id
-  (memories; sessions, which carry their summaries; the decision log and entity rows);
-- learned knowledge: Agno keeps no user_id on a shared learning, so find the agno_knowledge rows whose
-  metadata tags hold "source:<user_id>" (save_learning adds it), and remove each with
-  learnings(settings).remove_content_by_id(id), which also removes its vectors;
-- brand facts they proposed: keep the fact, set source to 'removed user';
-- their chat page folders: _files(settings, user_id), removed with shutil.rmtree.
-A table that does not exist yet is skipped. Remove the @todo mark.
+In launchkit/agents/main_agent.py, build_main_agent: num_history_runs=3 (was 5), and add
+session_summary_manager=summary_manager(settings, trace, model) if model is not None and not
+isinstance(model, FakeModel) else None. The fakes are scripted for the conversation only.
 ```
 
 ## Prove it
@@ -59,41 +55,27 @@ A table that does not exist yet is skipped. Remove the @todo mark.
 uv run launchkit check mem5
 ```
 
-- A phone number and a token are personal data; a date is not.
-- The snapshot's phone number and token never reach the prompt.
-- A note with personal data is refused before anyone is asked.
-- The delete cascades by user_id, takes a learning they proposed by its source tag, and leaves everyone else.
-- What still names her is listed.
-- Without `--apply` nothing is deleted.
+- The main agent keeps three turns and a summary, written by the cheaper model.
+- The summary is put in the prompt.
+- Retention prunes by age, and writes nothing without `--apply`.
+- Retention never runs in a turn.
 
 ## Run it again
 
-Restart the page. Maya's **Memory** tab marks the two rows "personal data: never kept in memory", and the Trace holds them back. The same note in a new conversation: if the agent calls `save_memory`, the Trace shows `refused save_memory: Not saved: personal data (a phone number)`, and nobody is asked.
-
-The rows are still in the database. The fix stops new ones and stops loading old ones; deleting is a separate act. Now delete Dana:
+The retention job, in the terminal: it runs on a schedule, never in a turn.
 
 ```
-uv run python scripts/delete_user.py agency-manager --name "Dana Whitlock" --apply
+uv run python scripts/retention_job.py --days 90           # what it would do; nothing written
+uv run python scripts/retention_job.py --days 90 --apply   # prune, then Summarize whoever still has more than 100 rows
 ```
 
-```
-Removed:
-    18  memories
-     2  conversations and their summaries
-     2  decision log and entity rows
-     0  shared learnings they proposed (tag source:agency-manager)
-     2  chat page conversations and pictures (folders)
+In prep: Tomas 600 rows → 309 pruned → 291 left → Summarize → one row of about 1,170 tokens. Restart the page and ask Tomas's headline again: `memory loaded 1 rows · about 1,200 tokens`. In prep that turn sent **2,361 tokens**, but took **about 13 s, not less**. The session summary runs after every turn on `gpt-5-nano`, a reasoning model, and Agno counts its tokens in the turn. Point at the tokens, not the clock: the small model is cheaper, not faster.
 
-After: still names them
-   agno_knowledge: Dana Whitlock's tip: lead every poster with navy
-   learned knowledge text: Dana Whitlock's tip: lead every poster with navy
-```
-
-That learning was saved before ticket 2b, with no source. No key reaches it; only a search for her name finds it. The folder count depends on what you did on the page. Restart the page: Dana's Memory tab is empty. Reset afterwards.
+The long job again, in a new conversation: the **Memory** tab's session summaries show the running summary, and turn 8 reads from it. In prep, on the finished branch, the brief came back in full in 1 run of 3; twice the summary dropped the deadline or the lid rule. A summary is short because it leaves things out.
 
 ## Why it matters
 
-"Forgotten" has to mean every store, and you can only prove it if every row says whose it is. The cascade is as good as the keys the writes left behind: a write without a source can't be deleted on demand, only found by a search. Two systems would mean two deletions, and two proofs.
+What is always loaded, what is searched, what is summarised, and when anything is forgotten are four decisions, not one switch. The 600 rows were a retention problem; the lost brief was a conversation problem. Ticket 5 gives each its own answer: a job on a schedule for the first, a summary on the session for the second.
 
 ## Stuck?
 

@@ -1,4 +1,4 @@
-"""Ticket 2b: the memory doors. Every write to long-term memory is a catalogue tool of kind "write", so it goes through
+"""Ticket 4: the memory doors. Every write to long-term memory is a catalogue tool of kind "write", so it goes through
 run_tool's approval branch from Session 2, like an outside write: the chat shows the planned change and asks first.
 Each approved write is logged in the decision log: who allowed what, and when.
 

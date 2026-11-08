@@ -1,4 +1,4 @@
-"""Ticket 5: delete everything LaunchKit keeps about one person, and show what still names them.
+"""Ticket 6: delete everything LaunchKit keeps about one person, and show what still names them.
 
     uv run python scripts/delete_user.py agency-manager --name "Dana Whitlock"            # what it would remove; nothing written
     uv run python scripts/delete_user.py agency-manager --name "Dana Whitlock" --apply    # remove it, then search again

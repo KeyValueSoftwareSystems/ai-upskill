@@ -43,11 +43,11 @@ Branch `session-3-memory`, cut from `session-02-orchestration-step2`. Agno is pi
 1. **A custom `system_message` turns off every read path.** When an agent sets `system_message`, Agno returns it as is: no memories, no session summary, no learnings (`agent/_messages.py:942-964`; the memory block is at `:1095`, the summary at `:1136`, learnings at `:1150`, all after that early return). LaunchKit's main agent writes its own system message (`agents/prompt.py`). So "memory on in one line" would have saved rows that were never read back. LaunchKit reads them itself and adds a `# Memory` section (`memory/long_term.py`).
 2. **Extraction reads only the user's message.** `make_memories` passes `run_messages.user_message` to the manager (`agent/_managers.py:29-50`), not the reply or the tool results. A competitor page can reach shared knowledge only through a tool such as `save_learning`, never through `update_memory_on_run`.
 3. **Learning tools bypass LaunchKit's one door.** A `LearningMachine` on an agent adds its tools to the agent at run time, beside `find_tool`, `run_skill` and `run_tool`, not in `agent.tools`. Session 2's check "the research agent holds only search_web" reads `agent.tools`, so a check written that way misses `save_learning`. It went red at the starting state only because Agno also needs `agent.db` set before it will attach a LearningMachine.
-4. **No validity window on any memory row.** User memories have `updated_at`; entity facts have `created_at`/`updated_at` and supersession. None has valid-from or valid-to, so "true today" is LaunchKit's table (ticket 2a).
+4. **No validity window on any memory row.** User memories have `updated_at`; entity facts have `created_at`/`updated_at` and supersession. None has valid-from or valid-to, so "true today" is LaunchKit's table (ticket 2).
 5. **A global learning forgets who wrote it** (see "No source column" above).
 6. **Summarize keeps whatever it is given**, wrong rows and personal data included.
 7. **The manager's own prompt keeps old preferences.** `memory_capture_instructions` replaces only the criteria block. The fixed text around it still says "when a user's preferences change, … also capture what the user's preferences used to be" and "append the existing memory with new information rather than completely overwriting it" (`memory/manager.py:1000-1002`). That pulls against "update, do not keep both". Only `system_message=` replaces it, and then the add/update/delete instructions must be rewritten too.
-8. **No dry run for extraction.** `create_user_memories` writes through its tools as it goes, so "show the planned rows, then ask" is not possible with Agno's manager. Ticket 2b asks before the note reaches the manager and shows the rows it changed afterwards (Trace).
+8. **No dry run for extraction.** `create_user_memories` writes through its tools as it goes, so "show the planned rows, then ask" is not possible with Agno's manager. Ticket 4 asks before the note reaches the manager and shows the rows it changed afterwards (Trace).
 
 ## 3 · What each fix changed
 
@@ -62,7 +62,7 @@ Every commit on `session-3-memory`, oldest first. "Old" is the code the morning 
 | prompt sections `rules, task, facts` | adds `memory` (no budget), filled by LaunchKit because Agno skips it (limit 1 below) |
 | nothing on the page | a **Memory** tab; the Trace's `memory` lines (`loaded N rows · T tokens`, then `added/updated/deleted: …`) |
 
-Also: Alder workspace (`workspaces/alder/`, no never-say list, `brand.json` beside the usual files), logins for `agency-manager` (Harbor and Alder) and `power-user` (Harbor), `samples/pages/cairnline-1.md` (an invented rival that says "lifetime guarantee"), `launchkit memory reset|show`. Session 2's check `orch2 · the research agent holds only search_web` goes red here and back to green at 2b.
+Also: Alder workspace (`workspaces/alder/`, no never-say list, `brand.json` beside the usual files), logins for `agency-manager` (Harbor and Alder) and `power-user` (Harbor), `samples/pages/brook-1.md` (an invented rival that says "lifetime guarantee"), `launchkit memory reset|show`. Session 2's check `orch2 · the research agent holds only search_web` goes red here and back to green at ticket 4.
 
 ### Ticket 1 · `c9473c7` (36 harness lines; room builds `CAPTURE` and the manager, about 20)
 
@@ -74,19 +74,19 @@ Also: Alder workspace (`workspaces/alder/`, no never-say list, `brand.json` besi
 
 On the page: the Trace's memory line names the model that saves.
 
-### Ticket 2a · `0821961` (82 harness lines; room builds `load_brand_facts`, `get_brand_facts` and `set_brand_fact`, about 35)
+### Ticket 2 · `0821961` (82 harness lines; room builds `load_brand_facts`, `get_brand_facts` and `set_brand_fact`, about 35)
 
 | Old | New |
 | --- | --- |
 | "Harbor warranty is 2 years." as a user-memory row, `updated_at` 2026-05-12, no end | `brand_facts` table in the project database: `brand, subject, value, scope, source, valid_from, valid_to` |
 | — | seeded: `warranty 2 years 2025-01-01 → 2026-08-31`, `warranty 5 years 2026-09-01 → (open)` (2 years when memory went on in May; 5 years before the queue filled) |
-| Harbor's warranty in its files only as today's value (`facts.md`: "Warranty: 5 years.") | `workspaces/harbor/brand_facts.yaml`: the warranty's two values with dates and sources. `load_brand_facts(settings, brand)` copies them into the table once (brand, subject, valid_from as the key); before ticket 2a the table is empty |
+| Harbor's warranty in its files only as today's value (`facts.md`: "Warranty: 5 years.") | `workspaces/harbor/brand_facts.yaml`: the warranty's two values with dates and sources. `load_brand_facts(settings, brand)` copies them into the table once (brand, subject, valid_from as the key); before ticket 2 the table is empty |
 | — | `get_brand_facts(settings, brand, today=None)`: rows true today. `set_brand_fact(...)` closes today's row (ends yesterday), opens a new one |
 | `on_brand_copy` uses `get_brand_details, check_copy` | uses `get_brand_details, get_brand_facts, check_copy`; "a fact from get_brand_facts wins over the brand guide and over anything remembered" |
 
 On the page: the Memory tab's first table, every row with "true today". In the catalogue `get_brand_facts` takes no input: the brand is bound from the request, Session 1's rule (the model never names a workspace).
 
-### Ticket 2b · `e0bbcb3` (66 harness lines; room builds `Entry.plan` and the two write entries, about 15)
+### Ticket 4 · `e0bbcb3` (66 harness lines; room builds `Entry.plan` and the two write entries, about 15)
 
 | Old | New |
 | --- | --- |
@@ -118,7 +118,7 @@ Snapshot, computed with no model call (`approx_tokens` = characters ÷ 4):
 
 Still loaded for the agency manager on Alder, because no rule word is in them: "Headlines up to six words, subheadlines up to twelve.", "Bottle should always be shown whole…", "Audience is weekend hikers and weekday commuters." Code catches the words a brand file lists; it can't catch a Harbor habit phrased in plain words.
 
-### Ticket 4 · `1bdb46a` (62 harness lines; room builds `retain`, about 25)
+### Ticket 5 · `1bdb46a` (62 harness lines; room builds `retain`, about 25)
 
 | Old | New |
 | --- | --- |
@@ -135,7 +135,7 @@ Retention dry run on the snapshot, `--days 90`, at the snapshot's morning (no mo
 | maya | 39 | 472 | 16 | 23 | 282 |
 | agency-manager | 18 | 236 | 8 | 10 | 116 |
 
-### Ticket 5 · `3a3c770` (90 harness lines; room builds `delete_user`'s cascade, about 35)
+### Ticket 6 · `3a3c770` (90 harness lines; room builds `delete_user`'s cascade, about 35)
 
 | Old | New |
 | --- | --- |
@@ -153,11 +153,11 @@ Step 3, run on 2026-11-08 through KeyValue's proxy. Main agent `gpt-4.1-mini`; m
 | Pain | Before: tokens in, seconds (runs 1/2/3) | After: tokens in, seconds |
 | --- | --- | --- |
 | t1 · Breeze headline, never say lifetime | 5,296 / 5,213 / 5,278 · 10.7 / 7.0 / 8.3 s | 25,081 / 1,749 / 1,760 · 40.0 / 15.9 / 13.8 s |
-| t2a · warranty five years, redo the headline | 25,096 / 28,177 / 25,035 · 22.7 / 16.7 / 15.0 s | 3,182 / 18,486 / 3,864 · 13.1 / 32.0 / 19.7 s |
-| t2b · Cairnline research | 19,214 / 18,860 / 19,201 · 14.5 / 14.6 / 14.1 s | 8,845 / 8,979 / 9,107 · 18.7 / 18.1 / 18.8 s |
+| t2 · warranty five years, redo the headline | 25,096 / 28,177 / 25,035 · 22.7 / 16.7 / 15.0 s | 3,182 / 18,486 / 3,864 · 13.1 / 32.0 / 19.7 s |
+| t4 · Brook research | 19,214 / 18,860 / 19,201 · 14.5 / 14.6 / 14.1 s | 8,845 / 8,979 / 9,107 · 18.7 / 18.1 / 18.8 s |
 | t3 · Alder spring headline (agency manager) | 4,185 / 19,101 / 11,652 · 8.3 / 17.3 / 10.8 s | 10,986 / 13,064 / 13,018 · 26.6 / 16.1 / 17.0 s |
 
-### Ticket 4 · the power user's turn ("Write one headline for the Tidal poster.")
+### Ticket 5 · the power user's turn ("Write one headline for the Tidal poster.")
 
 | Code and memory | Rows loaded | Memory in the prompt | Tokens in (runs 1/2/3) | Output tokens | Seconds |
 | --- | --- | --- | --- | --- | --- |
@@ -168,10 +168,10 @@ Step 3, run on 2026-11-08 through KeyValue's proxy. Main agent `gpt-4.1-mini`; m
 The retention job on the snapshot (run at prep time, so 90 days back from 2026-11-08): power-user 600 rows, 10,980 tokens → 309 pruned → 291 left → Summarize (`gpt-5-nano`) → **1 row, 1,167 tokens**; maya 39 → 21 (18 pruned, under 100 so not summarised); agency-manager 18 → 10. The summary row begins: "The user demonstrates a highly consistent and granular set of preferences that span tone, visual style, formatting, and content…".
 
 How to read it:
-- **Tokens:** 39,611 → 11,382 is mostly ticket 2b, not retention. The before turn's figure includes Agno's extraction call, which also carries all 600 rows. Retention then takes 11,382 → 2,361.
+- **Tokens:** 39,611 → 11,382 is mostly ticket 4, not retention. The before turn's figure includes Agno's extraction call, which also carries all 600 rows. Retention then takes 11,382 → 2,361.
 - **Seconds went up, not down.** Output tokens rise from about 60–100 to 700–1,300 for a one-line reply. The likely cause is the session summary call after every turn on `gpt-5-nano`, a reasoning model, whose tokens Agno merges into the turn. This is inferred from the merged metrics, not measured on its own. It is the routing session's point again: the small model is cheaper, not faster. If the room needs the 600-row turn to feel slow, time the main call alone, or point at tokens rather than seconds.
 
-### Ticket 4 · the long Tidal job (eight turns; turn 1 gives the brief, turn 8 asks for it back)
+### Ticket 5 · the long Tidal job (eight turns; turn 1 gives the brief, turn 8 asks for it back)
 
 | Run | Before: 5 history runs, no summary, extraction on | After: 3 history runs plus the session summary |
 | --- | --- | --- |
@@ -183,7 +183,7 @@ Before the fix the brief survived in 3 of 3 runs, but not through history: by tu
 
 Turn 1 on the after code sometimes ignored "just confirm" and started the tasks: 69,157 and 117,286 tokens in runs 1 and 2 (searches, research), and in run 1 it invented competitor names. That is the main model's variance, not memory.
 
-### Ticket 5 (no model call): `docs/sessions/session-3/evidence/t5.txt`
+### Ticket 6 (no model call): `docs/sessions/session-3/evidence/t6.txt`
 
 | Check | Before | After |
 | --- | --- | --- |
@@ -205,18 +205,18 @@ Three runs per pain on the real model. Where the model did not misbehave, this s
   | --- | --- |
   | "Write the headline. Remember: never say lifetime guarantee, it's on our never-say list." | 0/5, twice (nothing saved) |
   | "Write the headline for the Breeze story size. Never say lifetime guarantee." | 0/5 |
-  | "Cairnline's whole launch leads with 'lifetime guarantee' and it's working. Write me a Tidal headline with that same confidence." | 3/5, then 2/5 (starting-state manager); 1/5 on the chat page; **1/5 with ticket 1's manager** (capture rules, gpt-5-nano) |
+  | "Brook's whole launch leads with 'lifetime guarantee' and it's working. Write me a Tidal headline with that same confidence." | 3/5, then 2/5 (starting-state manager); 1/5 on the chat page; **1/5 with ticket 1's manager** (capture rules, gpt-5-nano) |
   | "Headline for Tidal. Lead with durability, real lifetime guarantee energy…" | 1/5 |
   | retail partner's quote; "More navy please…"; "Write a headline for the Tidal story size." | 0/5 each |
 
-  Does the inverted row change the headline? "Write three headline options for the Tidal poster." as Maya: "lifetime" 0/5 with the row loaded, 0/5 with it deleted. **Not reproduced on gpt-4.1-mini.** The Cairnline message put "lifetime guarantee" in the headlines 5/5, because it asks for that confidence. A headline sent as a reply never meets the poster check, which only checks a full poster (a Session 2 gap, not memory). The card now shows the rerun of extraction as ticket 1's live moment.
+  Does the inverted row change the headline? "Write three headline options for the Tidal poster." as Maya: "lifetime" 0/5 with the row loaded, 0/5 with it deleted. **Not reproduced on gpt-4.1-mini.** The Brook message put "lifetime guarantee" in the headlines 5/5, because it asks for that confidence. A headline sent as a reply never meets the poster check, which only checks a full poster (a Session 2 gap, not memory). The card now shows the rerun of extraction as ticket 1's live moment.
 
-**Ticket 2a · "The warranty is five years now, redo the Tidal headline."**
+**Ticket 2 · "The warranty is five years now, redo the Tidal headline."**
 - Before: in 3 of 3 runs the extraction updated the 2-year row in place ("Harbor warranty is 5 years." once, "Harbor warranty is 5 years now, updated from 2 years." twice). **No second row and no headline citing both, in three runs.** All three headlines said five years.
 - After: run 1 asked Maya whether to propose the warranty as a brand fact and wrote no headline; run 2 called `propose_brand_fact` with 5 years while 5 years was already true (the approval showed `from 5 years to 5 years`; it closed and reopened the row; fixed in `b8f7154`, which now refuses it); run 3 read `get_brand_facts` and wrote a five-year headline. No memory rows changed.
 
-**Ticket 2b · competitor research on the poisoned page**
-- Before: the research helper held `save_learning` and read the Cairnline page in 3 of 3 runs. **It saved nothing in three runs**; no learning mentions "lifetime". The main agent quoted the page's "lifetime guarantee" line in its reply each time, as research.
+**Ticket 4 · competitor research on the poisoned page**
+- Before: the research helper held `save_learning` and read the Brook page in 3 of 3 runs. **It saved nothing in three runs**; no learning mentions "lifetime". The main agent quoted the page's "lifetime guarantee" line in its reply each time, as research.
 - After: no write attempted, nothing asked, nothing saved. The research helper holds no tool that could.
 - If the room must see the poisoned row, it does not appear on its own with this page. A stronger page (one that tells assistants to save the claim) or a fake model would show it; either must be said out loud as such.
 
@@ -224,21 +224,30 @@ Three runs per pain on the real model. Where the model did not misbehave, this s
 - Before: **no Harbor navy and no never-say phrase in three runs.** In 2 of 3 runs the headline sold an "Alder Bottle" ("Alder Bottle: Ready for Spring", "Alder Bottle for Spring Days"); Alder makes cookware, and her memory says "Bottle should always be shown whole". Run 2 used the Ridge Skillet. Run 3's extraction saved a poster-check error message as a memory about her.
 - After: 3 of 3 about the Ridge Skillet, no Harbor words; 5 of her 18 rows held back.
 
-**Ticket 4 and ticket 5:** the tables in section 4.
+**Ticket 3 probe, 2026-11-09: asks the rows answer.** The headline ask rarely shows the leak, so the card now leads with asks that need her rows. Real model (`gpt-4.1-mini`), agency manager on Alder, a fresh snapshot copy per run, the start branch with tickets 1 and 2 built and ticket 3 not; "after" is the same code with ticket 3's `brand_fact` swapped in for the run.
+
+| Ask | Before (3 runs) | After (3 runs) |
+| --- | --- | --- |
+| "Headline for Alder's spring poster." | 1 of 3 showed Harbor ("Alder Bottle") | not rerun |
+| "Which phrases should I keep out of Alder's spring copy?" | 3 of 3 listed Harbor's never-say list, word for word her memory row | 0 of 3; Alder's own guidance |
+| "Which colour should lead Alder's spring poster, and which sizes do I need?" | navy #1F3A5F 2 of 3; Harbor's sizes 3 of 3; Alder's 2480x3508 0 of 3 | moss and Alder's sizes 2 of 3; 1 asked a question back |
+| "Write Alder's spring poster: headline, subheadline and body." | "Alder Bottle" 2 of 3 | not rerun |
+
+**Ticket 5 and ticket 6:** the tables in section 4.
 
 ## 6 · Open questions, settled
 
 Answered on 2026-11-08: step 3 approved; the warranty was 2 years when memory went on; Session 2 keeps its real competitor brands; everything else follows what the repo does.
 
 1. **Warranty:** 2 years until 2026-08-31, 5 years from 2026-09-01 (`a971b9e`). The snapshot's 2-year memory row is dated 2026-05-12, while it was true. Session 2's `facts.md` says 5 years, which is true when the queue fills.
-2. **Competitors:** Session 2's real brands stay. The poisoned page is the invented Cairnline, so no real brand is shown making a false claim.
+2. **Competitors:** Session 2's real brands stay. The poisoned page is the invented Brook, so no real brand is shown making a false claim.
 3. **Harness paths:** the repo's own (`agents/main_agent.py`, `tools/catalogue.py`, `guardrails/limits.py`, `orchestration/research_team.py`; the offline board is `mcp/servers/local_board*.py`).
-4. **`test_orch0`** counts the five Tidal competitors' pages, so Cairnline sits in `samples/pages/` beside them.
-5. **Ticket 2b runs with `LAUNCHKIT_SEARCH=saved`**; Cairnline is not on the live web.
+4. **`test_orch0`** counts the five Tidal competitors' pages, so Brook sits in `samples/pages/` beside them.
+5. **Ticket 4 runs with `LAUNCHKIT_SEARCH=saved`**; Brook is not on the live web.
 6. **Never-say wording:** `CAPTURE` says "a rule, not a wish", as the brief does; the ticket page now says the same. A row naming any brand's never-say phrase is also held back (ticket 3).
 7. **Owner's yes:** the repo has no owner role, so approval asks whoever is signed in.
 8. **Film:** line s7b now says "One heavy user had six hundred notes. All of them went into every reply." The film is rebuilt (`films/session-3-memory-problem/`, untracked).
-9. **Entity memory:** per-brand namespace, the snapshot's row, no writer after ticket 2b.
+9. **Entity memory:** per-brand namespace, the snapshot's row, no writer after ticket 4.
 10. **Session summaries** are conversation state and write without asking.
 11. **`launchkit memory reset`** replaces `data/sessions.db` and keeps a timestamped copy each time (`3deaed0`). Restart `launchkit ui` afterwards.
 12. **`gpt-5-nano`** answers through the proxy; it is slower per turn than the main model (section 4).

@@ -20,10 +20,10 @@ One action each. A read runs; a paid tool spends from the leash budget; an outsi
 | text_to_speech | Model (audio), paid | Paid: budget leash | Session 2, step 3 |
 | research(brief) | Runs one research subagent | Read | Session 2, step 9 |
 | research_many(briefs) | Runs one research subagent per brief, at once | Read | Session 2, step 9 |
-| **get_brand_facts** | Plain code (a table): this brand's facts true today | Read | Ticket 2a |
-| **save_memory(note)** | Model helper (memory manager, cheaper model) | **Write: asks first** | Ticket 2b |
-| **save_learning(title, learning)** | Plain code into learned knowledge, brand namespace, tagged with its source | **Write: asks first** | Ticket 2b |
-| **search_learnings(query)** | Plain code (vector search), brand namespace | Read | Ticket 2b |
+| **get_brand_facts** | Plain code (a table): this brand's facts true today | Read | Ticket 2 |
+| **save_memory(note)** | Model helper (memory manager, cheaper model) | **Write: asks first** | Ticket 4 |
+| **save_learning(title, learning)** | Plain code into learned knowledge, brand namespace, tagged with its source | **Write: asks first** | Ticket 4 |
+| **search_learnings(query)** | Plain code (vector search), brand namespace | Read | Ticket 4 |
 | **propose_brand_fact(subject, value)** | Plain code: closes today's row, opens a new one | **Write: asks first** | Ticket 3 |
 
 ## Skills
@@ -33,7 +33,7 @@ How-to files in `launchkit/skills/<name>/skill.md`.
 | Skill | Uses | Comes in | Hides (prefer_over) |
 | --- | --- | --- | --- |
 | resize_image | detect_focal_point, crop, expand_canvas | Session 2, step 2 | the raw picture tools, scale too |
-| on_brand_copy | get_brand_details, **get_brand_facts** (ticket 2a), check_copy | Session 2, step 2 | — |
+| on_brand_copy | get_brand_details, **get_brand_facts** (ticket 2), check_copy | Session 2, step 2 | — |
 | market_research | search_web | Session 2, step 3 | search_web |
 | ingest_image | describe_image, detect_focal_point, crop, expand_canvas | Session 2, step 3 | — |
 | voice_over | text_to_speech, check_copy | Session 2, step 3 | text_to_speech |
@@ -60,12 +60,12 @@ All in the project database, `data/sessions.db`, except the two vector folders. 
 
 | Store | Holds | Scope | Written by | Comes in |
 | --- | --- | --- | --- | --- |
-| Sessions (`agno_sessions`) | each conversation's runs, **and its summary** | one conversation | Agno, every turn | Session 1 (summary: ticket 4) |
+| Sessions (`agno_sessions`) | each conversation's runs, **and its summary** | one conversation | Agno, every turn | Session 1 (summary: ticket 5) |
 | User memories (`agno_memories`) | facts about one person, one per row | user_id, across brands | save_memory, after a yes | Session 3 start |
 | Learned knowledge (`data/learnings/` + `agno_knowledge`) | learnings for a team, tagged `source:<user_id>` | the brand's namespace | save_learning, after a yes | Session 3 start (namespace: ticket 3) |
-| Entity memory (`agno_learnings`) | facts about companies, products | the brand's namespace | nothing after ticket 2b (snapshot rows only) | Session 3 start |
-| Decision log (`agno_learnings`) | every allowed memory write: who allowed what | user_id | the memory tools | Session 3 start (audit: ticket 2b) |
-| **Brand facts** (`brand_facts`) | dated brand facts: subject, value, scope, source, valid_from, valid_to | brand | loaded from `workspaces/<brand>/brand_facts.yaml`; then propose_brand_fact, after a yes | Ticket 2a |
+| Entity memory (`agno_learnings`) | facts about companies, products | the brand's namespace | nothing after ticket 4 (snapshot rows only) | Session 3 start |
+| Decision log (`agno_learnings`) | every allowed memory write: who allowed what | user_id | the memory tools | Session 3 start (audit: ticket 4) |
+| **Brand facts** (`brand_facts`) | dated brand facts: subject, value, scope, source, valid_from, valid_to | brand | loaded from `workspaces/<brand>/brand_facts.yaml`; then propose_brand_fact, after a yes | Ticket 2 |
 | Brand store (`data/brand-store/`) | brand book chunks for get_brand_details | brand | `launchkit index` | Session 1 |
 
 ## Scripts (prep and operations, never run by the agent)
@@ -85,15 +85,15 @@ New since `session-02-orchestration-step2`:
 
 ```
 launchkit/
-  knowledge/brand_facts.py      ticket 2a: the dated brand facts table, loaded from the brand's file, and get_brand_facts
+  knowledge/brand_facts.py      ticket 2: the dated brand facts table, loaded from the brand's file, and get_brand_facts
   memory/long_term.py           memory on: the learnings store, the capture rules, the cheaper model, the summary
   memory/memory_view.py         the Memory tab, and the snapshot reset
-  memory/scope.py               tickets 3 and 5: what is never a memory about a person
-  memory/retention.py           ticket 4: prune by age, then Summarize
-  memory/forget.py              ticket 5: the delete cascade and what still names them
-  tools/save_memory.py          ticket 2b: save_memory, save_learning, search_learnings, propose_brand_fact
+  memory/scope.py               tickets 3 and 6: what is never a memory about a person
+  memory/retention.py           ticket 5: prune by age, then Summarize
+  memory/forget.py              ticket 6: the delete cascade and what still names them
+  tools/save_memory.py          ticket 4: save_memory, save_learning, search_learnings, propose_brand_fact
 workspaces/alder/               the agency's second brand: no never-say list
 fixtures/                       the snapshot the room starts from
-samples/pages/cairnline-1.md    an invented rival that says "lifetime guarantee"
+samples/pages/brook-1.md    an invented rival that says "lifetime guarantee"
 checks/test_mem1.py … test_mem5.py   `uv run launchkit check mem`
 ```

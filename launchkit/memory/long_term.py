@@ -46,7 +46,7 @@ def memory_manager(settings, trace, main_model) -> MemoryManager | None:
 
 
 def summary_manager(settings, trace, main_model) -> SessionSummaryManager:
-    """Ticket 4: a running summary of one conversation, kept on the session, on the cheaper model."""
+    """Ticket 5: a running summary of one conversation, kept on the session, on the cheaper model."""
     return SessionSummaryManager(model=cheap_model(settings, trace, main_model))
 
 
