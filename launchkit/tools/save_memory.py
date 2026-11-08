@@ -58,7 +58,7 @@ def memory_entries(settings, make_manager, user_id: str, namespace: str = "globa
 
     return [
         Entry("save_memory", "remember how the marketer likes to work, for later conversations", "write", save_memory,
-              plan=lambda i: (f"Not saved: {reason}. Brand facts go in with propose_brand_fact." if (reason := held_back(i.get("note", ""), settings))
+              plan=lambda i: (f"Not saved: {reason}." + (" Brand facts go in with propose_brand_fact." if "brand fact" in reason else "") if (reason := held_back(i.get("note", ""), settings))
                               else {"store": "user memory", "person": user_id, "note": i.get("note")})),
         Entry("save_learning", "save a learning for everyone who works on this brand", "write", save_learning,
               plan=lambda i: {"store": "learned knowledge", "namespace": namespace, "source": user_id, **i}),
