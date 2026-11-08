@@ -74,7 +74,8 @@ def memory_text(db: SqliteDb, user_id: str) -> str:
     if not rows:
         return ""
     lines = "\n".join(f"- {m.memory}" for m in rows)
-    return f"What you remember about this person from earlier conversations:\n{lines}"
+    return (f"What you remember about this person from earlier conversations:\n{lines}\n"
+            "A remembered brand or product fact may be out of date: facts from get_brand_facts win.")
 
 
 def memory_changes(before: list, after: list) -> list[tuple[str, str]]:

@@ -22,6 +22,7 @@ from launchkit.adapters.models import check_reachable, model_name, resolve_model
 from launchkit.agents.prompt import ContextBuilder
 from launchkit.brands.request import Request, resolve_workspace_id
 from launchkit.guardrails.limits import make_leash
+from launchkit.knowledge.brand_facts import make_get_brand_facts
 from launchkit.mcp.client import closes_its_mcp_links
 from launchkit.mcp.servers import server_entries
 from launchkit.memory.attached_pictures import Pictures
@@ -119,6 +120,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
     desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None)
     entries: list[Entry] = [
         Entry("get_brand_details", "look up this brand's guide and product facts", "read", make_get_brand_details(ws, trace, settings)),
+        Entry("get_brand_facts", "this brand's facts that change over time, true today: warranty, prices, launch dates", "read", make_get_brand_facts(settings, ws)),
         Entry("generate_image", "make a new poster picture from a scene description, only when no photo is given", "read", make_generate_image(make_images(settings), ws.colours, trace, pictures.made if pictures else None)),
         *desk.entries(),
         Entry("check_copy", "check a headline, subheadline and body against the brand's word limits and banned claims", "read", make_check_copy(ws)),
@@ -191,7 +193,8 @@ def main_turn(content) -> MainTurn:
 def found(trace: Trace) -> set[str]:
     """What the agent may cite: brand sections get_brand_details returned, and pages a tool returned with an address."""
     pages = {a for e in trace.events if e.kind == "tool" for a in re.findall(r"^Address: (\S+)", str(e.detail.get("result", "")), flags=re.M)}
-    return looked_up(trace) | pages
+    facts = {ref for e in trace.tool_calls("get_brand_facts") if e.kind == "tool" for ref in re.findall(r"^\[([^\]]+)\]", str(e.detail["result"]), flags=re.M)}
+    return looked_up(trace) | pages | facts
 
 
 def checked_spec(spec: PosterSpec, agent, session: str, req, ws, model, trace: Trace, result) -> PosterSpec:

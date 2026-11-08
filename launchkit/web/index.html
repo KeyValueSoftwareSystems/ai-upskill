@@ -313,7 +313,9 @@ async function loadMemory(){
   const table = (title, rows, cols, note) => `<h3>${esc(title)} <small class="empty">(${rows.length})</small></h3>${note ? `<p class="empty">${note}</p>` : ""}` + (rows.length
     ? `<table><tr>${cols.map(c => `<th>${esc(c[1])}</th>`).join("")}</tr>${rows.map(r => `<tr>${cols.map(c => `<td>${esc(Array.isArray(r[c[0]]) ? r[c[0]].join(", ") : (r[c[0]] ?? ""))}</td>`).join("")}</tr>`).join("")}</table>`
     : '<p class="empty">Nothing stored.</p>');
-  $("memory").innerHTML = table(`${w.user_id}'s memories`, m.memories, [["updated", "updated"], ["memory", "memory"], ["topics", "topics"]], "Kept by user id, across every brand and conversation.")
+  const facts = m.brand_facts.map(f => ({ ...f, valid_to: f.valid_to || "still true", today: f.true_today ? "yes" : "no" }));
+  $("memory").innerHTML = table(`${w.workspace_id}'s brand facts`, facts, [["subject", "subject"], ["value", "value"], ["valid_from", "valid from"], ["valid_to", "valid to"], ["today", "true today"], ["source", "source"]], "Owned by LaunchKit. get_brand_facts returns only the rows true today.")
+    + table(`${w.user_id}'s memories`, m.memories, [["updated", "updated"], ["memory", "memory"], ["topics", "topics"]], "Kept by user id, across every brand and conversation.")
     + table("Session summaries", m.summaries, [["updated", "updated"], ["session", "conversation"], ["summary", "summary"]])
     + table("Shared learnings", m.learnings, [["updated", "updated"], ["title", "title"], ["namespace", "namespace"], ["tags", "tags"]], "Shared with every person who can read this namespace.")
     + table("Entity memory", m.entities, [["entity", "entity"], ["namespace", "namespace"], ["facts", "facts"]])

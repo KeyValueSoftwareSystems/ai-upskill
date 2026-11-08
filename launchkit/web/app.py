@@ -380,7 +380,7 @@ def notion_callback(code: str = "", state: str = "", error: str = ""):
 @app.get("/memory/{workspace_id}/{user_id}")
 def memory(workspace_id: str, user_id: str = UrlPart(pattern=USER_ID)):
     """The Memory tab: what is stored for this person, and what is shared with everyone, straight from the store."""
-    return {"workspace_id": workspace_id, "user_id": user_id, **memory_view(settings, user_id)}
+    return {"workspace_id": workspace_id, "user_id": user_id, **memory_view(settings, user_id, workspace_id)}
 
 
 @app.get("/explain")

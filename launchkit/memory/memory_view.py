@@ -45,10 +45,13 @@ def _rows(con, sql: str, *args) -> list[sqlite3.Row]:
         return []
 
 
-def memory_view(settings, user_id: str) -> dict:
+def memory_view(settings, user_id: str, workspace_id: str = "") -> dict:
+    from launchkit.knowledge.brand_facts import all_brand_facts
+
     path = settings.data_dir / "sessions.db"
+    facts = all_brand_facts(settings, workspace_id) if workspace_id else []
     if not path.exists():
-        return {"memories": [], "summaries": [], "learnings": [], "entities": [], "decisions": []}
+        return {"memories": [], "summaries": [], "learnings": [], "entities": [], "decisions": [], "brand_facts": facts}
     with sqlite3.connect(path) as con:
         con.row_factory = sqlite3.Row
         memories = [{"memory": r["memory"], "topics": json.loads(r["topics"] or "[]"), "updated": _day(r["updated_at"])}
@@ -62,4 +65,4 @@ def memory_view(settings, user_id: str) -> dict:
                     for r in _rows(con, "select entity_id, namespace, content from agno_learnings where learning_type = 'entity_memory'")]
         decisions = [{"decision": json.loads(r["content"]).get("decision"), "updated": _day(r["created_at"])}
                      for r in _rows(con, "select content, created_at from agno_learnings where learning_type = 'decision_log' and user_id = ?", user_id)]
-    return {"memories": memories, "summaries": summaries, "learnings": learnings, "entities": entities, "decisions": decisions}
+    return {"memories": memories, "summaries": summaries, "learnings": learnings, "entities": entities, "decisions": decisions, "brand_facts": facts}
