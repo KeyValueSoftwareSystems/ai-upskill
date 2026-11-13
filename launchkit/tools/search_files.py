@@ -12,6 +12,7 @@ their own copy for speed, which is worth saying in the room and is not what this
 Reference page 4, Finding a file, and page 5, What an index costs to keep true.
 """
 
+from launchkit.files.paths import OutsideWorkspace, refuse, resolve_in_workspace
 from launchkit.tools.catalogue import Entry
 
 TEXT = {".md", ".txt", ".json", ".yaml", ".yml", ".csv"}
@@ -23,7 +24,10 @@ SNIPPET = 160
 def make_search_files(workspace, trace) -> Entry:
     def search_files(pattern: str, folder: str = ".") -> str:
         """Find which of this conversation's files mention a word or phrase, and on which line, before reading any of them."""
-        root = workspace.root / folder
+        try:
+            root = resolve_in_workspace(workspace.root, folder)
+        except OutsideWorkspace as error:
+            return refuse(trace, "search_files", folder, error.reason)
         wanted = pattern.lower()
         matches, stopped = [], False
         for file in sorted(root.rglob("*")) if root.is_dir() else []:
@@ -34,7 +38,7 @@ def make_search_files(workspace, trace) -> Entry:
                     if len(matches) == MAX_MATCHES:
                         stopped = True
                         break
-                    matches.append(f"{file.relative_to(workspace.root).as_posix()}:{number}: {line.strip()[:SNIPPET]}")
+                    matches.append(f"{file.relative_to(workspace.root.resolve()).as_posix()}:{number}: {line.strip()[:SNIPPET]}")
             if stopped:
                 break
         trace.add("search", pattern=pattern, matches=len(matches), stopped=stopped)

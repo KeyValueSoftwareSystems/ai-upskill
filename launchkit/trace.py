@@ -103,6 +103,8 @@ class Trace:
             case "search":
                 more = " · stopped early" if d["stopped"] else ""
                 return f"search    {d['pattern']!r} · {d['matches']} matches{more}"
+            case "file_refused":
+                return f"refused   {d['tool']}({d['path']!r}): {d['reason']}"
             case "file_listed":
                 return f"listed    {d['folder']} · {d['files']} files"
             case "reply":

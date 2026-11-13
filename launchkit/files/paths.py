@@ -31,7 +31,20 @@ class OutsideWorkspace(Exception):
 
 
 def resolve_in_workspace(root: Path, asked: str | Path) -> Path:
-    raise NotImplementedError("stage 3: the real location of `asked` inside `root`, or OutsideWorkspace")
+    """The real location of `asked` inside `root`, or OutsideWorkspace.
+
+    Resolve both sides, then ask whether one is really inside the other. Resolving is what follows a symbolic link
+    and what flattens a `..`, so it has to happen before anything is compared, and the comparison is between
+    paths, not between strings: "/data/files/ember/t3a9-old".startswith("/data/files/ember/t3a9") is true, and t3a9-old is
+    not inside ember.
+    """
+    real_root = Path(root).resolve()
+    real = (real_root / asked).resolve()
+    if not real.is_relative_to(real_root):
+        if Path(asked).is_absolute():
+            raise OutsideWorkspace(str(asked), "an absolute path leaves this conversation's workspace")
+        raise OutsideWorkspace(str(asked), "that path resolves outside this conversation's workspace")
+    return real
 
 
 def refuse(trace, tool: str, asked: str, reason: str) -> str:

@@ -19,6 +19,8 @@ from launchkit.agents.main_agent import run_main
 from launchkit.brands.onboard import onboard_workspace
 from launchkit.brands.request import Request, UnknownWorkspace, resolve_workspace_id
 from launchkit.brands.users import list_logins
+from launchkit.files.paths import OutsideWorkspace, resolve_in_workspace
+from launchkit.files.workspace import for_request
 from launchkit.guardrails.poster_check import SpecError
 from launchkit.knowledge.brand_library import asset_path, read_library, workspace_root
 from launchkit.mcp.servers.notion import NotionServer, connected, log_in
@@ -326,6 +328,19 @@ def data_file(name: str):
     root = settings.data_dir.resolve()
     path = (root / name).resolve()
     if not path.is_relative_to(root) or path.suffix.lower() not in MEDIA or not path.exists():
+        raise HTTPException(404)
+    return FileResponse(path)
+
+
+@app.get("/workspace/{brand}/{session_id}/{name:path}")
+def workspace_file(brand: str, session_id: str, name: str):
+    """Download one file a conversation owns. The same check every file tool passes decides whether the path is inside."""
+    try:
+        ws = for_request(Request(workspace_id=brand, session_id=session_id, text="download"), settings)
+        path = resolve_in_workspace(ws.root, name)
+    except (UnknownWorkspace, ValueError, OutsideWorkspace):
+        raise HTTPException(404)
+    if not path.is_file():
         raise HTTPException(404)
     return FileResponse(path)
 
