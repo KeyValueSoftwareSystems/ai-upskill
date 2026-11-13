@@ -100,6 +100,9 @@ class Trace:
                 return f"read      {d['path']} · {d['characters']} characters"
             case "file_written":
                 return f"wrote     {d['path']} · {d['characters']} characters"
+            case "search":
+                more = " · stopped early" if d["stopped"] else ""
+                return f"search    {d['pattern']!r} · {d['matches']} matches{more}"
             case "file_listed":
                 return f"listed    {d['folder']} · {d['files']} files"
             case "reply":
