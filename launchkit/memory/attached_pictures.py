@@ -1,5 +1,8 @@
 """The pictures in one conversation: the ones the marketer attached and the ones the agent made. The picture tools
 work on the newest one. They are kept with the conversation, like its chat history; a new conversation starts with none.
+
+They are kept under data/pictures/<brand>/<person>/<conversation>, a folder of their own that nothing else uses.
+Stage 1 moves them into the conversation's workspace, an attached photo into uploads/.
 """
 
 import hashlib

@@ -1,5 +1,9 @@
 """text_to_speech: turns a short script into a voice-over file. With the fakes it writes a silent file, so the checks
-run offline."""
+run offline.
+
+It saves into data/audio, a folder every brand shares. Stage 1 points it at the conversation's workspace; stage 5
+makes it record what it wrote.
+"""
 
 import os
 import uuid

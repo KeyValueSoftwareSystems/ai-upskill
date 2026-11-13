@@ -210,6 +210,7 @@ RAG_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob(
 TOOLS_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_tools*.py"))
 ORCH_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_orch*.py"))
 MEM_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_mem*.py"))
+FILES_STAGES = [f"stage{n}" for n in range(1, 7)] + ["ticket"]  # Session 4: one check file, a marker per stage
 ORCH_GATE = ORCH_STEPS + [name for name in TOOLS_STEPS if name in ("tools3", "tools4", "tools5")]
 
 
@@ -223,10 +224,14 @@ def cmd_check(args):
         names = ORCH_GATE
     elif args.step == "mem":
         names = MEM_STEPS
+    elif args.step == "files" or args.step in FILES_STAGES:
+        names = ["files"]
     else:
         names = [args.step if args.step in extra + RAG_STEPS + TOOLS_STEPS + ORCH_STEPS + MEM_STEPS else f"step{args.step}"]
     targets = [ROOT / "checks" / f"test_{name}.py" for name in names]
     command = [sys.executable, "-m", "pytest", "-q", "--tb=no", "-rN", "-p", "no:cacheprovider", *map(str, targets)]
+    if args.step in FILES_STAGES:
+        command += ["-m", args.step]
     proc = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
     for line in proc.stdout.splitlines():
         if line.startswith("PASS"):
@@ -255,6 +260,21 @@ def cmd_memory(args):
         console.print(f"\n[bold]{name}[/bold]")
         for row in view[name]:
             console.print(f"  {json.dumps(row, ensure_ascii=False)}", highlight=False)
+    return 0
+
+
+def cmd_setup(args):
+    """Put data/ back the way Breeze week left it. Prep built this seed; the room never generates it.
+
+    It replaces only the folders the seed owns. Conversations, the brand index and Session 3's memory
+    database live under data/ too and are left alone.
+    """
+    from launchkit.files.seed import build
+
+    build(settings.data_dir)
+    files = sum(1 for p in settings.data_dir.rglob("*") if p.is_file())
+    console.print(f"Seeded [bold]{settings.data_dir}[/bold]: {files} files, in shared folders, owned by nobody.")
+    console.print("[dim]Open the chat page as Maya at Harbor and press Files.[/dim]")
     return 0
 
 
@@ -323,14 +343,17 @@ def main(argv=None):
     explain.add_argument("--show", action="store_true", help="print the system message as sent")
     explain.set_defaults(func=cmd_explain)
 
-    check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all; retrieval: check rag1.. or rag; orchestration: check orch0.. or orch")
-    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch", *MEM_STEPS, "mem"])
+    check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all; retrieval: check rag1.. or rag; orchestration: check orch0.. or orch; files: check stage1..6, ticket or files")
+    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch", *MEM_STEPS, "mem", *FILES_STAGES, "files"])
     check.set_defaults(func=cmd_check)
 
     memory = sub.add_parser("memory", help="long-term memory: reset it to the checked-in snapshot, or show what is stored for a person")
     memory.add_argument("action", choices=["reset", "show"])
     memory.add_argument("--user", default="maya", help="whose memory to show")
     memory.set_defaults(func=cmd_memory)
+
+    setup = sub.add_parser("setup", help="put data/ back the way Breeze week left it (Session 4's starting state)")
+    setup.set_defaults(func=cmd_setup)
 
     ui = sub.add_parser("ui", help="start the chat page")
     ui.add_argument("--port", type=int, default=8000)

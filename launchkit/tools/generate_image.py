@@ -1,3 +1,7 @@
+"""generate_image: draws the poster picture with the image model. It saves into data/outputs, a folder every brand
+shares. Stage 1 points it at the conversation's workspace; stage 5 makes it record what it wrote.
+"""
+
 from launchkit.trace import Trace
 
 

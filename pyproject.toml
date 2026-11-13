@@ -64,3 +64,12 @@ packages = ["launchkit"]
 [tool.pytest.ini_options]
 testpaths = ["checks"]
 addopts = "-p no:cacheprovider"
+markers = [
+    "stage1: Session 4, stage 1: the file tools in a workspace per conversation",
+    "stage2: Session 4, stage 2: a capped search",
+    "stage3: Session 4, stage 3: one check every path passes",
+    "stage4: Session 4, stage 4: an edit tool",
+    "stage5: Session 4, stage 5: the artifact record",
+    "stage6: Session 4, stage 6: shared files, a discussion with no build",
+    "ticket: Session 4, the ticket after shipping: five writers, four entries lost",
+]

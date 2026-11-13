@@ -206,6 +206,7 @@ def _worker(body: RunBody, queue: Queue):
     req = Request(workspace_id=body.workspace_id, user_id=body.user_id, session_id=conversation["session_id"], text=body.text)
     conversation["turns"].append({"role": "user", "text": body.text, "files": body.attached})
     started = time.time()
+    trace.message = uuid.uuid4().hex[:8]
     try:
         result = run_main(req, settings=current, trace=trace, approve=ask_on_page(queue))
         answer = {

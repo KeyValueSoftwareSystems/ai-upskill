@@ -7,6 +7,7 @@ leash, same sessions. It holds get_brand_details and generate_image, and every t
 import inspect
 import re
 import time
+import uuid
 from pathlib import Path
 from dataclasses import dataclass, field, replace
 from datetime import date
@@ -146,6 +147,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
 @closes_its_mcp_links
 def run_main(req: Request, *, settings=default_settings, model=None, trace: Trace | None = None, approve=ask_in_terminal, board=None, attach=()) -> MainResult:
     trace = trace if trace is not None else Trace()
+    trace.message = trace.message or uuid.uuid4().hex[:8]
     settings.data_dir.mkdir(parents=True, exist_ok=True)
     wid = resolve_workspace_id(req, settings)
     ws = load_workspace(wid, settings, trace)

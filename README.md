@@ -14,10 +14,26 @@ A marketing assistant built in steps across the session. A marketer asks for a p
 | `session-02-tools-step1` … `step5` | each step's answer |
 | `session-02-orchestration` | agents and orchestration (Session 2, part 2): the main agent, the Tidal launch brief, saved competitor pages |
 | `session-02-orchestration-step1`, `step2` | each step's answer |
-| **`session-3-memory-start`** | agent memory (Session 3): the morning the support queue filled; the room builds the six fixes here |
+| `session-3-memory-start` | agent memory (Session 3): the morning the support queue filled; the room builds the six fixes here |
 | `session-3-memory` | every Session 3 fix built: the answer |
+| **`session-04-filesystem-prd`** (you are here) | agent file systems (Session 4): Harbor's feature request, the six requirements and the ticket after shipping |
+| `session-04-filesystem-solutions` | every Session 4 slot built, both fork paths: the answer |
 
 Each branch contains the previous branch's solution. Fall behind, check out the next one.
+
+## Session 4
+
+This branch is one feature request, built in stages, not a queue. Read `TICKETS.md`, write your decisions in
+`DECISIONS.md`, and see what is already built in `READY-MADE.md`.
+
+```
+uv run launchkit setup      # puts data/ back the way Breeze week left it
+uv run launchkit ui         # the chat page; sign in as Maya at Harbor and press Files
+uv run pytest checks/test_files.py -m stage1    # one stage's criteria, as code. Red until you build it. Or: launchkit check stage1
+```
+
+`uv run launchkit setup` replaces only the folders the seed owns. Conversations, the brand index and Session 3's
+memory database live under `data/` too and are left alone.
 
 ## Setup
 

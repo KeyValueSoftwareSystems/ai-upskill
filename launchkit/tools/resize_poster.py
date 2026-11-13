@@ -3,6 +3,9 @@ attached or one the agent made: the model never names a file.
 
 Plain code cuts, pads or stretches the picture: free, and the same every time. One tool asks a vision model
 where the bottle is: it costs money, so the desk asks once per poster and keeps the box.
+
+Every size is saved into data/sizes, a folder every brand shares. Stage 1 points the desk at the conversation's
+workspace; stage 5 makes it record what it wrote.
 """
 
 import base64

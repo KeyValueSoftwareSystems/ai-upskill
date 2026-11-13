@@ -28,7 +28,9 @@ class Settings:
     search: str = field(default_factory=lambda: _env("LAUNCHKIT_SEARCH", "web"))
     search_delay: float = field(default_factory=lambda: float(_env("LAUNCHKIT_SEARCH_DELAY", "0")))
     workspaces_dir: Path = field(default_factory=lambda: Path(_env("LAUNCHKIT_WORKSPACES_DIR", str(ROOT / "workspaces"))))
-    data_dir: Path = ROOT / "data"
+    # Reads an environment variable so two workers can run with two data directories: the closing block's
+    # two-worker demo needs that, and nothing else in the session changes it.
+    data_dir: Path = field(default_factory=lambda: Path(_env("LAUNCHKIT_DATA_DIR", str(ROOT / "data"))))
     limits: Limits = Limits()
     budgets: dict = field(default_factory=lambda: {"rules": 1500, "task": 400, "facts": 1500, "history": 2000})
 

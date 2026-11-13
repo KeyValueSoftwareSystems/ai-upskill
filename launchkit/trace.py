@@ -12,6 +12,7 @@ class Trace:
     def __init__(self):
         self.events: list[Event] = []
         self.listeners: list = []
+        self.message = ""  # the message this trace is answering; whatever the turn writes is recorded against it
 
     def add(self, kind: str, **detail):
         event = Event(kind, detail)
