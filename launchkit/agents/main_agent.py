@@ -32,6 +32,7 @@ from launchkit.memory.chat_history import session_db
 from launchkit.memory.long_term import memory_changes, memory_manager, memory_text, summary_manager, summary_text, user_memories
 from launchkit.memory.scope import held_back
 from launchkit.tools.save_memory import memory_entries
+from launchkit.tools.edit_file import make_edit_file
 from launchkit.tools.list_files import make_list_files
 from launchkit.tools.read_file import make_read_file
 from launchkit.tools.search_files import make_search_files
@@ -131,7 +132,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
 
 def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya", pictures: Pictures | None = None, files=None, message: str = "") -> Catalogue:
     ws = ws or load_workspace("harbor", settings, trace)
-    file_tools = [make_read_file(files, trace), make_list_files(files, trace), make_write_file(files, trace, message), make_search_files(files, trace)] if files is not None else []
+    file_tools = [make_read_file(files, trace), make_list_files(files, trace), make_write_file(files, trace, message), make_search_files(files, trace), make_edit_file(files, trace, message)] if files is not None else []
     outputs = files.drawer("outputs") if files is not None else None
     desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None, files)
     entries: list[Entry] = [
