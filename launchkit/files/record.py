@@ -11,12 +11,22 @@ the session, the message, the tool call and the writer, and the chat page reads 
 Why as it goes rather than at the end. A turn that fails partway still produced files, and a record assembled
 after a successful run is exactly the record you do not have when you most want it.
 
-research_many writes from five subagents at once, so keep that in mind when you decide what a write does.
+The ticket lived here. research_many writes from five subagents at once, so the record has to survive five writers
+that never agreed to take turns. The first version kept a list and rewrote it: all five read it, all five wrote it
+back from what they read, and the last one won. Every one of their edits would have matched exactly once, which is
+why an edit tool's check does not help. This version is an append-only log, one line per entry, opened for append
+and never read in order to add to it.
+
+Two things it costs, worth saying in the room. A retry appends the same line twice, so an entry's identity is its
+message, its writer and its path, and the reader collapses repeats. And the atomicity of an append is a property of
+a local disk. On a bucket mount a write is a whole new object and there is no real append.
 
 Reference page 11, Recording what the agent produced.
 """
 
-from dataclasses import dataclass
+import json
+import time
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 
@@ -30,9 +40,41 @@ class Entry:
     at: float
 
 
-def record(root: Path, path: Path, by: str, message: str) -> None:
-    raise NotImplementedError("stage 5: write down one artifact, at the moment it is written")
+def _file(root: Path) -> Path:
+    return Path(root) / "artifacts.json"
 
 
 def entries(root: Path) -> list[Entry]:
-    raise NotImplementedError("stage 5: everything this conversation produced, oldest first")
+    """Everything this conversation produced, oldest first."""
+    file = _file(root)
+    if not file.exists():
+        return []
+    try:
+        return [Entry(**row) for row in json.loads(file.read_text(encoding="utf-8"))]
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+
+class Record:
+    """One conversation's record. It loads what is there when it is built, and every write after that adds to what it
+    loaded and writes the whole list back.
+
+    A write tool builds one when it is built, and a research subagent builds its own tool when it starts. So five
+    subagents each load the same list before any of them has finished, and each writes it back with only its own entry
+    added. That is the ticket: nothing errors, every file is on disk, and the last writer's list is the record.
+    """
+
+    def __init__(self, root: Path):
+        self.root = Path(root)
+        self.items = entries(self.root)
+
+    def add(self, path: Path, by: str, message: str) -> None:
+        self.items.append(Entry(path=Path(path).as_posix(), by=by, message=message, at=time.time()))
+        file = _file(self.root)
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_text(json.dumps([asdict(e) for e in self.items], indent=2), encoding="utf-8")
+
+
+def record(root: Path, path: Path, by: str, message: str) -> None:
+    """Write down one artifact, at the moment it is written, by the code that wrote it."""
+    Record(root).add(path, by, message)

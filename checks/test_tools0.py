@@ -66,22 +66,20 @@ def test_the_chat_page_asks_before_a_write_and_waits_for_the_answer():
     assert answers == [True]
 
 
-def test_the_chat_page_serves_only_pictures_and_sounds_under_data(settings, monkeypatch):
-    """Files the agent made are shown on the page; nothing outside data/, and no other kind of file, is served."""
-    import pytest
-    from fastapi import HTTPException
+def test_a_stray_picture_in_a_shared_folder_is_neither_listed_nor_served(settings, monkeypatch):
+    """The page shows and serves a conversation's own files only. A picture lying in a folder every brand shared belongs
+    to no turn: it is not listed, and no route hands it out."""
+    from fastapi.testclient import TestClient
 
     import launchkit.web.app as web
+    from launchkit.brands.request import Request
 
     monkeypatch.setattr(web, "settings", settings)
     (settings.data_dir / "sizes").mkdir(parents=True, exist_ok=True)
     (settings.data_dir / "sizes" / "a.png").write_bytes(b"png")
-    (settings.data_dir / "notes.json").write_text("{}")
-    assert web.new_files(settings, 0) == ["/files/sizes/a.png"]
-    assert str(web.data_file("sizes/a.png").path).endswith("a.png")
-    for name in ("notes.json", "../pyproject.toml"):
-        with pytest.raises(HTTPException):
-            web.data_file(name)
+
+    assert web.listed_files(settings, Request(workspace_id="harbor", user_id="maya", session_id="t1", text="x"), "m1") == []
+    assert TestClient(web.app).get("/files/sizes/a.png").status_code == 404
 
 
 def test_the_main_agent_knows_todays_date(settings):

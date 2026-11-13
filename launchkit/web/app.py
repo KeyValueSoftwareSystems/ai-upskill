@@ -20,6 +20,7 @@ from launchkit.brands.onboard import onboard_workspace
 from launchkit.brands.request import Request, UnknownWorkspace, resolve_workspace_id
 from launchkit.brands.users import list_logins
 from launchkit.files.paths import OutsideWorkspace, resolve_in_workspace
+from launchkit.files.record import entries
 from launchkit.files.workspace import for_request
 from launchkit.guardrails.poster_check import SpecError
 from launchkit.knowledge.brand_library import asset_path, read_library, workspace_root
@@ -37,7 +38,6 @@ DONE = object()
 LOGINS_OPEN: dict[str, tuple[asyncio.AbstractEventLoop, asyncio.Future]] = {}
 CONNECTING: dict[str, str] = {}
 ASK_WAIT = 300
-MEDIA = {".png", ".jpg", ".jpeg", ".webp", ".mp3", ".wav"}
 USER_ID = r"^[a-z0-9-]{1,32}$"  # a login name; it becomes a folder name under data/, so nothing else is accepted
 
 
@@ -173,10 +173,30 @@ def answer(ask_id: str, body: Answer):
     return {"ok": True}
 
 
-def new_files(current, since: float) -> list[str]:
-    """Pictures and sounds the run wrote under data/, as page addresses."""
-    found = [p for p in current.data_dir.rglob("*") if p.suffix.lower() in MEDIA and p.stat().st_mtime >= since]
-    return [f"/files/{p.relative_to(current.data_dir).as_posix()}" for p in sorted(found)]
+def listed_files(current, req: Request, message: str, kept=()) -> list[str]:
+    """What this turn produced, as page addresses, read from the record rather than from a scan of data/.
+
+    Two sources, both this conversation's own: the artifact record for this message (drafts in work/ stay out of it,
+    because the marketer sees finished work only), and a poster the run kept from an earlier turn. Every address goes
+    through the download route, so nothing another brand wrote during the same minute can appear here.
+    """
+    ws = for_request(req, current)
+    root = ws.root.resolve()
+    paths = [e.path for e in entries(ws.root) if e.message == message and not e.path.startswith("work/")]
+    for path in kept:
+        real = Path(path).resolve()
+        if real.is_relative_to(root) and real.exists():
+            paths.append(real.relative_to(root).as_posix())
+    return list(dict.fromkeys(f"/workspace/{ws.brand}/{ws.conversation}/{path}" for path in paths))
+
+
+def _made_before_failing(current, req: Request, message: str) -> list[str]:
+    """What a turn that died partway had already produced. It is the reason the record is written as each file is
+    written: a list assembled after a successful run is exactly the list you do not have when you want it most."""
+    try:
+        return listed_files(current, req, message)
+    except Exception:
+        return []
 
 
 def refuse_bad_workspace(body: RunBody, current) -> str | None:
@@ -208,13 +228,13 @@ def _worker(body: RunBody, queue: Queue):
     req = Request(workspace_id=body.workspace_id, user_id=body.user_id, session_id=conversation["session_id"], text=body.text)
     conversation["turns"].append({"role": "user", "text": body.text, "files": body.attached})
     started = time.time()
-    trace.message = uuid.uuid4().hex[:8]
+    message = trace.message = uuid.uuid4().hex[:8]
     try:
         result = run_main(req, settings=current, trace=trace, approve=ask_on_page(queue))
         answer = {
             "type": "result",
             "reply": result.reply,
-            "files": new_files(current, started) + [f"/files/{p.relative_to(current.data_dir).as_posix()}" for p in result.kept],
+            "files": listed_files(current, req, message, result.kept),
             "view": {"tool_tokens": result.view_tokens, "history_tokens": result.history_tokens, "seconds": round(result.seconds, 1)},
             "memory": {"tokens": result.memory_tokens},
         }
@@ -224,8 +244,9 @@ def _worker(body: RunBody, queue: Queue):
         conversation["turns"].append({"role": "error", "kind": type(error).__name__, "message": str(error)})
         queue.put({"type": "error", "kind": type(error).__name__, "message": str(error), "errors": getattr(error, "errors", None)})
     except Exception as error:
-        conversation["turns"].append({"role": "error", "kind": type(error).__name__, "message": str(error)})
-        queue.put({"type": "error", "kind": type(error).__name__, "message": str(error)})
+        made = _made_before_failing(current, req, message)
+        conversation["turns"].append({"role": "error", "kind": type(error).__name__, "message": str(error), "files": made})
+        queue.put({"type": "error", "kind": type(error).__name__, "message": str(error), "files": made})
     finally:
         _save_conversation(body.workspace_id, body.user_id, conversation)
         queue.put(DONE)
@@ -240,8 +261,9 @@ async def attach_picture(workspace_id: str = Form(...), user_id: str = Form(...,
         raise HTTPException(404, str(error))
     if not re.fullmatch(r"[0-9a-f]{6}", session_id) or Path(picture.filename or "").suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
         raise HTTPException(400, "attach a .png, .jpg or .webp picture to a conversation")
-    kept = Pictures(settings, workspace_id, user_id, session_id).attach_bytes(Path(picture.filename).name, await picture.read())
-    return {"name": kept.name, "url": f"/files/{kept.relative_to(settings.data_dir).as_posix()}"}
+    pictures = Pictures(settings, workspace_id, user_id, session_id)
+    kept = pictures.attach_bytes(Path(picture.filename).name, await picture.read())
+    return {"name": kept.name, "url": f"/workspace/{pictures.files.brand}/{pictures.files.conversation}/{kept.relative_to(pictures.files.root).as_posix()}"}
 
 
 @app.post("/onboard")
@@ -313,23 +335,6 @@ async def events(run_id: str):
             yield f"data: {json.dumps(item, default=str)}\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream")
-
-
-@app.get("/outputs/{name}")
-def output(name: str):
-    path = settings.data_dir / "outputs" / Path(name).name
-    if not path.exists():
-        raise HTTPException(404)
-    return FileResponse(path)
-
-
-@app.get("/files/{name:path}")
-def data_file(name: str):
-    root = settings.data_dir.resolve()
-    path = (root / name).resolve()
-    if not path.is_relative_to(root) or path.suffix.lower() not in MEDIA or not path.exists():
-        raise HTTPException(404)
-    return FileResponse(path)
 
 
 @app.get("/workspace/{brand}/{session_id}/{name:path}")

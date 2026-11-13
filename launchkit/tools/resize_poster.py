@@ -4,7 +4,7 @@ attached or one the agent made: the model never names a file.
 Plain code cuts, pads or stretches the picture: free, and the same every time. One tool asks a vision model
 where the bottle is: it costs money, so the desk asks once per poster and keeps the box.
 
-Every size is saved into the conversation's outputs/ drawer.
+Every size is saved into the conversation's outputs/ drawer, and put in the record under the tool's name.
 """
 
 import base64
@@ -15,6 +15,7 @@ from pathlib import Path
 
 from PIL import Image, ImageColor
 
+from launchkit.files.record import record
 from launchkit.memory.attached_pictures import NO_PICTURE, NoPicture, sidecar
 from launchkit.settings import ROOT
 from launchkit.tools.catalogue import Entry, built
@@ -113,12 +114,14 @@ def around_product(crop):
 
 
 class PictureDesk:
-    def __init__(self, settings, colours: dict, trace: Trace, model=None, source=None, on_saved=None, files=None):
+    def __init__(self, settings, colours: dict, trace: Trace, model=None, source=None, on_saved=None, files=None, message: str = ""):
         self._source = source
         self.on_saved = on_saved
         self.colours = colours
         self.trace = trace
         self.model = model
+        self.files = files
+        self.message = message
         self.out = files.drawer("outputs") if files is not None else settings.data_dir / "sizes"  # a desk with no conversation keeps the old folder
         self._box: list[int] | None = None
         self._box_for: Path | None = None
@@ -147,20 +150,23 @@ class PictureDesk:
     def open(self) -> Image.Image:
         return Image.open(self.source).convert("RGB")
 
-    def save(self, img: Image.Image, kind: str) -> str:
+    def save(self, img: Image.Image, kind: str, by: str) -> str:
+        """Write one size to disk and, in a conversation, put it in the record under the tool that made it."""
         self.out.mkdir(parents=True, exist_ok=True)
         # A new name each time: a later run never overwrites, and the page never shows an older picture by the same name.
         path = self.out / f"{self.source.stem}-{kind}-{img.width}x{img.height}-{uuid.uuid4().hex[:4]}.png"
         img.save(path)
         if self.on_saved is not None:
             self.on_saved(path)
+        if self.files is not None:
+            record(self.files.root, path.relative_to(self.files.root), by, self.message)
         return str(path)
 
     def centre_crop(self, width: int, height: int) -> dict:
         """Cut the approved poster to a new size from its centre, then scale it. Plain code: free, the same every time."""
         img = self.open()
         window = centre_window(img.size, (width, height))
-        return {"file": self.save(img.crop(window).resize((width, height)), "centre"), "size": f"{width}x{height}", "window": list(window)}
+        return {"file": self.save(img.crop(window).resize((width, height)), "centre", "centre_crop"), "size": f"{width}x{height}", "window": list(window)}
 
     def use_photo(self, photo: Path):
         """The marketer's photo becomes the picture to work on. The kept box belonged to the old picture."""
@@ -187,7 +193,7 @@ class PictureDesk:
         else:
             window = (left, top, right, bottom)
         whole = self.box is None or (window[0] <= self.box[0] and window[1] <= self.box[1] and window[2] >= self.box[2] and window[3] >= self.box[3])
-        return {"file": self.save(img.crop(window).resize((width, height)), "crop"), "size": f"{width}x{height}", "window": list(window), "product_whole": whole}
+        return {"file": self.save(img.crop(window).resize((width, height)), "crop", "crop"), "size": f"{width}x{height}", "window": list(window), "product_whole": whole}
 
     def expand_canvas(self, width: int, height: int, colour: str = "") -> dict:
         """Fit the whole approved poster into width x height without cutting anything, and fill the new space with a
@@ -196,11 +202,11 @@ class PictureDesk:
         img.thumbnail((width, height))
         canvas = Image.new("RGB", (width, height), ImageColor.getrgb(colour_of(colour, self.colours)))
         canvas.paste(img, ((width - img.width) // 2, (height - img.height) // 2))
-        return {"file": self.save(canvas, "bars"), "size": f"{width}x{height}"}
+        return {"file": self.save(canvas, "bars", "expand_canvas"), "size": f"{width}x{height}"}
 
     def scale(self, width: int, height: int) -> dict:
         """Stretch the approved poster to width x height. Fast, plain code, and it changes the poster's proportions."""
-        return {"file": self.save(self.open().resize((width, height)), "scaled"), "size": f"{width}x{height}"}
+        return {"file": self.save(self.open().resize((width, height)), "scaled", "scale"), "size": f"{width}x{height}"}
 
     def entries(self) -> list[Entry]:
         return [

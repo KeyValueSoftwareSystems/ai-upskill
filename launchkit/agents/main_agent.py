@@ -134,16 +134,16 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
     ws = ws or load_workspace("harbor", settings, trace)
     file_tools = [make_read_file(files, trace), make_list_files(files, trace), make_write_file(files, trace, message), make_search_files(files, trace), make_edit_file(files, trace, message)] if files is not None else []
     outputs = files.drawer("outputs") if files is not None else None
-    desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None, files)
+    desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None, files, message)
     entries: list[Entry] = [
         Entry("get_brand_details", "look up this brand's guide and product facts", "read", make_get_brand_details(ws, trace, settings)),
         Entry("get_brand_facts", "this brand's facts that change over time, true today: warranty, prices, launch dates", "read", make_get_brand_facts(settings, ws)),
-        Entry("generate_image", "make a new poster picture from a scene description, only when no photo is given", "read", make_generate_image(make_images(settings, outputs), ws.colours, trace, pictures.made if pictures else None)),
+        Entry("generate_image", "make a new poster picture from a scene description, only when no photo is given", "read", make_generate_image(make_images(settings, outputs), ws.colours, trace, pictures.made if pictures else None, files, message)),
         *desk.entries(),
         Entry("check_copy", "check a headline, subheadline and body against the brand's word limits and banned claims", "read", make_check_copy(ws)),
         search_entry(settings),
         describe_image_entry(settings, model, desk),
-        text_to_speech_entry(settings, model, files),
+        text_to_speech_entry(settings, model, files, message),
         *(board.entries() if board else server_entries(settings, trace, user)),
         *file_tools,
         *make_research_entries(model, settings, trace, write=(lambda: make_write_file(files, trace, message).fn) if files is not None else None),
@@ -171,7 +171,7 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
         trace.note(f"attached {Path(picture).name} to this conversation")
         pictures.attach(Path(picture))
     files = for_request(req, settings)
-    catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures, files, message=uuid.uuid4().hex[:8])
+    catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures, files, message=trace.message)
     ctx = ContextBuilder(settings.budgets)
     session = f"{wid}:{req.user_id}:{req.session_id}:main"
     agent = build_main_agent(ws, ctx, model, settings, trace, catalogue, pictures, req.user_id, session)
@@ -287,7 +287,7 @@ def make_picture(spec: PosterSpec, catalogue: Catalogue, trace: Trace, pictures:
     fn = generate.fn
     if last is not None and settings is not None and ws is not None:
         trace.picture("rework", file=last["file"], reason="the image prompt changed, so the new picture starts from this one")
-        fn = make_generate_image(FromPicture(make_images(settings, files.drawer("outputs") if files is not None else None), Path(last["file"])), ws.colours, trace, pictures.made)
+        fn = make_generate_image(FromPicture(make_images(settings, files.drawer("outputs") if files is not None else None), Path(last["file"])), ws.colours, trace, pictures.made, files, trace.message)
     made = fn(spec.image_prompt)
     trace.tool("generate_image", {"image_prompt": spec.image_prompt}, made)
     if pictures is not None:
