@@ -35,6 +35,10 @@ uv run pytest checks/test_files.py -m stage1    # one stage's criteria, as code.
 `uv run launchkit setup` replaces only the folders the seed owns. Conversations, the brand index and Session 3's
 memory database live under `data/` too and are left alone.
 
+Cards for the lead, one per stage: `docs/files-1.md` to `docs/files-6.md`, and `docs/files-ticket.md`. Each holds the
+stage's prompt and ends with what the prompt must not build, so the next failure stays real. The room argues a stage
+and writes its criteria before the lead runs its prompt, in order, on one working copy of the participant branch.
+
 ## Setup
 
 Needs Python 3.12+ and [uv](https://docs.astral.sh/uv/).

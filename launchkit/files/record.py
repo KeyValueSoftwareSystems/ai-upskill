@@ -41,40 +41,48 @@ class Entry:
 
 
 def _file(root: Path) -> Path:
-    return Path(root) / "artifacts.json"
+    return Path(root) / "artifacts.jsonl"
 
 
 def entries(root: Path) -> list[Entry]:
-    """Everything this conversation produced, oldest first."""
+    """Everything this conversation produced, oldest first, with a retried write counted once.
+
+    A last line cut short by a crash is skipped rather than raised into the chat.
+    """
     file = _file(root)
     if not file.exists():
         return []
-    try:
-        return [Entry(**row) for row in json.loads(file.read_text(encoding="utf-8"))]
-    except (json.JSONDecodeError, TypeError):
-        return []
+    seen, out = set(), []
+    for line in file.read_text(encoding="utf-8").splitlines():
+        try:
+            entry = Entry(**json.loads(line))
+        except (json.JSONDecodeError, TypeError):
+            continue
+        key = (entry.message, entry.by, entry.path)
+        if key not in seen:
+            seen.add(key)
+            out.append(entry)
+    return out
 
 
 class Record:
-    """One conversation's record. It loads what is there when it is built, and every write after that adds to what it
-    loaded and writes the whole list back.
+    """One conversation's record. Writing never reads it: a write opens the file for append and adds one line.
 
-    A write tool builds one when it is built, and a research subagent builds its own tool when it starts. So five
-    subagents each load the same list before any of them has finished, and each writes it back with only its own entry
-    added. That is the ticket: nothing errors, every file is on disk, and the last writer's list is the record.
+    That is the whole fix. A record that was loaded when the tool was built can be as stale as it likes, because
+    nothing is written back from it.
     """
 
     def __init__(self, root: Path):
         self.root = Path(root)
-        self.items = entries(self.root)
 
     def add(self, path: Path, by: str, message: str) -> None:
-        self.items.append(Entry(path=Path(path).as_posix(), by=by, message=message, at=time.time()))
+        line = json.dumps(asdict(Entry(path=Path(path).as_posix(), by=by, message=message, at=time.time()))) + "\n"
         file = _file(self.root)
         file.parent.mkdir(parents=True, exist_ok=True)
-        file.write_text(json.dumps([asdict(e) for e in self.items], indent=2), encoding="utf-8")
+        with open(file, "a", encoding="utf-8") as log:
+            log.write(line)
 
 
 def record(root: Path, path: Path, by: str, message: str) -> None:
-    """Write down one artifact, at the moment it is written, by the code that wrote it."""
+    """Write down one artifact, at the moment it is written, by the code that wrote it. One line, appended."""
     Record(root).add(path, by, message)
