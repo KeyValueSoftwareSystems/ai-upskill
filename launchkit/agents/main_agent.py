@@ -26,11 +26,15 @@ from launchkit.guardrails.limits import make_leash
 from launchkit.knowledge.brand_facts import make_get_brand_facts
 from launchkit.mcp.client import closes_its_mcp_links
 from launchkit.mcp.servers import server_entries
+from launchkit.files.workspace import for_request
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.chat_history import session_db
 from launchkit.memory.long_term import memory_changes, memory_manager, memory_text, summary_manager, summary_text, user_memories
 from launchkit.memory.scope import held_back
 from launchkit.tools.save_memory import memory_entries
+from launchkit.tools.list_files import make_list_files
+from launchkit.tools.read_file import make_read_file
+from launchkit.tools.write_file import make_write_file
 from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, built, load_skills
 from launchkit.tools.check_copy import make_check_copy
 from launchkit.tools.describe_image import describe_image_entry
@@ -56,6 +60,7 @@ When find_tool lists a skill for the job, load it once with run_skill before you
 Call tools only through run_tool, as run_tool(name, inputs) with every input inside inputs, e.g.
 run_tool("<a tool find_tool listed>", {"<input>": "..."}).
 Every job beyond a greeting is done with the skills and tools find_tool lists, never from your own knowledge. A question is a job too: you know nothing about this season, the web or the competitors until a tool tells you.
+This conversation has a workspace of files, and everything you have made for the marketer is kept there. Save finished work with write_file in outputs/ and drafts in work/. Before you answer from memory or ask the marketer to send something again, look in the workspace with list_files, search_files and read_file. A brief, plan, draft or document is a file there, not a card on the board.
 Never say something is made, cut, attached or posted unless a tool did it in this turn.
 When the marketer asks for sizes, a picture or a voice-over, they want files a tool makes, not text in your reply. Sizes are the picture in this conversation cut to each of the brand's placements, one file each.
 When the marketer tells you how they like to work and it will matter in a later conversation, call run_tool("save_memory", {"note": "..."}); a new value for a brand fact, such as the warranty, goes to propose_brand_fact. Every memory write asks the marketer first.
@@ -123,20 +128,23 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
     )
 
 
-def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya", pictures: Pictures | None = None) -> Catalogue:
+def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya", pictures: Pictures | None = None, files=None, message: str = "") -> Catalogue:
     ws = ws or load_workspace("harbor", settings, trace)
-    desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None)
+    file_tools = [make_read_file(files, trace), make_list_files(files, trace), make_write_file(files, trace, message)] if files is not None else []
+    outputs = files.drawer("outputs") if files is not None else None
+    desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None, files)
     entries: list[Entry] = [
         Entry("get_brand_details", "look up this brand's guide and product facts", "read", make_get_brand_details(ws, trace, settings)),
         Entry("get_brand_facts", "this brand's facts that change over time, true today: warranty, prices, launch dates", "read", make_get_brand_facts(settings, ws)),
-        Entry("generate_image", "make a new poster picture from a scene description, only when no photo is given", "read", make_generate_image(make_images(settings), ws.colours, trace, pictures.made if pictures else None)),
+        Entry("generate_image", "make a new poster picture from a scene description, only when no photo is given", "read", make_generate_image(make_images(settings, outputs), ws.colours, trace, pictures.made if pictures else None)),
         *desk.entries(),
         Entry("check_copy", "check a headline, subheadline and body against the brand's word limits and banned claims", "read", make_check_copy(ws)),
         search_entry(settings),
         describe_image_entry(settings, model, desk),
-        text_to_speech_entry(settings, model),
+        text_to_speech_entry(settings, model, files),
         *(board.entries() if board else server_entries(settings, trace, user)),
-        *make_research_entries(model, settings, trace),
+        *file_tools,
+        *make_research_entries(model, settings, trace, write=(lambda: make_write_file(files, trace, message).fn) if files is not None else None),
         *memory_entries(settings, lambda: memory_manager(settings, trace, model), user, namespace=ws.id),
     ]
     catalogue = Catalogue(entries, load_skills(), trace, approve)
@@ -160,7 +168,8 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     for picture in attach:
         trace.note(f"attached {Path(picture).name} to this conversation")
         pictures.attach(Path(picture))
-    catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures)
+    files = for_request(req, settings)
+    catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures, files, message=uuid.uuid4().hex[:8])
     ctx = ContextBuilder(settings.budgets)
     session = f"{wid}:{req.user_id}:{req.session_id}:main"
     agent = build_main_agent(ws, ctx, model, settings, trace, catalogue, pictures, req.user_id, session)
@@ -182,7 +191,7 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
         turn.spec = checked_spec(turn.spec, agent, session, req, ws, model, trace, result)
     result.spec = turn.spec
     if turn.spec is not None and not any(trace.tool_calls(name) for name in PICTURE_WORK):
-        kept = make_picture(turn.spec, catalogue, trace, pictures, settings, ws)
+        kept = make_picture(turn.spec, catalogue, trace, pictures, settings, ws, files)
         if kept is not None:
             result.kept.append(kept)
     result.reply = turn.reply or (poster_words(turn.spec) if turn.spec else "")
@@ -257,7 +266,7 @@ def loose(tools: list) -> list[Function]:
 PICTURE_WORK = ("generate_image", "centre_crop", "crop", "expand_canvas", "scale", "describe_image")
 
 
-def make_picture(spec: PosterSpec, catalogue: Catalogue, trace: Trace, pictures: Pictures | None = None, settings=None, ws=None) -> Path | None:
+def make_picture(spec: PosterSpec, catalogue: Catalogue, trace: Trace, pictures: Pictures | None = None, settings=None, ws=None, files=None) -> Path | None:
     """Session 1's picture phase, kept: a checked poster gets its picture, made from the image prompt, never from the
     words. It joins the conversation, so "now all the sizes" works on it. As in Session 1, the same image prompt keeps
     the poster's picture, and a changed one reworks it. Returns the kept picture, if any."""
@@ -276,7 +285,7 @@ def make_picture(spec: PosterSpec, catalogue: Catalogue, trace: Trace, pictures:
     fn = generate.fn
     if last is not None and settings is not None and ws is not None:
         trace.picture("rework", file=last["file"], reason="the image prompt changed, so the new picture starts from this one")
-        fn = make_generate_image(FromPicture(make_images(settings), Path(last["file"])), ws.colours, trace, pictures.made)
+        fn = make_generate_image(FromPicture(make_images(settings, files.drawer("outputs") if files is not None else None), Path(last["file"])), ws.colours, trace, pictures.made)
     made = fn(spec.image_prompt)
     trace.tool("generate_image", {"image_prompt": spec.image_prompt}, made)
     if pictures is not None:

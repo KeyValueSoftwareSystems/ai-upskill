@@ -238,11 +238,7 @@ async def attach_picture(workspace_id: str = Form(...), user_id: str = Form(...,
         raise HTTPException(404, str(error))
     if not re.fullmatch(r"[0-9a-f]{6}", session_id) or Path(picture.filename or "").suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
         raise HTTPException(400, "attach a .png, .jpg or .webp picture to a conversation")
-    uploads = settings.data_dir / "uploads"
-    uploads.mkdir(parents=True, exist_ok=True)
-    temp = uploads / Path(picture.filename).name
-    temp.write_bytes(await picture.read())
-    kept = Pictures(settings, workspace_id, user_id, session_id).attach(temp)
+    kept = Pictures(settings, workspace_id, user_id, session_id).attach_bytes(Path(picture.filename).name, await picture.read())
     return {"name": kept.name, "url": f"/files/{kept.relative_to(settings.data_dir).as_posix()}"}
 
 

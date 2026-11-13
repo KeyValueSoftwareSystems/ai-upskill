@@ -4,8 +4,7 @@ attached or one the agent made: the model never names a file.
 Plain code cuts, pads or stretches the picture: free, and the same every time. One tool asks a vision model
 where the bottle is: it costs money, so the desk asks once per poster and keeps the box.
 
-Every size is saved into data/sizes, a folder every brand shares. Stage 1 points the desk at the conversation's
-workspace; stage 5 makes it record what it wrote.
+Every size is saved into the conversation's outputs/ drawer.
 """
 
 import base64
@@ -114,13 +113,13 @@ def around_product(crop):
 
 
 class PictureDesk:
-    def __init__(self, settings, colours: dict, trace: Trace, model=None, source=None, on_saved=None):
+    def __init__(self, settings, colours: dict, trace: Trace, model=None, source=None, on_saved=None, files=None):
         self._source = source
         self.on_saved = on_saved
         self.colours = colours
         self.trace = trace
         self.model = model
-        self.out = settings.data_dir / "sizes"
+        self.out = files.drawer("outputs") if files is not None else settings.data_dir / "sizes"  # a desk with no conversation keeps the old folder
         self._box: list[int] | None = None
         self._box_for: Path | None = None
 

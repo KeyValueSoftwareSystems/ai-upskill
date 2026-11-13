@@ -1,9 +1,5 @@
-"""text_to_speech: turns a short script into a voice-over file. With the fakes it writes a silent file, so the checks
-run offline.
-
-It saves into data/audio, a folder every brand shares. Stage 1 points it at the conversation's workspace; stage 5
-makes it record what it wrote.
-"""
+"""text_to_speech: turns a short script into a voice-over file in the conversation's outputs/ drawer. With the fakes it
+writes a silent file, so the checks run offline."""
 
 import os
 import uuid
@@ -13,8 +9,8 @@ from launchkit.tools.catalogue import Entry
 from launchkit.tools.describe_image import is_fake
 
 
-def make_text_to_speech(settings, model):
-    out = settings.data_dir / "audio"
+def make_text_to_speech(settings, model, files=None):
+    out = files.drawer("outputs") if files is not None else settings.data_dir / "audio"
 
     def text_to_speech(script: str) -> dict:
         """Turn a short script into a spoken voice-over file. It costs money: write and check the script first."""
@@ -34,5 +30,5 @@ def make_text_to_speech(settings, model):
     return text_to_speech
 
 
-def text_to_speech_entry(settings, model) -> Entry:
-    return Entry("text_to_speech", "turn a short script into a spoken voice-over", "read", make_text_to_speech(settings, model))
+def text_to_speech_entry(settings, model, files=None) -> Entry:
+    return Entry("text_to_speech", "turn a short script into a spoken voice-over", "read", make_text_to_speech(settings, model, files))

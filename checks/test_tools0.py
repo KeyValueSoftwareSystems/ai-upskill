@@ -186,7 +186,7 @@ def test_the_chat_page_attaches_a_picture_to_the_conversation(settings, monkeypa
     monkeypatch.setattr(web, "settings", settings)
     upload = UploadFile(file=io.BytesIO(APPROVED.read_bytes()), filename="tidal-poster.jpg")
     kept = asyncio.run(web.attach_picture(workspace_id="harbor", user_id="maya", session_id="abc123", picture=upload))
-    assert kept["url"].endswith("/abc123/tidal-poster.jpg")
+    assert kept["url"].endswith("/abc123/uploads/tidal-poster.jpg")
     assert Pictures(settings, "harbor", "maya", "abc123").newest().name == "tidal-poster.jpg"
     assert Pictures(settings, "harbor", "maya", "def456").newest() is None
 

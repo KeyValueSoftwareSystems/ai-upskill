@@ -96,6 +96,12 @@ class Trace:
                 return f"warning   {d['text']}"
             case "written":
                 return f"wrote     {_relative(d['path'])}"
+            case "file_read":
+                return f"read      {d['path']} · {d['characters']} characters"
+            case "file_written":
+                return f"wrote     {d['path']} · {d['characters']} characters"
+            case "file_listed":
+                return f"listed    {d['folder']} · {d['files']} files"
             case "reply":
                 return f"reply     {_short(d['text'], 80)}  (no poster this turn)"
             case "context":

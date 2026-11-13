@@ -103,8 +103,9 @@ class FromPicture:
         return self.images.generate(prompt, colours, reference=self.reference)
 
 
-def make_images(settings):
-    out_dir = settings.data_dir / "outputs"
+def make_images(settings, out_dir: Path | None = None):
+    """The picture maker, saving into out_dir: a conversation's outputs/ drawer, or data/outputs for a run with no conversation."""
+    out_dir = out_dir if out_dir is not None else settings.data_dir / "outputs"
     has_key = (os.environ.get("LITELLM_API_KEY") and os.environ.get("LITELLM_BASE_URL")) or os.environ.get("OPENAI_API_KEY") or os.environ.get("IMAGESVC_URL")
     placeholder = settings.image_mode == "fake" or image_provider() == "placeholder"
     if placeholder or not has_key:
