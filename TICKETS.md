@@ -37,7 +37,7 @@ What is already there, and what each piece does, is in `READY-MADE.md`.
 
 ## Stage 1 · Where the work lives, and the file tools
 
-> Maya, Harbor: "Give me Monday's approved brief." She gets a brand new one.
+> Maya, Harbor: "Give me Monday's approved brief." The agent says it cannot find one and asks her for the details.
 
 **What is actually wrong.** The agent has no file tools at all. Every tool that writes a file already knows its own output path, all of those paths are shared folders, and nothing records which conversation a file belongs to or which version anyone approved. There is no way to ask for yesterday's work because the agent cannot look at anything it made.
 
@@ -123,13 +123,14 @@ Ask your coding agent for one function in <code>launchkit/files/paths.py</code> 
 
 ## Stage 4 · How a file gets changed
 
-> The reviewer, on Breeze: "Take out the lifetime-guarantee line." Two other paragraphs come back reworded.
+> The reviewer, on Breeze: "Take out the lifetime-guarantee line." The trace shows the whole brief written again for one line.
 
-**What is actually wrong.** The only way to change a file today is to write the whole thing again, so the model rewrites everything and drifts in the parts nobody asked about.
+**What is actually wrong.** The only way to change a file today is to write the whole thing again, so every line goes back through the write tool for one line's change, and nothing can tell the line that was asked for from the lines that were not.
 
 **Done when**
 
 - Ask for one line to change. That line changes and nothing else in the file does.
+- The trace shows one edit, not a whole-file write.
 - Ask for a line that is not there. The agent says so instead of writing something.
 - Ask for text that appears twice. The agent says so instead of guessing which one.
 
