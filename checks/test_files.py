@@ -130,6 +130,21 @@ def test_pictures_sizes_and_voice_overs_land_in_the_conversations_workspace(sett
         assert made.is_relative_to(ws.drawer("outputs")), f"{made} is outside this conversation's outputs/"
 
 
+@pytest.mark.stage1
+def test_a_research_subagent_saves_its_brief_into_the_conversations_workspace(settings, request_for, trace, brief):
+    """1 · a researcher gets a write tool of its own from the catalogue and saves competitors/<name>.md in this conversation."""
+    from launchkit.agents.main_agent import build_catalogue
+
+    files = for_request(request_for(workspace_id="harbor", session_id="k7c1"), settings)
+    tools = build_catalogue(settings, trace, lambda name, inputs: False, model=brief, files=files, message="m1").entries
+    report = tools["research"].fn("How is Owala launching bottles this season?")
+
+    assert report.startswith("Owala"), report
+    saved = files.root / "competitors" / "owala.md"
+    assert saved.exists(), "the researcher's brief was not saved in the workspace"
+    assert saved.read_text(encoding="utf-8") == report
+
+
 # Stage 2: a capped search ---------------------------------------------------
 
 BRIEFS = {
