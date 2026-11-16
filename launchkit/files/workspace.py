@@ -14,7 +14,7 @@ Reference page 3, Where the work lives.
 """
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from launchkit.brands.request import Request, resolve_workspace_id
@@ -29,6 +29,7 @@ class Workspace:
     conversation: str
     root: Path       # this conversation's folder, under data/files/<brand>/<conversation>
     shared: Path     # the brand's own files, workspaces/<brand>. Read by the agent, never written, and outside root.
+    seen: dict = field(default_factory=dict, compare=False, repr=False)  # stretch: what each file looked like when it was last read
 
     def drawer(self, name: str) -> Path:
         """One drawer inside this workspace, made on first use. A name that is not a drawer is a mistake worth catching here."""

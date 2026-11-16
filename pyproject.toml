@@ -70,4 +70,5 @@ markers = [
     "stage3: Session 4, stage 3: a capped search",
     "stage4: Session 4, stage 4: an edit tool",
     "stage5: Session 4, stage 5: one check every path passes, and the brand's shared files",
+    "stretch: Session 4, optional stretch after stage 4: an edit that refuses when the file moved on",
 ]

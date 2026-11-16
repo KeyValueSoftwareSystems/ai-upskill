@@ -7,6 +7,7 @@ Reference page 6, File tools, and page 9, Who may touch which file.
 """
 
 from launchkit.files.paths import OutsideWorkspace, refuse, resolve_in_workspace
+from launchkit.files.versions import fingerprint
 from launchkit.tools.catalogue import Entry
 
 LIMIT = 200_000  # characters, so one read can never be the whole context
@@ -20,6 +21,8 @@ def make_read_file(workspace, trace) -> Entry:
                 real = resolve_in_workspace(workspace.shared, path[len("brand/"):])
             else:
                 real = resolve_in_workspace(workspace.root, path)
+                if real.is_file():
+                    workspace.seen[str(real)] = fingerprint(real.read_bytes())  # stretch: edit_file refuses if the file moves on
         except OutsideWorkspace as error:
             return refuse(trace, "read_file", path, error.reason)
         if not real.is_file():
