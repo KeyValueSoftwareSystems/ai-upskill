@@ -91,3 +91,30 @@ The other refusal, `Not found`, is covered by the checks and is rarely seen live
 There are five ways to change a file: write it all again, replace a line range, replace an exact piece of text, apply a patch, or run a shell command. Four of them can change the wrong thing without telling you. What the room builds is one function that replaces exactly the text it was given, refuses when that text is missing, and refuses when it appears more than once. Hold on to that check, because stage 2's bug gets past it without a single failed match. Versioning and rollback are the other half of write safety, and every undo tool covers what it saw change and nothing else, so a file changed by something outside the tool does not come back.
 
 What if the old text appears more than once? The tool refuses and says how many, because the agent cannot count well and a short word such as "the" is almost never meant everywhere. Other tools handle it in three ways. The agent adds surrounding text until the match is unique. An explicit replace-all flag, off unless the agent asks for it. Or an occurrence number, which breaks when the file changes between the read and the edit. Replace-all is right for renaming a term across a file, such as "lifetime guarantee" to "five-year warranty", and dangerous for a short word, and one flag does both jobs. So the room has three questions: who decides that every match is meant, should a replace-all ask Maya first, and should the refusal list each match with a line of context so the agent can pick one?
+
+## Optional stretch: close the gap
+
+Only if your team finishes early. Stage 4 left a gap on purpose: the edit tool checks the text it was given, and it does not check whether the file changed since the agent read it. A production system closes that gap. This stretch does it for one machine.
+
+```
+Stretch after stage 4 of Session 4: make edit_file refuse when the file moved on.
+
+launchkit/tools/read_file.py: when it reads a file in the conversation's workspace, remember a SHA-256 fingerprint of the
+file's bytes in workspace.seen, keyed by the file's resolved path. Add a `seen` dict field to Workspace in
+launchkit/files/workspace.py (default empty, left out of equality and repr).
+
+launchkit/tools/edit_file.py: take a lock for the file (one threading.Lock per resolved path, kept in a small helper
+module launchkit/files/versions.py) and, inside the lock, in this order: read the file's bytes; if workspace.seen has no
+fingerprint for the file, change nothing and return a message that begins "Read first"; if the fingerprint of the bytes
+differs from the remembered one, change nothing and return a message that begins "Changed"; then do the existing
+Not found, Ambiguous and replace steps, and after a successful write remember the new fingerprint. The check and the
+write must both happen inside the lock.
+
+Do NOT: change write_file, the record or the path check; check outside the lock.
+
+Done when the stage 4 checks still pass once they read the file before they edit it. Not part of the five stages' checks.
+```
+
+Why one step matters: a check followed by a separate write leaves a gap where another writer can slip in. This lock closes that gap for writers in one process. Two processes need a file lock, and a bucket needs a conditional write, as Cloud Storage and S3 offer.
+
+The solution is on its own branch, `session-04-filesystem-solutions-stretch`, one commit on top of the stage 5 solution. Its three checks run with `uv run pytest checks/test_files.py -m stretch`. The stage 4 checks on that branch read the file before they edit it. This stretch has not been run against a coding agent, so treat the prompt as a draft.
