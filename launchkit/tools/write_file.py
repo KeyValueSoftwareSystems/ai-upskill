@@ -7,6 +7,7 @@ the outside world does.
 Reference page 6, File tools.
 """
 
+from launchkit.files.paths import OutsideWorkspace, refuse, resolve_in_workspace
 from launchkit.files.record import Record
 from launchkit.tools.catalogue import Entry
 
@@ -16,10 +17,13 @@ def make_write_file(workspace, trace, message: str = "") -> Entry:
 
     def write_file(path: str, text: str) -> str:
         """Write a file into this conversation's workspace. Finished work goes in outputs/, drafts in work/."""
-        real = workspace.root / path
+        try:
+            real = resolve_in_workspace(workspace.root, path)
+        except OutsideWorkspace as error:
+            return refuse(trace, "write_file", path, error.reason)
         real.parent.mkdir(parents=True, exist_ok=True)
         real.write_text(text, encoding="utf-8")
-        artifacts.add(real.relative_to(workspace.root), "write_file", message)
+        artifacts.add(real.relative_to(workspace.root.resolve()), "write_file", message)
         trace.add("file_written", path=path, characters=len(text))
         return f"Wrote {path}."
 
