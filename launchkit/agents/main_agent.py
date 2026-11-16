@@ -33,6 +33,7 @@ from launchkit.memory.long_term import memory_changes, memory_manager, memory_te
 from launchkit.memory.scope import held_back
 from launchkit.tools.save_memory import memory_entries
 from launchkit.tools.list_files import make_list_files
+from launchkit.tools.search_files import make_search_files
 from launchkit.tools.read_file import make_read_file
 from launchkit.tools.write_file import make_write_file
 from launchkit.tools.catalogue import Catalogue, Entry, ask_in_terminal, built, load_skills
@@ -60,7 +61,7 @@ When find_tool lists a skill for the job, load it once with run_skill before you
 Call tools only through run_tool, as run_tool(name, inputs) with every input inside inputs, e.g.
 run_tool("<a tool find_tool listed>", {"<input>": "..."}).
 Every job beyond a greeting is done with the skills and tools find_tool lists, never from your own knowledge. A question is a job too: you know nothing about this season, the web or the competitors until a tool tells you.
-This conversation has a workspace of files, and everything you have made for the marketer is kept there. Save finished work with write_file in outputs/ and drafts in work/. Before you answer from memory or ask the marketer to send something again, look in the workspace with list_files and read_file. A brief, plan, draft or document is a file there, not a card on the board.
+This conversation has a workspace of files, and everything you have made for the marketer is kept there. Save finished work with write_file in outputs/ and drafts in work/. Before you answer from memory or ask the marketer to send something again, look in the workspace with list_files, search_files and read_file. A brief, plan, draft or document is a file there, not a card on the board.
 Never say something is made, cut, attached or posted unless a tool did it in this turn.
 When the marketer asks for sizes, a picture or a voice-over, they want files a tool makes, not text in your reply. Sizes are the picture in this conversation cut to each of the brand's placements, one file each.
 When the marketer tells you how they like to work and it will matter in a later conversation, call run_tool("save_memory", {"note": "..."}); a new value for a brand fact, such as the warranty, goes to propose_brand_fact. Every memory write asks the marketer first.
@@ -130,7 +131,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
 
 def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya", pictures: Pictures | None = None, files=None, message: str = "") -> Catalogue:
     ws = ws or load_workspace("harbor", settings, trace)
-    file_tools = [make_read_file(files, trace), make_list_files(files, trace), make_write_file(files, trace, message)] if files is not None else []
+    file_tools = [make_read_file(files, trace), make_list_files(files, trace), make_write_file(files, trace, message), make_search_files(files, trace)] if files is not None else []
     outputs = files.drawer("outputs") if files is not None else None
     desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None, files, message)
     entries: list[Entry] = [
