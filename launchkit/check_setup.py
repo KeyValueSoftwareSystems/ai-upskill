@@ -299,7 +299,7 @@ def main(argv: list[str] | None = None) -> int:
     if c.failed:
         print("Setup incomplete: fix the items marked FAIL and run this again.")
         return 1
-    print("Setup complete. Next: open docs/tools-1.md, the first step card.")
+    print("Setup complete. Next: run `uv run launchkit setup`, then `uv run launchkit ui` and open the chat page as Maya at Harbor.")
     return 0
 
 

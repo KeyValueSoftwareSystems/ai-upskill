@@ -1,4 +1,6 @@
+import re
 from concurrent.futures import ThreadPoolExecutor
+from typing import Callable
 
 from agno.agent import Agent
 
@@ -14,22 +16,43 @@ Reply with a short report and nothing else: one paragraph of at most 60 words on
 then the addresses of the pages you used."""
 
 
-def build_research_agent(model, settings, trace: Trace) -> Agent | None:
-    """Orchestration step 2: the research subagent. RESEARCH_TASK, search_web only, no session store and no chat history."""
+SAVE_TASK = """
+When you have the report, call save_brief once with the competitor's name and the report, then reply with the report."""
+
+
+def build_research_agent(model, settings, trace: Trace, save_brief: Callable | None = None) -> Agent | None:
+    """Orchestration step 2: the research subagent. RESEARCH_TASK, search_web only, no session store and no chat history.
+
+    Session 4: given a `save_brief`, the subagent also writes its own brief, in parallel with the others. That is what
+    the ticket after shipping turns on. Without one it behaves exactly as it did in Session 2.
+    """
     return Agent(
         model=model,
-        system_message=RESEARCH_TASK,
-        tools=[make_search_web(settings)],
+        system_message=RESEARCH_TASK + (SAVE_TASK if save_brief else ""),
+        tools=[make_search_web(settings), *([save_brief] if save_brief else [])],
         tool_hooks=[make_leash(settings.limits, trace)],
         telemetry=False,
     )
 
 
-def make_research_entries(model, settings, trace: Trace) -> list[Entry]:
-    """Orchestration step 2: research and research_many, as read tools for the catalogue."""
+def make_research_entries(model, settings, trace: Trace, write: Callable[[], Callable[[str, str], str]] | None = None) -> list[Entry]:
+    """Orchestration step 2: research and research_many, as read tools for the catalogue.
+
+    `write` builds a file write tool (Session 4, stage 1). When it is given, every research subagent builds its own
+    at the moment it starts and saves its own brief to competitors/<name>.md with it, in parallel with the others.
+    A tool per subagent is how every other tool in a research run is built, and it is what the ticket after shipping
+    turns on. Nothing passes it until the room has built that tool and registered it.
+    """
 
     def research(brief: str) -> str:
-        run = build_research_agent(model, settings, trace).run(brief)
+        save = write() if write else None  # built now, before the subagent has searched anything
+
+        def save_brief(competitor: str, report: str) -> str:
+            """Save this competitor's brief into the conversation's competitors folder."""
+            name = re.sub(r"[^a-z0-9]+", "-", competitor.lower()).strip("-") or "competitor"
+            return save(f"competitors/{name}.md", report)
+
+        run = build_research_agent(model, settings, trace, save_brief if save else None).run(brief)
         raise_if_failed(run)
         trace.model("research", model_name(model), run.metrics)
         return str(run.content or "")

@@ -384,7 +384,8 @@ def research_report(name: str, pages: str) -> str:
 class BriefModel(FakeModel):
     """Plays both agents in the competitor job. As the main agent it finds the competitor_research skill, loads it and does
     what the skill names: search_web once per competitor, one after another, or research_many once.
-    As the research subagent it searches once and replies with a short report naming the sites it read. It keeps every view it was shown in seen."""
+    As the research subagent it searches once, saves its brief when it has a save tool, and replies with a short report
+    naming the sites it read. It keeps every view it was shown in seen."""
 
     def __init__(self):
         super().__init__("brief")
@@ -396,14 +397,18 @@ class BriefModel(FakeModel):
             self.seen.append(("main", view))
             return self.main(messages)
         self.seen.append(("research", view))
-        return self.research(messages)
+        return self.research(messages, "save_brief" in tool_names(tools))
 
-    def research(self, messages):
+    def research(self, messages, can_save=False):
         brief = last_user_text(messages)
-        if not has_tool_result(messages):
+        results = [str(m.content or "") for m in messages if getattr(m, "role", None) == "tool"]
+        if not results:
             return tool_call_response("search_web", {"query": brief}, "search_1")
-        pages = [str(m.content or "") for m in messages if getattr(m, "role", None) == "tool"][-1]
-        return text_response(research_report(next(iter(competitors_in(brief)), "The competitor"), pages), messages)
+        name = next(iter(competitors_in(brief)), "The competitor")
+        report = research_report(name, results[0])
+        if can_save and len(results) == 1:  # given a save tool, it saves once before it replies, as the real one is told to
+            return tool_call_response("save_brief", {"competitor": name, "report": report}, "save_1")
+        return text_response(report, messages)
 
     def main(self, messages):
         asked = last_user_text(messages)

@@ -149,7 +149,7 @@ header button.quiet.on{color:var(--accent);border-color:var(--accent);background
     </div>
     <div class="panel on trace" id="trace"><div class="empty">What happens during a run, line by line. "sent" is what the model read, "got back" is what it wrote, in tokens.</div></div>
     <div class="panel" id="context"><div class="empty">After a run: how much the main agent had in view.</div></div>
-    <div class="panel poster" id="poster"><div class="empty">Pictures and sounds the agent makes appear here.</div></div>
+    <div class="panel poster" id="poster"><div class="empty">What the agent made this turn appears here: finished work only, never drafts.</div></div>
     <div class="panel" id="memory"><div class="empty">What LaunchKit remembers about the person signed in, and what it shares with everyone.</div></div>
   </section>
 </main>
@@ -163,11 +163,14 @@ function sendAgain(box){ if (!LAST) return box; const b = document.createElement
 function specHtml(s){ return `<span class="k">headline</span>${esc(s.headline)}\n<span class="k">subheadline</span>${esc(s.subheadline)}\n<span class="k">body</span>${esc(s.body)}\n<span class="k">image prompt</span>${esc(s.image_prompt)}\n<span class="k">format</span>${esc(s.format)}${s.sources && s.sources.length ? `\n<span class="k">sources</span>${esc(s.sources.join(", "))}` : ""}`; }
 function mediaHtml(files){
   if (!files || !files.length) return "";
-  return `<div class="media">${files.map(f => `<figure>${/\.(mp3|wav)$/i.test(f) ? `<audio controls src="${esc(f)}"></audio>` : `<a href="${esc(f)}" target="_blank"><img src="${esc(f)}" alt=""></a>`}${esc(f.split("/").pop())}</figure>`).join("")}</div>`;
+  const one = f => /\.(mp3|wav)$/i.test(f) ? `<audio controls src="${esc(f)}"></audio>`
+    : /\.(png|jpe?g|webp)$/i.test(f) ? `<a href="${esc(f)}" target="_blank"><img src="${esc(f)}" alt=""></a>`
+    : `<a class="file" href="${esc(f)}" target="_blank">open</a>`;
+  return `<div class="media">${files.map(f => `<figure>${one(f)}${esc(f.split("/").pop())}</figure>`).join("")}</div>`;
 }
 function renderTurn(t){
   if (t.role === "user") add("user", esc(t.text) + mediaHtml(t.files));
-  else if (t.role === "error") add("error", `<b>${esc(t.kind)}</b>\n${esc(t.message)}`);
+  else if (t.role === "error") { add("error", `<b>${esc(t.kind)}</b>\n${esc(t.message)}${mediaHtml(t.files)}`); if (t.files && t.files.length) $("poster").innerHTML = mediaHtml(t.files); }
   else if (t.reply || t.files) { add("", esc(t.reply || "") + mediaHtml(t.files)); if (t.files && t.files.length) $("poster").innerHTML = mediaHtml(t.files); }
   else if (t.spec) { const d = add("", specHtml(t.spec)); if (t.image) { d.innerHTML += `<img src="${t.image}" alt="poster picture">`; $("poster").innerHTML = `<img src="${t.image}" alt="poster picture">`; } }
 }
@@ -185,7 +188,7 @@ async function loadConversation(sessionId){
   const pick = typeof sessionId === "string" ? `?session_id=${encodeURIComponent(sessionId)}` : "";
   const data = await (await fetch(`/conversations/${w.workspace_id}/${w.user_id}${pick}`)).json();
   fillSessions(data);
-  $("messages").innerHTML = ""; $("poster").innerHTML = '<div class="empty">Pictures and sounds the agent makes appear here.</div>';
+  $("messages").innerHTML = ""; $("poster").innerHTML = '<div class="empty">What the agent made this turn appears here: finished work only, never drafts.</div>';
   if (!data.turns.length) add("empty", `Signed in as ${esc($("person").selectedOptions[0].textContent)} at ${esc($("brand").selectedOptions[0].textContent)}. Ask the agent for something.`);
   data.turns.forEach(renderTurn);
 }
@@ -406,7 +409,7 @@ $("form").onsubmit = async e => {
     if (ev.type === "result" || ev.type === "error") answered = true;
     if (ev.type === "ask") showAsk(ev);
     if (ev.type === "result") { renderTurn({ role: "assistant", reply: ev.reply, files: ev.files }); showView(ev.view, ev.memory); }
-    if (ev.type === "error") sendAgain(add("error", `<b>${esc(ev.kind)}</b>\n${esc(ev.message)}`));
+    if (ev.type === "error") { sendAgain(add("error", `<b>${esc(ev.kind)}</b>\n${esc(ev.message)}${mediaHtml(ev.files)}`)); if (ev.files && ev.files.length) $("poster").innerHTML = mediaHtml(ev.files); }
   };
   es.addEventListener("done", () => { es.close(); finish(); refreshSessions(); if ($("memory").classList.contains("on")) loadMemory(); });
   es.onerror = () => {

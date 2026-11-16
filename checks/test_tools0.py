@@ -2,10 +2,13 @@ import json
 from dataclasses import replace
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from launchkit.agents.main_agent import build_catalogue, run_main
+from launchkit.files.workspace import for_request
 from launchkit.guardrails.limits import Limits, make_leash
+from launchkit.tools.catalogue import built
 from launchkit.tools.resize_poster import APPROVED
 from launchkit.trace import Trace
 
@@ -66,9 +69,9 @@ def test_the_chat_page_asks_before_a_write_and_waits_for_the_answer():
     assert answers == [True]
 
 
+@pytest.mark.skipif(built(for_request), reason="once the workspace is built the page lists from the record instead")
 def test_the_chat_page_serves_only_pictures_and_sounds_under_data(settings, monkeypatch):
     """Files the agent made are shown on the page; nothing outside data/, and no other kind of file, is served."""
-    import pytest
     from fastapi import HTTPException
 
     import launchkit.web.app as web
@@ -82,6 +85,23 @@ def test_the_chat_page_serves_only_pictures_and_sounds_under_data(settings, monk
     for name in ("notes.json", "../pyproject.toml"):
         with pytest.raises(HTTPException):
             web.data_file(name)
+
+
+@pytest.mark.skipif(not built(for_request), reason="before the workspace exists the page still lists by scanning data/")
+def test_a_stray_picture_in_a_shared_folder_is_neither_listed_nor_served(settings, monkeypatch):
+    """The page shows and serves a conversation's own files only. A picture lying in a folder every brand shared belongs
+    to no turn: it is not listed, and no route hands it out."""
+    from fastapi.testclient import TestClient
+
+    import launchkit.web.app as web
+    from launchkit.brands.request import Request
+
+    monkeypatch.setattr(web, "settings", settings)
+    (settings.data_dir / "sizes").mkdir(parents=True, exist_ok=True)
+    (settings.data_dir / "sizes" / "a.png").write_bytes(b"png")
+
+    assert web.listed_files(settings, Request(workspace_id="harbor", user_id="maya", session_id="t1", text="x"), "m1") == []
+    assert TestClient(web.app).get("/files/sizes/a.png").status_code == 404
 
 
 def test_the_main_agent_knows_todays_date(settings):

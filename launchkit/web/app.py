@@ -19,12 +19,15 @@ from launchkit.agents.main_agent import run_main
 from launchkit.brands.onboard import onboard_workspace
 from launchkit.brands.request import Request, UnknownWorkspace, resolve_workspace_id
 from launchkit.brands.users import list_logins
+from launchkit.files.record import entries
+from launchkit.files.workspace import for_request
 from launchkit.guardrails.poster_check import SpecError
 from launchkit.knowledge.brand_library import asset_path, read_library, workspace_root
 from launchkit.mcp.servers.notion import NotionServer, connected, log_in
 from launchkit.memory.attached_pictures import Pictures
 from launchkit.memory.memory_view import memory_view
 from launchkit.settings import settings
+from launchkit.tools.catalogue import built
 from launchkit.trace import Trace
 
 app = FastAPI(title="LaunchKit")
@@ -177,6 +180,37 @@ def new_files(current, since: float) -> list[str]:
     return [f"/files/{p.relative_to(current.data_dir).as_posix()}" for p in sorted(found)]
 
 
+def listed_files(current, req: Request, message: str, kept=(), since: float = 0.0) -> list[str]:
+    """What this turn produced, as page addresses.
+
+    Before the workspace exists (for_request is not built yet) there is no record, so the page lists the old way: every
+    picture and sound written under data/ since the turn began. Once it exists the list is read from the record:
+    the artifact entries for this message, drafts in work/ left out, plus a poster the run kept from an earlier turn.
+    Every address goes through the conversation's own download route.
+    """
+    if not built(for_request):
+        return new_files(current, since) + [f"/files/{p.relative_to(current.data_dir).as_posix()}" for p in kept]
+    ws = for_request(req, current)
+    root = ws.root.resolve()
+    paths = [e.path for e in entries(ws.root) if e.message == message and not e.path.startswith("work/")]
+    for path in kept:
+        real = Path(path).resolve()
+        if real.is_relative_to(root) and real.exists():
+            paths.append(real.relative_to(root).as_posix())
+    return list(dict.fromkeys(f"/workspace/{ws.brand}/{ws.conversation}/{path}" for path in paths))
+
+
+def _made_before_failing(current, req: Request, message: str) -> list[str]:
+    """What a turn that died partway had already produced. The record is written as each file is written, so it is
+    there when a list assembled after a successful run would not be."""
+    if not built(for_request):
+        return []
+    try:
+        return listed_files(current, req, message)
+    except Exception:
+        return []
+
+
 def refuse_bad_workspace(body: RunBody, current) -> str | None:
     """Step 4's check, run before any conversation file is opened, so a bad id never reads or rewrites another brand's history."""
     try:
@@ -206,12 +240,13 @@ def _worker(body: RunBody, queue: Queue):
     req = Request(workspace_id=body.workspace_id, user_id=body.user_id, session_id=conversation["session_id"], text=body.text)
     conversation["turns"].append({"role": "user", "text": body.text, "files": body.attached})
     started = time.time()
+    message = trace.message = uuid.uuid4().hex[:8]
     try:
         result = run_main(req, settings=current, trace=trace, approve=ask_on_page(queue))
         answer = {
             "type": "result",
             "reply": result.reply,
-            "files": new_files(current, started) + [f"/files/{p.relative_to(current.data_dir).as_posix()}" for p in result.kept],
+            "files": listed_files(current, req, message, result.kept, since=started),
             "view": {"tool_tokens": result.view_tokens, "history_tokens": result.history_tokens, "seconds": round(result.seconds, 1)},
             "memory": {"tokens": result.memory_tokens},
         }
@@ -221,8 +256,9 @@ def _worker(body: RunBody, queue: Queue):
         conversation["turns"].append({"role": "error", "kind": type(error).__name__, "message": str(error)})
         queue.put({"type": "error", "kind": type(error).__name__, "message": str(error), "errors": getattr(error, "errors", None)})
     except Exception as error:
-        conversation["turns"].append({"role": "error", "kind": type(error).__name__, "message": str(error)})
-        queue.put({"type": "error", "kind": type(error).__name__, "message": str(error)})
+        made = _made_before_failing(current, req, message)
+        conversation["turns"].append({"role": "error", "kind": type(error).__name__, "message": str(error), "files": made})
+        queue.put({"type": "error", "kind": type(error).__name__, "message": str(error), "files": made})
     finally:
         _save_conversation(body.workspace_id, body.user_id, conversation)
         queue.put(DONE)
@@ -318,6 +354,8 @@ async def events(run_id: str):
 
 @app.get("/outputs/{name}")
 def output(name: str):
+    if built(for_request):  # with a workspace every file is served through its conversation's own route
+        raise HTTPException(404)
     path = settings.data_dir / "outputs" / Path(name).name
     if not path.exists():
         raise HTTPException(404)
@@ -326,9 +364,26 @@ def output(name: str):
 
 @app.get("/files/{name:path}")
 def data_file(name: str):
+    if built(for_request):
+        raise HTTPException(404)
     root = settings.data_dir.resolve()
     path = (root / name).resolve()
     if not path.is_relative_to(root) or path.suffix.lower() not in MEDIA or not path.exists():
+        raise HTTPException(404)
+    return FileResponse(path)
+
+
+@app.get("/workspace/{brand}/{session_id}/{name:path}")
+def workspace_file(brand: str, session_id: str, name: str):
+    """Download one file a conversation owns."""
+    if not built(for_request):
+        raise HTTPException(404)
+    try:
+        ws = for_request(Request(workspace_id=brand, session_id=session_id, text="download"), settings)
+    except (UnknownWorkspace, ValueError):
+        raise HTTPException(404)
+    path = ws.root / name
+    if not path.is_file():
         raise HTTPException(404)
     return FileResponse(path)
 

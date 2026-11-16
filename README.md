@@ -14,10 +14,33 @@ A marketing assistant built in steps across the session. A marketer asks for a p
 | `session-02-tools-step1` … `step5` | each step's answer |
 | `session-02-orchestration` | agents and orchestration (Session 2, part 2): the main agent, the Tidal launch brief, saved competitor pages |
 | `session-02-orchestration-step1`, `step2` | each step's answer |
-| **`session-3-memory-start`** | agent memory (Session 3): the morning the support queue filled; the room builds the six fixes here |
-| `session-3-memory` | every Session 3 fix built: the answer |
+| `session-03-memory-step1`, `step2` | agent memory (Session 3): the morning the support queue filled; the room builds the memory fixes here |
+| `session-03-memory-solutions` | every Session 3 memory fix built: the answer |
+| **`session-04-filesystem-prd`** (you are here) | agent file systems (Session 4): Harbor's feature request, built in five stages |
+| `session-04-filesystem-solutions` | every Session 4 stage built: the answer |
 
 Each branch contains the previous branch's solution. Fall behind, check out the next one.
+
+*PS: For session 4 each commit in the solution branch represents the solution*
+
+## Session 4
+
+This branch is one feature request, built in stages, not a queue. Read `TICKETS.md`, write your decisions in
+`DECISIONS.md`, and see what is already built in `READY-MADE.md`. Do the Setup section below first (install and
+`.env`), then run:
+
+```
+uv run launchkit setup      # puts data/ back the way Breeze week left it
+uv run launchkit ui         # the chat page; sign in as Maya at Harbor and press Files
+uv run pytest checks/test_files.py -m stage1    # one stage's criteria, as code. Red until you build it. Or: launchkit check stage1
+```
+
+`uv run launchkit setup` replaces only the folders the seed owns. Conversations, the brand index and Session 3's
+memory database live under `data/` too and are left alone.
+
+One card per stage: `docs/files-1.md` to `docs/files-5.md`. Each card says what to break first,
+holds the stage's prompt for your coding agent, and ends with what the prompt must not build, so the next failure stays
+real. Read a stage's card after the room has written that stage's criteria, in order, on one working copy of this branch.
 
 ## Setup
 
@@ -31,7 +54,7 @@ uv run launchkit run harbor "Poster for the Tidal bottle on a misty lakeshore at
 uv run launchkit ui         # the harness chat page on http://localhost:8000
 ```
 
-Keys go through KeyValue's LiteLLM proxy: `LITELLM_API_KEY` and `LITELLM_BASE_URL`. Everyone runs the real model and real pictures. `LAUNCHKIT_IMAGE_PROVIDER` picks who makes the pictures: `gpu` (our GPU, a few seconds each, the default), `litellm` (the image model through the proxy, 30 to 60 seconds each; only when the trainer says the GPU is down) or `placeholder` (a stand-in picture drawn by code).
+Keys go through KeyValue's LiteLLM proxy: `LITELLM_API_KEY` and `LITELLM_BASE_URL`. Connect to the KeyValue VPN first, or the proxy cannot be reached. Everyone runs the real model and real pictures. `LAUNCHKIT_IMAGE_PROVIDER` picks who makes the pictures: `gpu` (our GPU, a few seconds each, the default), `litellm` (the image model through the proxy, 30 to 60 seconds each; only when the trainer says the GPU is down) or `placeholder` (a stand-in picture drawn by code).
 
 The opener's code is on this branch too (`approach_llm/`, `approach_graph/`, `launchkit/opener/ui.py`, `launchkit/opener/scoreboard.py`), but its LangGraph parts need the opener branches' dependencies; run them from `session-01-langgraph`.
 
