@@ -281,7 +281,7 @@ def cmd_setup(args):
 def cmd_ui(args):
     import uvicorn
 
-    console.print(f"LaunchKit chat page: http://localhost:{args.port}")
+    console.print(f"LaunchKit chat page: http://127.0.0.1:{args.port}")
     if args.no_reload:
         uvicorn.run("launchkit.web.app:app", host="127.0.0.1", port=args.port, log_level="warning")
         return 0

@@ -17,7 +17,7 @@ git clone <this repository> && cd ai-upskill
 uv sync
 cp .env.example .env            # paste your key after LITELLM_API_KEY=
 uv run launchkit run harbor "Poster for the Tidal bottle on a misty lakeshore at dawn."   # prints a trace and a spec
-uv run launchkit ui             # open http://localhost:8000, sign in as Maya at Harbor, say hi, then ask for a poster
+uv run launchkit ui             # open http://127.0.0.1:8000, sign in as Maya at Harbor, say hi, then ask for a poster
 ```
 
 If port 8000 is taken: `uv run launchkit ui --port 8010`.
