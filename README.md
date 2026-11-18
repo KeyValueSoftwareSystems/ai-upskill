@@ -51,7 +51,7 @@ git clone <this repo> && cd ai-upskill
 uv sync
 cp .env.example .env        # add your LITELLM_API_KEY (KeyValue's proxy)
 uv run launchkit run harbor "Poster for the Tidal bottle on a misty lakeshore at dawn."   # prints a trace and a spec
-uv run launchkit ui         # the harness chat page on http://localhost:8000
+uv run launchkit ui         # the harness chat page on http://127.0.0.1:8000
 ```
 
 Keys go through KeyValue's LiteLLM proxy: `LITELLM_API_KEY` and `LITELLM_BASE_URL`. Connect to the KeyValue VPN first, or the proxy cannot be reached. Everyone runs the real model and real pictures. `LAUNCHKIT_IMAGE_PROVIDER` picks who makes the pictures: `gpu` (our GPU, a few seconds each, the default), `litellm` (the image model through the proxy, 30 to 60 seconds each; only when the trainer says the GPU is down) or `placeholder` (a stand-in picture drawn by code).
@@ -126,7 +126,7 @@ git checkout session-02-tools
 uv sync
 cp .env.example .env        # already have a .env? copy in the Session 2 lines: LAUNCHKIT_BOARD, LAUNCHKIT_SEARCH, TAVILY_API_KEY
 uv run launchkit index      # once on a fresh clone: puts the brand books in the vector database get_brand_details searches
-uv run launchkit ui         # the chat page on http://localhost:8000
+uv run launchkit ui         # the chat page on http://127.0.0.1:8000
 ```
 
 How each step runs:
