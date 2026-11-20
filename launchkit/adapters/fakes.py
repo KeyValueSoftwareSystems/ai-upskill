@@ -468,3 +468,160 @@ class MemoryModel(FakeModel):
         if "is a rule, not a wish" in system:
             return tool_call_response("add_memory", {"memory": f'Never use "{phrase}".', "topics": ["rules"]}, "call_1")
         return tool_call_response("add_memory", {"memory": f"Maya wants headlines to mention the {phrase}.", "topics": ["preferences", "headlines"]}, "call_1")
+
+
+# Session 5: three scripted models for the runtime's failure moments. Each writes the same code every time, so the
+# failure is the same in every room. None of them calls a paid service: every file they make is cut by Pillow in
+# run_code. They call run_code through run_tool, as the main agent does.
+
+PEEK_CODE = '''import csv, os
+# Tidy Jonas's results file: trim the spaces, one spelling per channel, spend as a number.
+rows = list(csv.reader(open("uploads/autumn-results.csv")))
+tidy = [[cell.strip() for cell in row] for row in rows]
+for row in tidy[1:]:
+    row[1] = row[1].title()
+    row[2] = row[2].replace(",", "")
+os.makedirs("outputs", exist_ok=True)
+csv.writer(open("outputs/autumn-results-tidy.csv", "w", newline="")).writerows(tidy)
+print("Tidied", len(tidy) - 1, "rows into outputs/autumn-results-tidy.csv")
+
+# While it is here, the code looks around. The model was not asked to; code can do anything the process can.
+seen = {k: v[:6] + "..." for k, v in os.environ.items() if any(w in k.upper() for w in ("KEY", "TOKEN", "SECRET", "PASSWORD"))}
+print("Keys this code can see:", ", ".join(f"{k}={v}" for k, v in sorted(seen.items())) or "none")
+for folder in ("../../harbor", "../../harbor/k7c1/outputs"):
+    try:
+        print(folder, "->", ", ".join(sorted(os.listdir(folder))))
+    except OSError as error:
+        print(folder, "->", type(error).__name__)
+'''
+
+RUNAWAY_CODE = '''import csv, os, time
+# Cost per sign-up by channel, written the slow way: a copy of the whole table for every row it reads.
+rows = list(csv.reader(open("uploads/breeze-results.csv")))
+workers = os.cpu_count() or 4
+for _ in range(workers - 1):          # and one copy of the work per processor
+    if os.fork() == 0:
+        break
+started, copies, kept = time.time(), [], 0
+budget = 1200 * 1024 * 1024 // workers
+while time.time() - started < 120:    # it would finish in two minutes; nothing else in it stops sooner
+    for row in rows:
+        copy = [list(r) for r in rows]
+        if kept < budget:
+            copies.append(copy)
+            kept += 6000
+os._exit(0)
+'''
+
+SLOW_SIZES = [(1080, 1080), (1080, 1350), (1080, 1920), (1200, 628), (300, 250), (728, 90), (160, 600),
+              (300, 600), (970, 250), (1200, 1200), (1500, 500), (1584, 396), (2048, 1152), (640, 360)]
+
+
+def size_code(width: int, height: int) -> str:
+    return f'''import time
+from pathlib import Path
+from PIL import Image, ImageOps
+Path("outputs/sizes").mkdir(parents=True, exist_ok=True)
+poster = Image.open("outputs/breeze-poster.png").convert("RGB")
+ImageOps.fit(poster, ({width}, {height})).save("outputs/sizes/breeze-{width}x{height}.png")
+time.sleep(7)  # the slow part of a real export: about seven seconds a size
+print("made outputs/sizes/breeze-{width}x{height}.png")
+'''
+
+
+CONTACT_SHEET_CODE = '''from pathlib import Path
+from PIL import Image
+sizes = sorted(Path("outputs/sizes").glob("breeze-*.png"))
+sheet = Image.new("RGB", (1400, 220 * ((len(sizes) + 6) // 7)), "white")
+for n, path in enumerate(sizes):
+    thumb = Image.open(path).convert("RGB")
+    thumb.thumbnail((190, 190))
+    sheet.paste(thumb, (10 + (n % 7) * 200, 10 + (n // 7) * 220))
+sheet.save("outputs/breeze-contact-sheet.png")
+print("made outputs/breeze-contact-sheet.png from", len(sizes), "sizes")
+'''
+
+BLUE_CODE = '''from PIL import Image, ImageDraw, ImageFont
+poster = Image.open("outputs/breeze-poster.png").convert("RGB")
+draw = ImageDraw.Draw(poster)
+draw.rectangle([0, 1160, 1080, 1290], fill=(222, 231, 228))
+draw.text((540, 1220), "Keep using it.", font=ImageFont.load_default(size=48), fill=(20, 70, 200), anchor="mm")
+poster.save("outputs/breeze-poster-blue.png")
+print("made outputs/breeze-poster-blue.png")
+'''
+
+
+def code_call(tools: list, code: str, label: str, n: int) -> ModelResponse:
+    """A run_code call, through run_tool when the agent holds the doors."""
+    inputs = {"code": code, "label": label}
+    if "run_tool" in tool_names(tools):
+        return tool_call_response("run_tool", {"name": "run_code", "inputs": inputs}, f"code_{n}")
+    return tool_call_response("run_code", inputs, f"code_{n}")
+
+
+def first_lines(result: str, count: int = 8) -> str:
+    try:
+        result = json.loads(result) if result.startswith('"') else result
+    except ValueError:
+        pass
+    return "\n".join(str(result).splitlines()[:count])
+
+
+NO_CODE_TOOL = "I have no tool that runs code, so I cannot work this out from the file. I can only read it."
+
+
+class PeekModel(FakeModel):
+    """Session 5, stage 2's failure. Jonas at Ember asks for his results file to be tidied. The code tidies it, then
+    prints the keys it can see and lists Harbor's folder, the way the staging trial's code did."""
+
+    def __init__(self):
+        super().__init__("peek")
+
+    def answer(self, messages, tools):
+        done = fresh_results(messages)
+        if not done:
+            return code_call(tools, PEEK_CODE, "tidy-results", 1)
+        if "No tool named run_code" in done[0]:
+            return text_response(NO_CODE_TOOL, messages)
+        return text_response("Done. Here is what the code printed:\n" + first_lines(done[0], 12), messages)
+
+
+class RunawayModel(FakeModel):
+    """Session 5, stage 3's failure. Maya asks for cost per sign-up by channel; the code copies the table once per row,
+    in one process per processor, and would take two minutes and over a gigabyte of memory."""
+
+    def __init__(self):
+        super().__init__("runaway")
+
+    def answer(self, messages, tools):
+        done = fresh_results(messages)
+        if not done:
+            return code_call(tools, RUNAWAY_CODE, "cost-per-signup", 1)
+        if "No tool named run_code" in done[0]:
+            return text_response(NO_CODE_TOOL, messages)
+        return text_response("The analysis ended before it printed a figure:\n" + first_lines(done[0], 4), messages)
+
+
+class SlowSizesModel(FakeModel):
+    """Session 5, stages 4 and 5. Asked for every size, it makes fourteen, one run_code call each at about seven
+    seconds a size, then a contact sheet: about two minutes. Asked to make it blue, it makes one blue headline."""
+
+    def __init__(self):
+        super().__init__("slow_sizes")
+
+    def answer(self, messages, tools):
+        asked = last_user_text(messages).lower()
+        done = fresh_results(messages)
+        if done and "No tool named run_code" in done[0]:
+            return text_response(NO_CODE_TOOL, messages)
+        if "blue" in asked:
+            if not done:
+                return code_call(tools, BLUE_CODE, "blue-headline", 1)
+            return text_response("The headline is blue now: outputs/breeze-poster-blue.png.", messages)
+        if "size" not in asked:
+            return text_response("Morning. Ask me for every size of the Breeze poster.", messages)
+        plan = [(size_code(w, h), f"size-{w}x{h}") for w, h in SLOW_SIZES] + [(CONTACT_SHEET_CODE, "contact-sheet")]
+        if len(done) < len(plan):
+            code, label = plan[len(done)]
+            return code_call(tools, code, label, len(done) + 1)
+        return text_response(f"Done: {len(SLOW_SIZES)} sizes of the Breeze poster, and a contact sheet.", messages)

@@ -96,3 +96,9 @@ FAKES["tools"] = ToolsModel
 from launchkit.adapters.fakes import MemoryModel  # noqa: E402  Session 3's fake for ticket 1
 
 FAKES["memory"] = MemoryModel
+
+from launchkit.adapters.fakes import PeekModel, RunawayModel, SlowSizesModel  # noqa: E402  Session 5's failure moments
+
+FAKES["peek"] = PeekModel
+FAKES["runaway"] = RunawayModel
+FAKES["slow_sizes"] = SlowSizesModel

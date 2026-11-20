@@ -211,6 +211,7 @@ TOOLS_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glo
 ORCH_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_orch*.py"))
 MEM_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_mem*.py"))
 FILES_STAGES = [f"stage{n}" for n in range(1, 6)]  # Session 4: one check file, a marker per stage
+RUN_STAGES = [f"run{n}" for n in range(1, 6)]      # Session 5: checks/test_run.py, the same stage markers
 ORCH_GATE = ORCH_STEPS + [name for name in TOOLS_STEPS if name in ("tools3", "tools4", "tools5")]
 
 
@@ -226,19 +227,25 @@ def cmd_check(args):
         names = MEM_STEPS
     elif args.step == "files" or args.step in FILES_STAGES:
         names = ["files"]
+    elif args.step == "run" or args.step in RUN_STAGES:
+        names = ["run"]
     else:
         names = [args.step if args.step in extra + RAG_STEPS + TOOLS_STEPS + ORCH_STEPS + MEM_STEPS else f"step{args.step}"]
     targets = [ROOT / "checks" / f"test_{name}.py" for name in names]
     command = [sys.executable, "-m", "pytest", "-q", "--tb=no", "-rN", "-p", "no:cacheprovider", *map(str, targets)]
     if args.step in FILES_STAGES:
         command += ["-m", args.step]
+    if args.step in RUN_STAGES:
+        command += ["-m", args.step.replace("run", "stage")]
     proc = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
     for line in proc.stdout.splitlines():
-        if line.startswith("PASS"):
+        if line.startswith("SKIP"):
+            console.print("[yellow]SKIP[/yellow]  ", end="", highlight=False); console.print(line[6:], highlight=False, markup=False)
+        elif line.startswith("PASS"):
             console.print("[green]PASS[/green]  ", end="", highlight=False); console.print(line[6:], highlight=False, markup=False)
         elif line.startswith("FAIL"):
             console.print("[red]FAIL[/red]  ", end="", highlight=False); console.print(line[6:], highlight=False, markup=False)
-    summary = re.search(r"(\d+ failed, )?\d+ passed|\d+ failed", proc.stdout)
+    summary = re.search(r"(\d+ failed, )?\d+ passed(, \d+ skipped)?|\d+ failed(, \d+ skipped)?|\d+ skipped", proc.stdout)
     console.print(f"\n{summary.group(0) if summary else proc.stdout[-300:]}")
     if proc.returncode not in (0, 1):
         console.print(proc.stderr[-2000:])
@@ -271,10 +278,26 @@ def cmd_setup(args):
     """
     from launchkit.files.seed import build
 
+    from launchkit.sandbox.engine import IMAGE, build_image, docker_problem, image_ready
+
     build(settings.data_dir)
     files = sum(1 for p in settings.data_dir.rglob("*") if p.is_file())
     console.print(f"Seeded [bold]{settings.data_dir}[/bold]: {files} files, in shared folders, owned by nobody.")
-    console.print("[dim]Open the chat page as Maya at Harbor and press Files.[/dim]")
+    # Session 5: the image the agent's code runs in from stage 2. Built once; it needs the internet the first time.
+    problem = docker_problem()
+    if problem:
+        console.print(f"[yellow]Docker:[/yellow] {problem}. Stage 1 works without it; from stage 2 the sandbox needs it.")
+    elif image_ready():
+        console.print(f"Docker is running, and the sandbox image {IMAGE} is ready.")
+    else:
+        console.print(f"Building the sandbox image {IMAGE} (Python, pandas, matplotlib, Pillow). A few minutes the first time…")
+        try:
+            build_image()
+            console.print(f"The sandbox image {IMAGE} is ready.")
+        except subprocess.CalledProcessError as error:
+            console.print(f"[red]The sandbox image did not build.[/red] {(error.stderr or b'').decode(errors='replace')[-600:]}")
+            console.print("Check the internet connection and run `uv run launchkit setup` again.")
+    console.print("[dim]Open the chat page as Maya at Harbor.[/dim]")
     return 0
 
 
@@ -343,8 +366,8 @@ def main(argv=None):
     explain.add_argument("--show", action="store_true", help="print the system message as sent")
     explain.set_defaults(func=cmd_explain)
 
-    check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all; retrieval: check rag1.. or rag; orchestration: check orch0.. or orch; files: check stage1..5 or files")
-    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch", *MEM_STEPS, "mem", *FILES_STAGES, "files"])
+    check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all; retrieval: check rag1.. or rag; orchestration: check orch0.. or orch; files: check stage1..5 or files; runtime: check run1..5 or run")
+    check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch", *MEM_STEPS, "mem", *FILES_STAGES, "files", *RUN_STAGES, "run"])
     check.set_defaults(func=cmd_check)
 
     memory = sub.add_parser("memory", help="long-term memory: reset it to the checked-in snapshot, or show what is stored for a person")
@@ -352,7 +375,7 @@ def main(argv=None):
     memory.add_argument("--user", default="maya", help="whose memory to show")
     memory.set_defaults(func=cmd_memory)
 
-    setup = sub.add_parser("setup", help="put data/ back the way Breeze week left it (Session 4's starting state)")
+    setup = sub.add_parser("setup", help="put data/ back the way Breeze week left it, and build the sandbox image (Sessions 4 and 5)")
     setup.set_defaults(func=cmd_setup)
 
     ui = sub.add_parser("ui", help="start the chat page")

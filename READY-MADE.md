@@ -1,47 +1,52 @@
 # What is already built
 
-This branch starts with less than it looks like. The agent has no file tools at all, because LaunchKit never had any: every artifact was written by a tool that already knew its own output path. The room builds them in stages, and each stage's file below is a stub that says which stage fills it and what it must do. The artifact record and the page that reads it are the exception: they are built, and they switch on when stage 1 is.
+The room builds five things in Session 5: the code tool, the container, the limits, the job and the resume. Each one's file below is a stub that says which stage fills it and what it must do.
 
-Everything else, the chat page, the Files panel, the seeded state, the checks and the research team, is already there. This table says what each piece is, which stage it serves, and where the idea is explained in the reference. Nothing in it is inherited from Session 3; the prep script wrote the file layer for this branch.
+Everything else is already there, so that the room can see every criterion fail and then pass on the chat page. That means the chat page's job bar and **Stop** button, the trace line for a code run, the scripted models, the sandbox image, the seeded data and the checks. This table says what each piece is, which stage it serves, and where the idea is explained in the reference.
 
 | File | What it is | Stage | Reference page |
 | --- | --- | --- | --- |
-| `launchkit/files/workspace.py` | A stub. `Workspace` and `for_request` raise until stage 1 builds the folder one conversation owns, and its drawers. | 1 | 3 Where the work lives |
-| `launchkit/tools/read_file.py`, `list_files.py`, `write_file.py` | Stubs, not registered with the agent. Stage 1 builds all three and registers them in `build_catalogue`. | 1 | 6 File tools |
-| `launchkit/tools/search_files.py` | A stub. Stage 3 builds the search, capped from the start. | 3 | 4 Finding a file, 5 What an index costs |
-| `launchkit/files/paths.py` | A stub. `resolve_in_workspace` is the one door every path passes, built in stage 5. `OutsideWorkspace` and `refuse` are already here, so a refusal lands on the trace in the same words everywhere. | 5 | 9 Who may touch which file |
-| `launchkit/tools/edit_file.py` | A stub. Stage 4 builds the exact-text edit. | 4 | 7 Changing a file, 8 What an edit tool can and cannot check |
-| `launchkit/files/record.py` | Ready-made. The artifact record: each tool that writes a file adds an entry as it writes, and the chat page reads it. It switches on when stage 1 builds `for_request`. | 1 | 11 Recording what the agent produced |
-| `launchkit/tools/generate_image.py`, `resize_poster.py`, `text_to_speech.py`, `launchkit/memory/attached_pictures.py` | The tools that already write files, each into a folder every brand shares and each knowing its own path. They are ready to save into a conversation's workspace and record what they write; stage 1 gives them the workspace. | 1 | 3 Where the work lives, 11 Recording what the agent produced |
-| `launchkit/orchestration/research_team.py` | Session 2's research team. `research_many` fans five subagents out in parallel. Stage 2 happens here. | 2 | 12 Two writers, one file |
-| `launchkit/web/app.py`, `launchkit/web/index.html` | The chat page and the **Files** panel. Until stage 1 is built, `new_files` finds artifacts by scanning `data/` by modification time. Once it is, the page reads the record and serves files through each conversation's own route; stage 5 puts the fence in that route. | 1, 5 | 11 |
-| `launchkit/trace.py` | The trace, as Session 3 left it. File events (`file_read`, `file_written`, `file_refused`, `search`) are added to it as the tools are built. | 1, 3, 5 | 11 |
-| `launchkit/settings.py` | `data_dir` reads `LAUNCHKIT_DATA_DIR`, so two workers can run with two data directories for the closing demo. | closing block | 13 Running on many machines |
-| `workspaces/harbor/`, `workspaces/ember/` | The brands. Harbor's `brand-book.md` and `rules.yaml` are the shared files stage 5 reasons about. | 5 | 9 |
-| `checks/test_files.py` | The twelve acceptance criteria as code, grouped by stage. `-m stage1` runs one stage. Every group is red here and green on the solutions branch. | all | |
-| `launchkit/files/seed.py` | The starting state the room inherits, and the code that builds it. `uv run launchkit setup` runs it. | all | |
-| `launchkit/cli.py` | `setup` puts the seeded state in place. `ui --reload` runs the chat page. | | |
-
-## The Files panel
-
-<a id="files-panel"></a>
-
-Press **Files** on the chat page. It shows what this conversation produced and what the agent reached this turn. Every acceptance criterion is read from this panel or from the Trace tab, never from a terminal.
-
-Until stage 1 is built it lists anything under `data/` modified since the run started, filtered to picture and sound types, with no filter for the brand and no record of who wrote what. Once stage 1 is built it reads the artifact record instead.
+| `launchkit/tools/run_code.py` | A stub. Stage 1 builds the code tool. `build_catalogue` already lists it, and the catalogue leaves it out until it is built. | 1 | 3, 4 |
+| `launchkit/sandbox/__init__.py` | Ready-made. `Ran`, what one run of the agent's code came back with: its exit code, what it printed, why it was stopped, how long it took. | 1 to 3 | 4 |
+| `launchkit/sandbox/limits.py` | `RunLimits` with stage 1's two numbers, time and output size. `docker_flags` and `stop_reason` are stubs, and stage 3 adds the other limits. | 1, 3 | 10 |
+| `launchkit/sandbox/container.py` | A stub. Stage 2 builds `run_in_container`, one throwaway container per run. | 2 | 6, 7 |
+| `launchkit/sandbox/engine.py` | Ready-made. The Docker plumbing: is Docker running, build the image, and the container's name, `lk-<brand>-<conversation>-<6 letters>`, so Stop can find a conversation's containers. | 2, 4 | 6 |
+| `sandbox/Dockerfile` | Ready-made. A small image with Python, pandas, matplotlib, numpy and Pillow. `uv run launchkit setup` builds it once, which needs the internet. | 2 | 6 |
+| `launchkit/jobs/record.py`, `runner.py` | Stubs. The `Job` shape is ready-made, so the page and the checks agree on names. Stage 4 builds the record, the event log, the runner and Stop. | 4 | 12, 13 |
+| `launchkit/jobs/steps.py` | A stub. Stage 5 builds the steps on disk and the resume. | 5 | 14, 15 |
+| `launchkit/adapters/fakes.py` | Ready-made scripted models. `fake:peek` tidies Jonas's results, then prints the keys it can see and lists Harbor's folder. `fake:runaway` copies the table once per row, in a process per processor. `fake:slow_sizes` makes fourteen sizes and a contact sheet at about seven seconds a size, and "make it blue" makes one blue headline. None of them calls a paid service: every file is cut by Pillow inside `run_code`. | 2 to 5 | 5, 10, 12 |
+| `launchkit/web/app.py` | `run_turn` is one turn, start to end. Before stage 4 it runs inside the request, as before. The job routes (`/jobs/now/...`, `/jobs/<id>/events`, `/jobs/<id>/stop`) answer 404 until stage 4 builds what they call. At start-up the server calls `resume_jobs` once stage 5 has built it. | 4, 5 | 12 |
+| `launchkit/web/index.html` | The job bar with **Stop**, the "waits" note, and picking a job back up after a reload. They switch on when the job routes answer. | 4 | 12, 13 |
+| `launchkit/agents/main_agent.py` | `run_main` takes `hooks`, Agno tool hooks a job adds to the agent's own: its Stop in stage 4 and its steps in stage 5. | 4, 5 | 13, 15 |
+| `launchkit/trace.py` | A `code` line for each run: its label, the start of the code, how it ended, how long it took, and the files it wrote. | 1, 3 | 19 |
+| `launchkit/files/seed.py` | Breeze's first week of ads in `uploads/breeze-results.csv` and the approved poster in Maya's conversation `k7c1`; Jonas's own results in `t3a9`; `data/jobs/` emptied. | all | 2 |
+| `launchkit/check_setup.py`, `launchkit/cli.py` | The setup check says whether Docker is running. `launchkit setup` builds the sandbox image. `launchkit check run1` to `run5` runs one stage's checks. | all | |
+| `checks/test_run.py` | The twelve acceptance criteria as code, grouped by stage. `-m stage1` runs one stage. Every group is red here and green on the solutions branch. Stages 2 and 3 are skipped, with the reason, on a machine without Docker. | all | 24 |
 
 ## The seeded state
 
-`uv run launchkit setup` puts `data/` back the way Breeze week left it:
+`uv run launchkit setup` puts `data/` back the way Breeze's first week left it, on top of Session 4's state:
 
-- Posters from Harbor and Ember in one `outputs/` folder, named by the millisecond.
-- Their resized versions in `sizes/`, a voice-over in `audio/`, uploads keyed by the attached file's name.
-- Chat history for Maya, Sam and Jonas, including Monday's Breeze conversation and the reviewer's notes.
-- Five Breeze competitor briefs, with the lifetime-guarantee claim in two of them.
-- `data/files/ember/t3a9-old/`, a conversation whose name starts the same way as Jonas's `t3a9`, which is the prefix case in stage 5.
+- `data/files/harbor/k7c1/uploads/breeze-results.csv`: five channels, seven days, spend, impressions, clicks and sign-ups. Social is the cheapest channel per sign-up over the week, at £6.49. Email is the cheapest on six of the seven days, and loses over the week because of one bad send.
+- `data/files/harbor/k7c1/outputs/breeze-poster.png`: the approved Breeze poster, 1080 by 1350, that the fourteen sizes are cut from.
+- `data/files/ember/t3a9/uploads/autumn-results.csv`: Jonas's own results, untidy on purpose.
+- `data/jobs/`: emptied, so no job from an earlier run is left over.
 
 It is never generated in the room. If you want it back, run setup again.
 
-## Real models
+## Why the failure moments are scripted
 
-Every flow runs on the real model through the proxy. The path attack is seeded in the data rather than scripted, so it fails the same way every time without a fake model. Fake models exist only inside this branch's own tests.
+Stage 1's failure runs on the real model, because a model reading a table goes wrong by itself. Stages 2 to 5 each need the agent to write one particular piece of code at one particular moment: code that looks around, code that runs away, a job long enough to reload in the middle of. The real model writes code like that some of the time, and not on cue. A scripted model writes it every time, so the failure is the same in every room.
+
+The cost is that those four moments are not the real model's own mistakes. Each card says so, and each stage's **Run it again** goes back to the real model where it can.
+
+## Docker
+
+Docker is needed from stage 2 on. `uv run launchkit setup` and `uv run python -m launchkit.check_setup` both say whether it is running, and what to do when it is not.
+
+| What you see | What to do |
+| --- | --- |
+| `Docker is not installed` | Install Docker Desktop (Mac, Windows) or Docker Engine (Linux), then run `uv run launchkit setup` again. |
+| `Docker is installed but not running` | Start Docker Desktop, or the Docker service, and try again. |
+| `The sandbox image did not build` | The first build downloads Python's libraries. Check the internet connection and run setup again. |
+| Stage 2 and 3 checks say `SKIP · needs Docker` | The same. Without Docker, build stage 1, and take stage 2 as a discussion. |

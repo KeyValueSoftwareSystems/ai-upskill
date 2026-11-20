@@ -1,219 +1,209 @@
-# Session 4: one feature request, built in five stages
+# Session 5: one feature request, built in five stages
 
-Four months after the memory work, LaunchKit serves forty brands and about three hundred marketers. Agency teams work on several brands in an afternoon.
+Since Session 4, LaunchKit keeps the agent's work. Every file belongs to a brand and a conversation, the agent can list, read, search and edit its own files, and the chat shows what each message made.
 
-File handling never got the attention memory did. It was written when LaunchKit served one brand and has not changed since. Every poster, every resized version and every voice-over goes into one folder under `data/`, named by the millisecond it was made. Uploads go into another shared folder, keyed by the name of the file the person attached. Nothing on disk records which brand or which conversation owns any of it.
+Breeze, Harbor's new bottle, was announced on the fourteenth, and its ads are running. Every morning Maya downloads the ad results, one row per channel per day with spend, impressions, clicks and sign-ups, and uploads the file into her Breeze conversation. A sign-up is a person who left their email on Breeze's page.
 
-There are also no general file tools. `launchkit/tools/` has `generate_image`, `resize_poster`, `text_to_speech`, `save_memory`, `search_web` and the brand lookups, and nothing that reads, lists, writes or searches a file. Every artifact is written by a tool that already knows its own output path, and the agent cannot go back and look at any of it. Session 2's research team is the clearest case: `research_many` fans five subagents out over a list of competitors, each one searches the web, and what comes back is a paragraph in the chat that nobody writes down.
+The agent can read that file. It cannot calculate anything. Every figure it gives back was worked out by the model reading the table, and a model reading a table is guessing. Every long job, such as fourteen poster sizes and a contact sheet, runs inside the one web request that started it. Reload the page and the page loses it, nobody can stop it, and a restart loses it without a word.
 
-Breeze's launch week was last week. Maya and Sam made Breeze concepts, a reviewer threw two out, the winner went to every Harbor size and Sam added a voice-over. At Ember, Jonas made his autumn posters the same week. All of it landed in the same three folders.
-
-You start from what that week left behind. `uv run launchkit setup` puts it in place. Open the chat page as Maya at Harbor and look at the **Files** panel.
+You start from Breeze's first week. `uv run launchkit setup` puts it in place: `uploads/breeze-results.csv` and the approved poster in Maya's Breeze conversation (`k7c1`), and Jonas's own results file in his conversation at Ember (`t3a9`).
 
 ## The feature request
 
-> Harbor, in the renewal call: "We want the agent to keep its work. Drafts, plans, the artifacts it makes, so we can come back the next day and ask for the thing it already made instead of asking for it again."
+> Harbor, in the weekly call: "Stop guessing at our numbers. Work them out, make the things, and let me get on with my day."
 >
-> "Done, for us, means four things. I can come back to the same campaign the next day and get the file it already made, not a new one. I only see finished work, not its drafts. Nobody outside Harbor can see any of it, because Breeze is under embargo until the fourteenth. And I can see what it made for me, next to the message where I asked, because right now things it produces never show up in the chat and we cannot tell whether it did the work."
+> "Done, for us, means four things. Work the numbers out properly, from our export; don't guess them by looking. Whatever it runs touches this campaign and nothing else: not Ember's work, not anyone's passwords, and nothing goes out to the internet unless we say so. One job going wrong can't take everyone else down with it. And if it takes ten minutes, fine: let me see it working, stop it, close my laptop, and still have it when I come back."
 
-Those four sentences stay on the board. Every acceptance criterion the room writes has to trace back to one of them.
+Those four conditions stay on the board. Every acceptance criterion the room writes has to trace back to one of them, or say plainly that it is the room's own engineering choice.
+
+| # | Maya's condition | What it means for LaunchKit |
+| --- | --- | --- |
+| C1 | Work the numbers out properly | The agent runs code it writes on the conversation's files, and answers from what the code computed. |
+| C2 | Walled off | Code the agent writes cannot reach other brands, LaunchKit's keys or the network. |
+| C3 | Limits | A run has limits. Past them it is stopped, and other conversations carry on. |
+| C4 | Long jobs | Long jobs run apart from the page. They can be stopped, and they survive a reload and a restart. |
 
 ## How to work this session
 
-This is not a queue of complaints. The room scopes one feature request together and builds it in stages. Each stage works like red and green in test-driven development, where a test fails first and then passes. Something fails on the chat page. The room argues what to do about it and writes the acceptance criteria. The lead explains the prompt and runs it, and that stage's checks go green. The next failure then appears on top of what you just built. The chat page that lists what the agent made, and the record behind it, come ready: they switch on when stage 1 is built, and the first thing they show you is stage 2's failure.
+The session works as Session 4 did. The room scopes one feature request together and builds it in stages, like red and green in test-driven development, where a test fails first and then passes.
 
-- Read each stage below and watch it fail on the chat page before anyone explains it.
-- The room writes each stage's criteria before that stage's build, one to four at a time. They are the test; there is no separate test at the end. `uv run pytest checks/test_files.py -m stage1` runs one stage's checks.
+1. Something fails on the chat page.
+2. The room argues what to do about it and writes that stage's acceptance criteria.
+3. The lead explains the prompt and runs it, and that stage's checks go green.
+4. The next failure appears on top of what you just built.
+
+- Watch each stage fail on the chat page before anyone explains it.
+- The room writes each stage's criteria before its build, one to four at a time. They are the test; there is no separate test at the end. `uv run pytest checks/test_run.py -m stage1` runs one stage's checks, and so does `uv run launchkit check run1`.
 - Build with your coding agent. The hints say what to ask for and what to check in its answer. They are not the prompt. Open one only when you need it.
 - "Done" is seen on the chat page, never in a terminal.
-- Write your decision in `DECISIONS.md`, a few words. The room compares them after the build.
+- Write your decision in `DECISIONS.md`, in a few words. The room compares them after the build.
 - Stuck? Move on. The stages before yours stay as they are, and the lead's prompt for your stage is the backup.
 
-The five stages share one cause: nothing decides which files a request owns. Each ends in a build. The discussions that go with them are in the deck.
+Docker is needed from stage 2 on, because the agent's code runs in a container. `uv run launchkit setup` checks for it and builds the sandbox image. A team without Docker builds stage 1, and treats stage 2 as a discussion.
+
+The scripted models `fake:peek`, `fake:runaway` and `fake:slow_sizes` play the failure moments of stages 2 to 5. Type one into the **Model** field on the chat page. A scripted model writes the same code every time, so the failure is the same in every room. The real model could write that code too, but not reliably on cue. Stage 1's failure runs on the real model.
 
 What is already there, and what each piece does, is in `READY-MADE.md`.
 
 ---
 
-## Stage 1 · Where the work lives, and the file tools
+## Stage 1 · Work it out with code
 
-> Maya, Harbor: "You researched five competitors for me an hour ago. I asked what you found about Stanley, and you either said you did not know or started the research again."
+> Maya, Harbor: "Which channel had the lowest cost per sign-up last week?" She asked in two conversations and got two different channels. Neither matched her spreadsheet.
 
-**What is actually wrong.** The agent has no file tools at all. Every tool that writes a file already knows its own output path, all of those paths are shared folders, and nothing records which conversation a file belongs to or which version anyone approved. There is no way to ask for yesterday's work because the agent cannot look at anything it made. The page that lists a turn's files, and the record it reads, are already built. They stay quiet until a conversation has a workspace.
+**What is actually wrong.** Nothing computes anything. The agent reads `uploads/breeze-results.csv` with `read_file`, and the model does the sums in its head. Cost per sign-up is total spend divided by total sign-ups, over thirty-five rows. Email is the cheapest channel on six of the seven days, and one bad day makes it lose over the week. A model reading the table sees Email winning row after row and says Email.
 
 **Done when**
 
-- Sign in as Maya at Harbor, ask for a poster, and the **Files** panel shows it under this conversation rather than in a folder shared with every brand.
-- Ask for the same thing in a second conversation. The two sets of files do not mix.
-- The workspace name comes from the request. Nothing the model writes can change which folder a file lands in.
-- Research five competitors, ask three short questions, then ask what the research said about one of them. The agent looks in its saved briefs and answers from the file, not from scratch.
+- Ask the same question in two new conversations. Both answers name the same channel and the same figure, and the figure matches the room's hand calculation.
+- The Trace shows the code that ran, and the reply says which file it read.
+- Ask for the cost per sign-up by channel saved as a table. The file appears with the message that asked for it. (A chart waits for stage 2: matplotlib is in the sandbox image, not in LaunchKit's own Python.)
+- A run that never ends is stopped at its time limit, and the agent says so.
 
 <details><summary>Hint 1, a nudge</summary>
-<code>launchkit/brands/request.py</code> already resolves a brand to a folder, and refuses a bad one. Nothing does the same for a conversation. Look at how <code>Pictures</code> in <code>launchkit/memory/attached_pictures.py</code> scopes itself, because one feature already solved this for one file type and nobody generalised it. Then look at <code>build_catalogue</code> in <code>launchkit/agents/main_agent.py</code>, which is where a tool becomes something the agent can call.
+Look at <code>launchkit/tools/run_code.py</code>, and at how <code>write_file</code> adds every file it writes to the record. The code the agent writes will write files too, and nobody tells the record about them unless run_code does.
 </details>
 
 <details><summary>Hint 2, the approach</summary>
-Ask your coding agent for a <code>Workspace</code> in <code>launchkit/files/workspace.py</code> that takes the brand and the conversation from the request and gives back one folder with drawers inside it: uploads, work, outputs, competitors. Then three tools on top of it, <code>read_file</code>, <code>list_files</code> and <code>write_file</code>, registered with the agent. Check its answer resolves the folder from the request object and never from an argument a tool passes in, and that the drawers are named in one place rather than spelled out at each call site.
+Ask your coding agent for <code>make_run_code</code> that runs the code as a separate Python process in this conversation's workspace, with a time limit, and hands back what it printed cut to a set size. Check that its answer finds the files the code wrote by comparing the folder before and after, and that it kills everything the code started, not only the process it started itself, when the time runs out.
 </details>
 
 <details><summary>Hint 3, nearly the answer</summary>
-One class, four or five lines of real work: the root is <code>settings.data_dir / "files" / brand / conversation</code>, and the brand's own files are <code>settings.workspaces_dir / brand</code>, kept outside it, a method per drawer, and <code>mkdir(parents=True, exist_ok=True)</code> on first use. Each tool is a few lines that joins its path onto the root and reads or writes. Each write is also added to the record in <code>launchkit/files/record.py</code>, which is ready-made: build a <code>Record</code> when the tool is built and add one entry after each write. Build only that: nothing here has to decide whether a path is safe yet, because that is a later stage. The drawers decide what the panel shows later, so put finished work in <code>outputs/</code> and drafts in <code>work/</code> now.
+<code>subprocess.Popen([sys.executable, "-I", "-c", code], cwd=workspace.root, start_new_session=True)</code>, then <code>communicate(timeout=...)</code>. A new session puts the code and everything it starts in one process group, so <code>os.killpg</code> ends all of it. Snapshot each file's modification time and size before the run and after, and record what changed.
 </details>
 
-- Ask for research on five competitors and look at the **Files** panel. It lists fewer briefs than the Trace says were written. Leave it. That is stage 2.
-
-**Decision to write down.** Who names the workspace, and what stops the model from naming it?
+**Decision to write down.** Should the agent write and run code at all, or should LaunchKit get one tool per calculation? Name what each costs.
 
 ---
 
-## Stage 2 · Five writers at once
+## Stage 2 · Walled off
 
-> Maya, Harbor: "I asked it to research five competitors. The chat shows one brief. Did it do the other four?"
+> Jonas, Ember: "I asked it to tidy my results file. It did. It also printed LaunchKit's API keys into my chat, and listed the files in Harbor's conversation."
 
-**What is actually wrong.** It did. All five files are on disk. Four of them are missing from the record, so the chat cannot show them.
-
-`research_many` runs five subagents inside a `ThreadPoolExecutor`. Each builds its own write tool when it starts, which loads the record. Each writes its own `competitors/<name>.md`, which never collides, and then adds one line to the record by writing the whole list back from what it loaded. All five loaded the same record at the start, all five write it back, and the last one wins.
-
-Nobody wrote a criterion for this. Every one of the twelve is met, and the bug is real.
+**What is actually wrong.** Stage 1's process is a child of the server. It inherits the server's environment variables, so every key is there, and it can open any file the server can, including every brand's folder. Session 4's path check covers the file tools. It never ran, because the code opened the files itself. Turning off a file tool doesn't take away the ability to read files: code can read them anyway.
 
 **Done when**
 
-- Ask for five competitors. All five briefs appear in the **Files** panel.
-- Run it again. Still five.
-- A tool call that times out and runs again does not put the same entry in twice.
+- Sign in as Jonas at Ember, set **Model** to `fake:peek`, and ask the agent to tidy his results file. It tidies it. No key is printed, and Harbor's folder cannot be listed.
+- The code can still read Ember's own brand files, and cannot change them.
+- The code cannot reach the internet.
+- Nothing of the run is left behind when it ends.
 
 <details><summary>Hint 1, a nudge</summary>
-Watch the trace. Five writers, five successful writes, one surviving entry. Nothing errored. Ask what each writer read before it wrote.
+Five places the code could run: the server's own process with the keys taken out, a container, gVisor, a micro-VM, or a sandbox rented from a hosted service. Ask which of them hides the other brands' folders, not only the keys.
 </details>
 
 <details><summary>Hint 2, the approach</summary>
-There are three answers: one file per entry with the directory as the index, an append-only log, or a write that refuses when the file moved on. Two are layout changes and one is a lock. Ask your coding agent for the one you pick and check its answer never reads the whole record in order to add to it. Then ask it what happens when a timed-out call runs twice.
+Ask your coding agent for <code>run_in_container</code> in <code>launchkit/sandbox/container.py</code>: one <code>docker run</code> per run, mounting only this conversation's folder and the brand's files. Check that its answer passes no environment variables, turns the network off, runs as a user that is not root, and makes the root disk read-only. Ask it what the code can still write to.
 </details>
 
 <details><summary>Hint 3, nearly the answer</summary>
-If you take the log: one line per entry, opened for append, never read-modify-written, and each entry carries an id so a retry is caught rather than doubled. If you take one file per entry: the directory listing is the record, and the filename has to carry what the line used to.
+<code>docker run --rm --network none --user &lt;uid&gt; --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges -v &lt;workspace&gt;:/work -v &lt;brand&gt;:/brand:ro -w /work</code>, then the image, then <code>env -i</code> and Python. The image sets a few variables of its own; <code>env -i</code> starts Python with none.
 </details>
 
-**Decision to write down.** Which of the three, and what does your answer cost once the files are in a bucket?
-
-**The fork.** An append-only log, or one file per entry. Real products use both, and the code is different.
-
-An append-only log is one file where every writer adds a line at the end and nobody rewrites it. It costs you a clean-up now and then, to squeeze out old and repeated lines, and a reader that copes with a half-written last line.
-
-One file per entry means the folder is the record, and writers never touch each other's files. It costs you a folder listing on every read, and the file name has to carry what the entry's line used to say.
-
-Both depend on where the files live. Adding to the end of a file is safe on a server's own disk. On a bucket mounted as a drive, every write replaces the whole object, so there is no real append.
+**Decision to write down.** Where should the agent's code run, and what does your answer cost? One sandbox per run, per conversation, or per brand?
 
 ---
 
-## Stage 3 · How the agent finds a file
+## Stage 3 · Contain the damage
 
-> Maya, Harbor: "Somewhere in the briefs you saved, a competitor mentions a holiday. Find it." The agent reads every brief, one by one.
+> Maya, Harbor: "I asked for cost per sign-up. It sat there for half a minute. Jonas said his poster took forever at the same time."
 
-**What is actually wrong.** The agent can list and read, so to answer it reads every saved competitor brief into its context, which is expensive and still answers vaguely. There is no search, and a search that returns whole files would have the same problem as reading the folder.
+**What is actually wrong.** The container isolates what the code can see. It does nothing about how much the code can use. The analysis `fake:runaway` writes copies the table once for every row it reads, in one process per processor. It takes every core and over a gigabyte of memory until the time limit stops it, and every other conversation on the machine waits behind it. When it is stopped, the trace says only "time".
 
 **Done when**
 
-- Ask which saved briefs mention a holiday. The trace shows one search and one or two line reads, not every file in the folder.
-- The answer names the file and the line.
-- A search over a folder with a large binary in it still returns in a moment, and says when it stopped early.
+- Run `fake:runaway` again. It is stopped within seconds, and the trace and the reply say it was stopped for memory, with the limit's number.
+- A run that starts too many processes, or fills its scratch disk, is stopped with that reason.
+- While Maya's analysis runs, another conversation's code still runs at once, and the activity monitor shows one core busy, not all of them.
 
 <details><summary>Hint 1, a nudge</summary>
-Ask the agent which saved briefs mention a holiday, then open the Context tab and read what the tool results cost. That number is what this stage has to bring down.
+Before anyone builds anything, put a number on the board for each limit: time, memory, processor, processes, disk. Then ask what the machine does when a run reaches each one. Some kill the run. Some only refuse the next request, and the run fails with an error message.
 </details>
 
 <details><summary>Hint 2, the approach</summary>
-Ask your coding agent for <code>search_files</code> in <code>launchkit/tools/search_files.py</code>, capped from the start: a path, a line number and a short snippet per match instead of the file, a limit on matches, skip anything that is not text, skip anything over a size limit, and a line in the result saying it stopped early. Register it with the agent. Check the answer returns the path, the line number and the snippet as separate fields rather than one blob of text, because the agent has to be able to read just that line next.
+Ask your coding agent for <code>docker_flags</code> and <code>stop_reason</code> in <code>launchkit/sandbox/limits.py</code>, and for the container to carry the flags. Check how its answer knows a run was killed for memory: the exit code alone does not say. Docker remembers it, but only until the container is removed.
 </details>
 
 <details><summary>Hint 3, nearly the answer</summary>
-Roughly fifteen lines of Python, one match per line as <code>path:line: snippet</code>. Walk the workspace, skip files whose suffix is not text or whose size is over the limit, read line by line, keep the first N matches with their line numbers and about eighty characters either side, and return a flag when you stopped. It is deliberately not a wrapper around <code>ripgrep</code>: <code>rg</code> is not installed by default on any of the three operating systems, and nobody should spend session time installing one. Most coding editors do bundle their own copy for speed, which is worth knowing and is not what we need here.
+<code>--memory 512m --memory-swap 512m --cpus 1 --pids-limit 64 --tmpfs /tmp:rw,size=100m</code>. Run without <code>--rm</code>, read <code>docker inspect -f '{{.State.OOMKilled}}'</code>, then <code>docker rm -f</code>. "Resource temporarily unavailable" in the output means the process limit, "No space left on device" means the disk.
 </details>
 
-**Decision to write down.** Search the text, or build an index? Name the cost of the one you did not pick.
+**Decision to write down.** Which limits does a run need, and what number did you pick for each? Which one would you lower first if forty brands shared one machine?
 
 ---
 
-## Stage 4 · How a file gets changed
+## Stage 4 · A job that outlives the page
 
-> The reviewer, on Breeze: "Take out the lifetime-guarantee line." The trace shows the whole brief written again for one line.
+> Sam, Harbor: "I asked for the poster in all fourteen sizes. After a minute I reloaded the page and it was gone. I asked again and got two sets." Maya, a minute later: "I gave it the wrong headline. There's no way to stop it. And I sent 'also make it blue', and one of the two replies vanished."
 
-**What is actually wrong.** The only way to change a file today is to write the whole thing again, so every line goes back through the write tool for one line's change, and nothing can tell the line that was asked for from the lines that were not.
+**What is actually wrong.** A turn runs inside the web request that started it, and reports only to that page. A reload loses the page's view of it, nothing records how far it got, and nothing can stop it. Two messages to one conversation each start their own run, and each saves the conversation over the other when it ends.
 
 **Done when**
 
-- Ask for one line to change. That line changes and nothing else in the file does.
-- The trace shows one edit, not a whole-file write.
-- Ask for a line that is not there. The agent says so instead of writing something.
-- Ask for text that appears twice. The agent says so instead of guessing which one.
+- Ask for every size with `fake:slow_sizes` and reload in the middle. The page picks the job up again, with its trace, and it finishes.
+- Press **Stop**. The job ends within a few seconds, and its container is gone.
+- Send "also make it blue" while the job runs. The chat says the message waits. It runs after the job, and both replies stay in the conversation.
 
 <details><summary>Hint 1, a nudge</summary>
-There are five ways to change a file: write it all again, replace a line range, replace an exact piece of text, apply a patch, or run a shell command. Four of them can change the wrong thing without telling you. Work out which, then pick.
+Four options for a second message: refuse it, queue it, interrupt the job, or roll the job back and restart. Two of them can lose work Maya asked for. Pick before you build.
 </details>
 
 <details><summary>Hint 2, the approach</summary>
-Ask your coding agent for one function in <code>launchkit/tools/edit_file.py</code> that takes a path, the old text and the new text, and refuses rather than guessing. Check its answer refuses in two separate cases, not one: the old text missing, and the old text appearing more than once. Ask it what happens when the file changed since the agent last read it, and keep the answer; the ticket comes back to it.
+Ask your coding agent for the job record and its event log in <code>launchkit/jobs/record.py</code>, and <code>start_job</code> and <code>stop_job</code> in <code>launchkit/jobs/runner.py</code>. Check that its answer numbers every event so a page can ask for "everything after 41", and that Stop kills the conversation's containers, not only the thread.
 </details>
 
 <details><summary>Hint 3, nearly the answer</summary>
-<code>content.count(old)</code> first. Zero means refuse and say so. More than one means refuse and say how many. Exactly one means replace and write. Appending is not part of this tool. The ticket asks about it.
+A folder per job with <code>job.json</code> and <code>events.jsonl</code>; the turn on a thread of its own; an Agno tool hook that raises <code>StopAgentRun</code> once the job is marked stopping; <code>docker kill</code> on every container whose full name is <code>lk-&lt;brand&gt;-&lt;conversation&gt;-</code> and six letters. A message to a conversation with a job running goes on that job's waiting list.
 </details>
 
-**Look back at stage 2.** Would this check have caught the lost entries? Each of the five writers added a different line, so every one found its own text there exactly once, and every write was allowed. The edit check looks at content. Stage 2's bug is about the order of the writes.
-
-**Decision to write down.** What must an edit tool check before it writes? Name both checks, and which one you built.
+**Decision to write down.** A message arrives while a job runs. Wait, refuse, or stop the job? Who owns the job once the page is gone?
 
 ---
 
-## Stage 5 · Who may touch which file
+## Stage 5 · Survive a restart
 
-> Jonas, Ember: "I asked about `../../harbor/k7c1/outputs/campaign-brief.md` and it read it to me."
+> Maya, Harbor: "LaunchKit was updated during our Monday report. The report never arrived, and nothing said it had failed."
 
-To see it fail, have Maya's brief saved in her conversation `k7c1`, and know that Jonas's own folder exists once `uv run launchkit setup` has run. A path cannot climb out of a folder that is not there.
-
-**What is actually wrong.** Each piece of that path is allowed on its own. Nothing works out where the whole path really points before using it, so a path that looks local reaches a sibling folder. A second problem: the page's download route joins the name onto the workspace folder and serves whatever it finds, and it never goes through a file tool at all.
+**What is actually wrong.** A job lives on a thread of the server. Restart the server and the thread is gone. The job's record still says running, the page waits for a job nothing is running, and if anything started it again, it would make every size from the first one, and pay for them twice.
 
 **Done when**
 
-- Sign in as Jonas at Ember and ask for a path with `..` in it, such as the one above. The agent refuses, and the Trace tab shows the refusal with the tool name and the reason.
-- The same for an absolute path, for a symbolic link that points out, and for a folder whose name starts the same way as the real one. `t3a9-old` is not `t3a9`.
-- A legitimate read of Ember's own brand book still works. A fence that is too tight is also a defect.
-- Nothing made for Harbor appears in Ember's **Files** panel or downloads from Ember's session.
-- The agent reads `workspaces/harbor/brand-book.md` and `rules.yaml` normally, and cannot write either one. A refused write shows on the trace with the reason.
+- Start every size with `fake:slow_sizes` and restart the server halfway. The job carries on from where it had got to.
+- The sizes made before the restart are not made again. The trace says which steps were done before.
+- A job that had finished stays finished.
 
 <details><summary>Hint 1, a nudge</summary>
-Five callers need the same answer: the file tools, the search, the edit tool and the page's download route. The list of files a turn made comes from the record, which holds paths relative to the workspace. Find all four before writing anything, because a check that only one of them calls is not a fence.
+Three options: start the job again from the beginning, write each step down and resume, or hand the job to a durable-execution engine. Ask which steps must never happen twice, and what makes a step the same step after a restart.
 </details>
 
 <details><summary>Hint 2, the approach</summary>
-Ask your coding agent for one function in <code>launchkit/files/paths.py</code> that takes a workspace root and a path and either returns the real location inside it or raises. Check that it resolves first and compares after, and that the comparison is between resolved paths rather than between strings. Ask what its answer does with a symbolic link, and with <code>t3a9-old</code> when the conversation is <code>t3a9</code>.
+Ask your coding agent for a step hook in <code>launchkit/jobs/steps.py</code> that writes each tool call down as started and as done, under a key, and hands back the recorded result for a key that is done. Then <code>resume_jobs</code>, which runs at start-up. Check what its answer does with a step that started and never finished.
 </details>
 
 <details><summary>Hint 3, nearly the answer</summary>
-<code>Path.resolve()</code> on both, then compare with <code>is_relative_to</code>. String prefix matching is the bug: <code>"/data/files/ember/t3a9-old".startswith("/data/files/ember/t3a9")</code> is true. Raise your own error so the tool layer can turn it into a refusal on the trace rather than a stack trace in the chat.
+The key is the job and the run's label, <code>j7:size-1080x1350</code>, or the tool and a fingerprint of its inputs, plus which time it is in this run. A resumed turn is the same turn run again: its done steps come back from <code>steps.jsonl</code> in a moment.
 </details>
 
-**Decisions to write down.** May one person at a brand reach another person's conversation at that brand? Yes or no, and what breaks either way. And the brand's shared files: read-only, writable with approval, or writable? Name a product that ships your answer.
+**Decision to write down.** After a restart, what does "carries on" mean, and which steps must never happen twice? When would you take a durable-execution engine instead?
 
 ---
 
 ## The specification
 
-The room writes these on screen as it goes. They are the done checks on this branch and the checks that run.
+The room writes these on screen as it goes. They are the done checks on this branch, in `checks/test_run.py`.
 
-1. Every file the agent writes lands inside the workspace for the signed-in brand and conversation, and the workspace comes from the request rather than from anything the model supplies.
-2. The chat page shows finished work only. Drafts and rejected variants exist and are not shown.
-3. A search returns a path, a line number and a snippet, stops after a set number of matches, skips files that are not text or are over a size limit, and says when it stopped early.
-4. Answering "where did this line come from" costs one search and one or two line reads rather than every file in the folder.
-5. A path that resolves outside the workspace is refused, in every form: climbing out with `..`, an absolute path, a symbolic link, and a folder whose name starts the same way.
-6. An edit replaces the text it was asked to replace and nothing else, and refuses when the old text is missing or appears more than once.
-7. Every artifact the agent produces is recorded against the session and the message, by the code that wrote it, and the record survives a turn that fails partway.
-8. The chat page's file list is read from that record rather than from a scan of `data/` by modification time.
-9. The brand's shared files are readable by the agent and not writable by it.
-10. A legitimate read of a shared brand file still succeeds, because a fence that is too tight is also a defect.
-11. Every refusal is on the trace with the tool name and the reason, and can be counted.
-12. No file made for one brand is listed, linked or downloadable for another.
+1. When an answer depends on figures in a file, the figures come from code run on that file, and the code is on the trace. (C1)
+2. A run that goes past its time limit is stopped, the person is told, and nothing it started keeps running. (the room's own)
+3. Files the code makes land in this conversation's workspace, recorded against the message that asked. (C1)
+4. The code reaches only this conversation's files, and its brand's shared files read-only. (C2)
+5. No key or secret the server holds is visible to the code. (C2)
+6. The code has no network. (C2)
+7. A run that uses too much memory, too many processes or too much disk is stopped, with the reason on the trace. (C3)
+8. One conversation's run never slows another conversation's. (C3)
+9. Closing or reloading the page does not stop a job, and coming back shows it and how far it got. (C4)
+10. Stop ends the job and its sandbox within seconds. (C4)
+11. A message sent mid-job waits, and the page says so. (the room's own)
+12. After a restart, a job resumes, and no step that was done is done again. (C4)
 
-Criteria 3 and 6 are the room's own, and so are stage 2's two: five writers leave five entries, and a retry is counted once. The rest trace back to one of Harbor's four sentences. Criteria 2, 7, 8 and 12 are ready-made, and go green when stage 1 is built.
-
----
+Criteria 2 and 11 are the room's own. Harbor didn't ask for a time limit or for a rule about second messages, but Maya would notice straight away if either was missing.

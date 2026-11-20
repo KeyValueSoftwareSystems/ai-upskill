@@ -263,6 +263,21 @@ def check_data_dir(c: Check) -> None:
         c.fail(f"Cannot write to {DATA} ({err.strerror}). Check the folder's permissions or clone the repo somewhere you own")
 
 
+def check_docker(c: Check) -> None:
+    """Session 5 runs the agent's code in a container from stage 2 on. Stage 1 runs without Docker."""
+    from .sandbox.engine import IMAGE, docker_problem, image_ready
+
+    c.start("Docker (Session 5, stage 2 on)")
+    problem = docker_problem()
+    if problem:
+        c.fail(f"{problem}. Without Docker you can build stage 1, and stage 2 becomes a discussion")
+        return
+    if not image_ready():
+        c.ok(f"running; the sandbox image {IMAGE} is built by `uv run launchkit setup`")
+        return
+    c.ok(f"running, sandbox image {IMAGE} ready")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Check that your LaunchKit setup is ready.")
     parser.add_argument("--no-image", action="store_true", help="skip the paid picture call (LAUNCHKIT_IMAGE_PROVIDER=litellm only)")
@@ -294,6 +309,7 @@ def main(argv: list[str] | None = None) -> int:
         check_image(c, api_blocked or ("--no-image" if args.no_image else None))
 
     check_data_dir(c)
+    check_docker(c)
 
     print()
     if c.failed:

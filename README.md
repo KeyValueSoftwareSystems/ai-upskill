@@ -16,12 +16,44 @@ A marketing assistant built in steps across the session. A marketer asks for a p
 | `session-02-orchestration-step1`, `step2` | each step's answer |
 | `session-03-memory-step1`, `step2` | agent memory (Session 3): the morning the support queue filled; the room builds the memory fixes here |
 | `session-03-memory-solutions` | every Session 3 memory fix built: the answer |
-| **`session-04-filesystem-prd`** (you are here) | agent file systems (Session 4): Harbor's feature request, built in five stages |
+| `session-04-filesystem-prd` | agent file systems (Session 4): Harbor's feature request, built in five stages |
 | `session-04-filesystem-solutions` | every Session 4 stage built: the answer |
+| **`session-05-runtime-prd`** (you are here) | agent runtime and sandboxing (Session 5): Maya's four conditions, built in five stages |
+| `session-05-runtime-solutions` | every Session 5 stage built: the answer, one commit per stage |
 
 Each branch contains the previous branch's solution. Fall behind, check out the next one.
 
-*PS: For session 4 each commit in the solution branch represents the solution*
+*PS: For sessions 4 and 5 each commit in the solution branch represents the solution*
+
+## Session 5
+
+The agent works things out and makes things in bulk itself: it runs code it writes, walled off, within limits, as a
+job that survives a reload and a restart. One feature request, built in five stages, as in Session 4. Read
+`TICKETS.md`, write your decisions in `DECISIONS.md`, and see what is already built in `READY-MADE.md`.
+
+Docker is needed from stage 2. Install Docker Desktop (Mac, Windows) or Docker Engine (Linux) before the day, then:
+
+```
+uv sync
+uv run python -m launchkit.check_setup   # the last line says whether Docker is running
+uv run launchkit setup      # puts data/ back the way Breeze's first week left it, and builds the sandbox image once
+uv run launchkit ui         # the chat page; sign in as Maya at Harbor and open her Breeze conversation
+uv run pytest checks/test_run.py -m stage1    # one stage's criteria, as code. Red until you build it. Or: launchkit check run1
+```
+
+One card per stage: `docs/run-1.md` to `docs/run-5.md`. Each card says what to break first, holds the stage's prompt
+for your coding agent, and ends with what the prompt must not build, so the next failure stays real. The scripted
+models for the failure moments are `fake:peek`, `fake:runaway` and `fake:slow_sizes`: type one into **Model**.
+
+### If something breaks
+
+| What you see | What to do |
+| --- | --- |
+| `Docker is not installed` (setup, or a check that says SKIP) | Install Docker Desktop or Docker Engine, start it, and run `uv run launchkit setup` again. Without it, build stage 1 and take stage 2 as a discussion. |
+| `Docker is installed but not running` | Start Docker Desktop, or the Docker service. |
+| `The sandbox image did not build` | The first build downloads Python's libraries: check the internet connection and run setup again. |
+| `The code did not run: the sandbox is not available` in the chat | The same: run_code fails closed when Docker is not running. |
+| A job that never finishes after you restarted the server | Before stage 5 that is the failure. Run `uv run launchkit setup` to clear `data/jobs/`. |
 
 ## Session 4
 
