@@ -17,8 +17,8 @@ Two events are the runner's own, because the page that is ready-made reads them.
 {"type": "waiting", "text": ...} to the running job's log. When a turn ends, the runner adds one last event,
 {"type": "end", "status": <the job's final status>}, which tells the page the job is over.
 
-What this stage does not do, on purpose: survive a restart. A job lives on a thread of this server; restart the
-server and the record still says running, with nothing running it. Stage 5 is that failure.
+Stage 5 adds a second hook after Stop, launchkit/jobs/steps.py's step_hook, so every tool call is a step on disk,
+and a server that starts again resumes the jobs it left running.
 
 Reference page 12, A turn that outlives its request, and page 13, Stopping a run.
 """
@@ -32,6 +32,7 @@ import time
 from agno.exceptions import StopAgentRun
 
 from launchkit.jobs.record import ACTIVE, LOCK, append_event, create, current, load, save
+from launchkit.jobs.steps import step_hook
 from launchkit.sandbox.engine import name_prefix
 
 WAITS = "This message waits until the job that is running now finishes, then runs on its own. It is not lost."
@@ -67,7 +68,7 @@ def run_job(settings, job, run_turn, hooks=()) -> None:
     emit = lambda event: append_event(settings, job.id, event)  # noqa: E731
     final = "done"
     try:
-        run_turn({**job.body, "job_id": job.id}, emit, [stop_hook(settings, job.id), *hooks])
+        run_turn({**job.body, "job_id": job.id}, emit, [stop_hook(settings, job.id), step_hook(settings, job.id, emit), *hooks])
     except StopAgentRun:
         final = "stopped"
     except Exception as error:
