@@ -1,9 +1,9 @@
 """Stage 4: a job's record and its event log, on disk.
 
-Not built yet. The room builds this in stage 4, after watching Sam reload the page in the middle of the fourteen sizes
-and lose all of it, and Maya send "also make it blue" into a job she could not stop.
+Built in stage 4, after the room watched Sam reload the page in the middle of the fourteen sizes and lose all of it,
+and Maya send "also make it blue" into a job she could not stop.
 
-What it must do. Each job is a folder, data/jobs/<job id>/, with two files:
+Each job is a folder, data/jobs/<job id>/, with two files:
 
     job.json       who asked, for which conversation, the message itself, and the job's status
     events.jsonl   every event the turn emitted, one line each, numbered 1, 2, 3 in the order they happened
@@ -12,15 +12,19 @@ The page reads the events through events_after, so it can come back after a relo
 job's status is one of running, stopping, stopped, done or failed. A conversation has at most one job that is running
 or stopping, and current() finds it.
 
-The Job shape is ready-made, so the page and the checks agree on names. The functions are the build.
+Writes go through one lock, because the server writes a job's log from the job's own thread while a page asks for
+it from another. job.json is written to a new file and then renamed over the old one, so a reader never sees half of
+it. The log is append-only, as Session 4's record is: a line is added, never rewritten.
 
 Reference page 12, A turn that outlives its request, and page 13, Stopping a run.
 """
 
-from dataclasses import dataclass, field
+import json
+import os
+import threading
+import time
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
-
-from launchkit.tools.catalogue import todo
 
 ACTIVE = ("running", "stopping")
 
@@ -42,40 +46,79 @@ def jobs_dir(settings) -> Path:
     return settings.data_dir / "jobs"
 
 
-@todo
+LOCK = threading.RLock()
+_SEQ: dict[str, int] = {}  # the last event number of each job's log this process has written or read
+
+
+def _folder(settings, job_id: str) -> Path:
+    return jobs_dir(settings) / job_id
+
+
+def _write(settings, job: Job) -> None:
+    file = _folder(settings, job.id) / "job.json"
+    fresh = file.with_suffix(".tmp")
+    fresh.write_text(json.dumps(asdict(job), indent=2), encoding="utf-8")
+    os.replace(fresh, file)
+
+
 def create(settings, body: dict) -> Job:
     """A new job for this message, saved, with status running."""
-    raise NotImplementedError("stage 4 builds the job record")
+    with LOCK:
+        folder = jobs_dir(settings)
+        folder.mkdir(parents=True, exist_ok=True)
+        numbers = [int(p.name[1:]) for p in folder.glob("j*") if p.name[1:].isdigit()]
+        job = Job(id=f"j{max(numbers, default=0) + 1}", brand=body["workspace_id"], user=body["user_id"],
+                  conversation=body.get("session_id") or "", body=dict(body), started=time.time())
+        _folder(settings, job.id).mkdir()
+        _write(settings, job)
+        return job
 
 
-@todo
 def load(settings, job_id: str) -> Job:
-    raise NotImplementedError("stage 4 builds the job record")
+    return Job(**json.loads((_folder(settings, job_id) / "job.json").read_text(encoding="utf-8")))
 
 
-@todo
 def save(settings, job: Job) -> None:
-    raise NotImplementedError("stage 4 builds the job record")
+    with LOCK:
+        _write(settings, job)
 
 
-@todo
 def all_jobs(settings) -> list[Job]:
-    raise NotImplementedError("stage 4 builds the job record")
+    folder = jobs_dir(settings)
+    found = [p.name for p in folder.glob("j*") if (p / "job.json").is_file()] if folder.is_dir() else []
+    return [load(settings, job_id) for job_id in sorted(found, key=lambda name: int(name[1:]))]
 
 
-@todo
 def current(settings, brand: str, conversation: str) -> Job | None:
     """The job running or stopping in this conversation, if there is one."""
-    raise NotImplementedError("stage 4 builds the job record")
+    return next((j for j in all_jobs(settings) if j.brand == brand and j.conversation == conversation and j.status in ACTIVE), None)
 
 
-@todo
+def _read(settings, job_id: str) -> list[dict]:
+    file = _folder(settings, job_id) / "events.jsonl"
+    if not file.exists():
+        return []
+    events = []
+    for line in file.read_text(encoding="utf-8").splitlines():
+        try:
+            events.append(json.loads(line))
+        except json.JSONDecodeError:  # a last line cut short by a crash
+            continue
+    return events
+
+
 def append_event(settings, job_id: str, event: dict) -> int:
     """Add one event to the job's log and return its number."""
-    raise NotImplementedError("stage 4 builds the job record")
+    with LOCK:
+        if job_id not in _SEQ:
+            _SEQ[job_id] = max((e["seq"] for e in _read(settings, job_id)), default=0)
+        _SEQ[job_id] += 1
+        line = json.dumps({**event, "seq": _SEQ[job_id]}, default=str)
+        with open(_folder(settings, job_id) / "events.jsonl", "a", encoding="utf-8") as log:
+            log.write(line + "\n")
+        return _SEQ[job_id]
 
 
-@todo
 def events_after(settings, job_id: str, seq: int) -> list[dict]:
     """Every event numbered after `seq`, oldest first, each with its "seq"."""
-    raise NotImplementedError("stage 4 builds the job record")
+    return [e for e in _read(settings, job_id) if e["seq"] > seq]
