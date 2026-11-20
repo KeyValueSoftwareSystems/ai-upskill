@@ -10,7 +10,8 @@ uploads/breeze-results.csv by that name. A run has a time limit; past it, the co
 killed and the agent is told why. Without Docker the code does not run at all: the tool fails closed. What it printed goes back cut to a set size, with a line saying how much was cut. Every file it wrote or changed
 goes into the record, so the chat page shows it with the message that asked for it.
 
-What stage 2 does not do, on purpose: limit memory, processor, processes or disk. Stage 3 is that failure.
+Stage 3 holds every run to the limits in launchkit/sandbox/limits.py, and the agent and the trace say which one
+stopped it.
 
 Reference page 3, Why an agent runs code, and page 4, What a code tool hands back.
 """
@@ -57,7 +58,13 @@ def cut(output: str, limit: int) -> str:
 def make_run_code(workspace, trace, message: str = "", limits: RunLimits | None = None) -> Entry:
     limits = limits or RunLimits()
     record = Record(workspace.root)
-    reasons = {"time": f"the run went past its time limit of {limits.seconds} seconds"}
+    reasons = {
+        "time": f"the run went past its time limit of {limits.seconds} seconds",
+        "memory": f"the run used more than its memory limit of {limits.memory_mb} MB",
+        "processes": f"the run tried to start more than {limits.processes} processes",
+        "disk": f"the run wrote more than its disk limit of {limits.disk_mb} MB in /tmp",
+        "killed": "the run was killed from outside, by Stop or by the machine",
+    }
 
     def run_code(code: str, label: str = "") -> str:
         """Run Python on this conversation's files and return what it printed."""

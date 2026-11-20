@@ -14,7 +14,8 @@ see:
               (with /tmp, in memory, as the one other place to write), no Linux capabilities, no way to gain any
 
 The container is named after its conversation (engine.container_name), lives for one run, and is removed after it.
-Past the time limit it is killed by that name.
+Past the time limit it is killed by that name. Stage 3 holds it to the limits in limits.py, and asks it, before it is
+removed, whether the kernel killed it for memory, so the trace can say why a run was stopped.
 
 Reference page 6, How strong the isolation is, and page 7, What running code can reach.
 """
@@ -26,7 +27,7 @@ import time
 from launchkit.files.workspace import Workspace
 from launchkit.sandbox import Ran
 from launchkit.sandbox.engine import IMAGE, container_name
-from launchkit.sandbox.limits import RunLimits
+from launchkit.sandbox.limits import RunLimits, docker_flags, stop_reason
 
 
 def sandbox_user() -> str:
@@ -40,10 +41,11 @@ def run_in_container(workspace: Workspace, code: str, limits: RunLimits) -> Ran:
     """Run `code` with Python in a new container that sees only this conversation, and give back what happened."""
     name = container_name(workspace.brand, workspace.conversation)
     command = [
-        "docker", "run", "--rm", "--name", name,
+        "docker", "run", "--name", name,
         "--network", "none",
         "--user", sandbox_user(),
-        "--read-only", "--tmpfs", "/tmp",
+        "--read-only",
+        *docker_flags(limits),
         "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
         "-v", f"{workspace.root.resolve()}:/work",
         "-v", f"{workspace.shared.resolve()}:/brand:ro",
@@ -54,10 +56,16 @@ def run_in_container(workspace: Workspace, code: str, limits: RunLimits) -> Ran:
     ]
     started = time.monotonic()
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    timed_out = False
     try:
         output, _ = process.communicate(timeout=limits.seconds)
-        return Ran(process.returncode, output, None, time.monotonic() - started)
     except subprocess.TimeoutExpired:
+        timed_out = True
         subprocess.run(["docker", "kill", name], capture_output=True)
         output, _ = process.communicate()
-        return Ran(None, output or "", "time", time.monotonic() - started)
+    seconds = time.monotonic() - started
+    # Stage 3: the container is kept until it has been asked whether the kernel killed it for memory, then removed.
+    oom = subprocess.run(["docker", "inspect", "-f", "{{.State.OOMKilled}}", name], capture_output=True, text=True).stdout.strip() == "true"
+    subprocess.run(["docker", "rm", "-f", name], capture_output=True)
+    exit_code = None if timed_out else process.returncode
+    return Ran(exit_code, output or "", stop_reason(exit_code, timed_out, oom, output or ""), seconds)
