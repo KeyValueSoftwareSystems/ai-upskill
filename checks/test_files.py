@@ -406,9 +406,11 @@ def test_a_read_can_take_just_the_lines_it_needs(workspace, trace):
 def test_an_edit_changes_the_one_line_and_nothing_else(workspace, trace):
     """6 · an edit replaces the text it was asked to replace and nothing else."""
     write = tool("write_file", "make_write_file", workspace, trace)
+    read = tool("read_file", "make_read_file", workspace, trace)
     edit = tool("edit_file", "make_edit_file", workspace, trace)
     original = "Positioning\navoid the lifetime-guarantee framing\nTone\nwarm and plain\nPlacements\nsquare\n"
     write("outputs/brief.md", original)
+    read("outputs/brief.md")
 
     edit("outputs/brief.md", "avoid the lifetime-guarantee framing", "lean into the five-year warranty")
     after = (workspace.root / "outputs/brief.md").read_text(encoding="utf-8")
@@ -420,8 +422,10 @@ def test_an_edit_changes_the_one_line_and_nothing_else(workspace, trace):
 def test_an_edit_refuses_when_the_old_text_is_missing(workspace, trace):
     """6 · it refuses when the old text is missing, and the file is untouched."""
     write = tool("write_file", "make_write_file", workspace, trace)
+    read = tool("read_file", "make_read_file", workspace, trace)
     edit = tool("edit_file", "make_edit_file", workspace, trace)
     write("outputs/brief.md", "Tone\nwarm and plain\n")
+    read("outputs/brief.md")
 
     out = edit("outputs/brief.md", "never clever", "playful")
 
@@ -433,8 +437,10 @@ def test_an_edit_refuses_when_the_old_text_is_missing(workspace, trace):
 def test_an_edit_refuses_when_the_old_text_appears_twice(workspace, trace):
     """6 · it refuses when the old text appears more than once, and says how many."""
     write = tool("write_file", "make_write_file", workspace, trace)
+    read = tool("read_file", "make_read_file", workspace, trace)
     edit = tool("edit_file", "make_edit_file", workspace, trace)
     write("outputs/brief.md", "lifetime\nlifetime\n")
+    read("outputs/brief.md")
 
     out = edit("outputs/brief.md", "lifetime", "five-year")
 
@@ -446,11 +452,68 @@ def test_an_edit_refuses_when_the_old_text_appears_twice(workspace, trace):
 def test_an_edit_is_recorded_the_way_a_write_is(workspace, trace):
     """7 · the edit tool records what it changed, under its own name, like every tool that writes a file."""
     write = tool("write_file", "make_write_file", workspace, trace, "m1")
+    read = tool("read_file", "make_read_file", workspace, trace)
     edit = tool("edit_file", "make_edit_file", workspace, trace, "m2")
     write("outputs/brief.md", "Tone\nwarm and plain\n")
+    read("outputs/brief.md")
     edit("outputs/brief.md", "warm and plain", "dry and plain")
 
     assert ("outputs/brief.md", "edit_file", "m2") in [(e.path, e.by, e.message) for e in entries(workspace.root)]
+
+
+# Stretch, after stage 2: an edit that refuses when the file moved on -----------
+
+@pytest.mark.stretch
+def test_an_edit_refuses_a_file_that_was_never_read(workspace, trace):
+    """An edit needs a read first, so it knows what it is changing."""
+    write = tool("write_file", "make_write_file", workspace, trace)
+    edit = tool("edit_file", "make_edit_file", workspace, trace)
+    write("outputs/brief.md", "Tone\nwarm and plain\n")
+
+    out = edit("outputs/brief.md", "warm", "dry")
+
+    assert "read" in out.lower()
+    assert (workspace.root / "outputs/brief.md").read_text(encoding="utf-8") == "Tone\nwarm and plain\n"
+
+
+@pytest.mark.stretch
+def test_an_edit_refuses_when_the_file_changed_since_it_was_read(workspace, trace):
+    """Another writer changed the file after the read, so the edit refuses even though its text is still there once."""
+    write = tool("write_file", "make_write_file", workspace, trace)
+    read = tool("read_file", "make_read_file", workspace, trace)
+    edit = tool("edit_file", "make_edit_file", workspace, trace)
+    write("outputs/brief.md", "Tone\nwarm and plain\n")
+    read("outputs/brief.md")
+    (workspace.root / "outputs/brief.md").write_text("Tone\nwarm and plain\nPlacements\nsquare\n", encoding="utf-8")  # someone else
+
+    out = edit("outputs/brief.md", "warm", "dry")
+
+    assert "changed" in out.lower()
+    assert "dry" not in (workspace.root / "outputs/brief.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.stretch
+def test_the_check_and_the_write_are_one_step(workspace, trace):
+    """Two edits made from the same read: one wins, the other is told the file moved on, and neither is lost silently."""
+    write = tool("write_file", "make_write_file", workspace, trace)
+    read = tool("read_file", "make_read_file", workspace, trace)
+    first = tool("edit_file", "make_edit_file", workspace, trace)
+    write("outputs/brief.md", "one\ntwo\n")
+    read("outputs/brief.md")
+    from launchkit.files.versions import fingerprint
+    from launchkit.tools.edit_file import make_edit_file
+
+    # a second agent that read the same version
+    second_workspace = type(workspace)(brand=workspace.brand, conversation=workspace.conversation, root=workspace.root, shared=workspace.shared)
+    second_workspace.seen[str(workspace.root / "outputs/brief.md")] = fingerprint((workspace.root / "outputs/brief.md").read_bytes())
+    second = make_edit_file(second_workspace, trace, "m2").fn
+
+    with ThreadPoolExecutor(2) as pool:
+        results = list(pool.map(lambda call: call(), [lambda: first("outputs/brief.md", "one", "1"), lambda: second("outputs/brief.md", "two", "2")]))
+
+    edited = [r for r in results if r.startswith("Edited")]
+    refused = [r for r in results if "changed" in r.lower()]
+    assert len(edited) == 1 and len(refused) == 1, results
 
 
 # Stage 3: one check every path passes, and what it protects ------------------
