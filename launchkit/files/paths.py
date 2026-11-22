@@ -1,6 +1,6 @@
 """Stage 3: the one door every path passes before it is used.
 
-Not built yet. The room builds this in stage 3, after watching Jonas at Ember read Harbor's brief with a `..`.
+The room builds this in stage 3, after watching Jonas at Ember read Harbor's brief with a `..`.
 
 What it must do. Four callers need the same answer about a path: the file tools, the search, the chat page's file
 list and the download route. A check only one of them calls is not a fence, so there is one function.
@@ -31,7 +31,20 @@ class OutsideWorkspace(Exception):
 
 
 def resolve_in_workspace(root: Path, asked: str | Path) -> Path:
-    raise NotImplementedError("stage 3: the real location of `asked` inside `root`, or OutsideWorkspace")
+    """The real location of `asked` inside `root`, or OutsideWorkspace.
+
+    Resolve both sides, then ask whether one is really inside the other. Resolving is what follows a symbolic link
+    and what flattens a `..`, so it has to happen before anything is compared, and the comparison is between
+    paths, not between strings: "/data/files/ember/t3a9-old".startswith("/data/files/ember/t3a9") is true, and t3a9-old is
+    not inside ember.
+    """
+    real_root = Path(root).resolve()
+    real = (real_root / asked).resolve()
+    if not real.is_relative_to(real_root):
+        if Path(asked).is_absolute():
+            raise OutsideWorkspace(str(asked), "an absolute path leaves this conversation's workspace")
+        raise OutsideWorkspace(str(asked), "that path resolves outside this conversation's workspace")
+    return real
 
 
 def refuse(trace, tool: str, asked: str, reason: str) -> str:

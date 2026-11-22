@@ -19,6 +19,7 @@ from launchkit.agents.main_agent import run_main
 from launchkit.brands.onboard import onboard_workspace
 from launchkit.brands.request import Request, UnknownWorkspace, resolve_workspace_id
 from launchkit.brands.users import list_logins
+from launchkit.files.paths import OutsideWorkspace, resolve_in_workspace
 from launchkit.files.record import entries
 from launchkit.files.workspace import for_request
 from launchkit.guardrails.poster_check import SpecError
@@ -378,9 +379,9 @@ def workspace_file(brand: str, session_id: str, name: str):
         raise HTTPException(404)
     try:
         ws = for_request(Request(workspace_id=brand, session_id=session_id, text="download"), settings)
-    except (UnknownWorkspace, ValueError):
+        path = resolve_in_workspace(ws.root, name)
+    except (UnknownWorkspace, ValueError, OutsideWorkspace):
         raise HTTPException(404)
-    path = ws.root / name
     if not path.is_file():
         raise HTTPException(404)
     return FileResponse(path)
