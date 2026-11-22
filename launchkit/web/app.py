@@ -39,6 +39,7 @@ LOGINS_OPEN: dict[str, tuple[asyncio.AbstractEventLoop, asyncio.Future]] = {}
 CONNECTING: dict[str, str] = {}
 ASK_WAIT = 300
 MEDIA = {".png", ".jpg", ".jpeg", ".webp", ".mp3", ".wav"}
+SESSION_ID = re.compile(r"[A-Za-z0-9_-]{1,32}")  # a conversation id: the seeded ones (k7c1, t3a9) are not six hex characters
 USER_ID = r"^[a-z0-9-]{1,32}$"  # a login name; it becomes a folder name under data/, so nothing else is accepted
 
 
@@ -102,7 +103,7 @@ def _conversations(workspace_id: str, user_id: str) -> list[Path]:
 
 def _load_conversation(workspace_id: str, user_id: str, session_id: str | None = None) -> dict:
     saved = _conversations(workspace_id, user_id)
-    if session_id and re.fullmatch(r"[0-9a-f]{6}", session_id):
+    if session_id and SESSION_ID.fullmatch(session_id):
         saved = [path for path in saved if path.stem == session_id]
     if saved:
         return json.loads(saved[0].read_text(encoding="utf-8"))
@@ -271,7 +272,7 @@ async def attach_picture(workspace_id: str = Form(...), user_id: str = Form(...,
         resolve_workspace_id(Request(workspace_id=workspace_id, user_id=user_id, session_id=session_id, text="attach"), settings)
     except UnknownWorkspace as error:
         raise HTTPException(404, str(error))
-    if not re.fullmatch(r"[0-9a-f]{6}", session_id) or Path(picture.filename or "").suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
+    if not SESSION_ID.fullmatch(session_id) or Path(picture.filename or "").suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
         raise HTTPException(400, "attach a .png, .jpg or .webp picture to a conversation")
     uploads = settings.data_dir / "uploads"
     uploads.mkdir(parents=True, exist_ok=True)

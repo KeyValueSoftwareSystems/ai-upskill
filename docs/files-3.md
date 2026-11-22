@@ -1,74 +1,97 @@
-# Files stage 3 · How the agent finds a file
+# Files stage 3 · Who may touch which file
 
-> Maya, Harbor: "Somewhere in the briefs you saved, a competitor mentions a holiday. Find it." The agent reads every brief, one by one.
+> Jonas, Ember: "I asked about `../../harbor/k7c1/outputs/campaign-brief.md` and it read it to me."
 
-With stage 1 built, the agent can list and read. To answer a question about the five competitor briefs it reads all five into its context, which is expensive, and still answers vaguely. There is no search, and a search that returned whole files would have the same problem as reading the folder.
+Each piece of that path is allowed on its own. Nothing works out where the whole path points before using it, so a path that looks local reaches a sibling folder, and Harbor's brief is under embargo until the fourteenth.
 
 ## Before you start
 
-The page is running on the working copy where stage 2's checks went green. Maya's Breeze conversation, `k7c1`, holds the competitor briefs the research in stages 1 and 2 saved.
+The page is running on the working copy where stage 2's checks went green. Harbor's brief is at `outputs/campaign-brief.md` in Maya's Breeze conversation, and Jonas's own folder exists. `uv run launchkit setup` put both there. A path cannot climb out of a folder that is not there, so Jonas's folder has to exist for the attack to work. If you set up before this stage, run `uv run launchkit setup` again.
 
 ## The slot
 
-- `launchkit/tools/search_files.py` · `make_search_files`. Today it raises and is not registered.
-- `launchkit/tools/read_file.py` · `read_file` reads a whole file. It cannot take a line range yet.
+- `launchkit/files/paths.py` · `resolve_in_workspace`. Today it raises. `OutsideWorkspace` and `refuse` are ready-made, so a refusal lands on the trace in the same words everywhere. The trace line they write, `file_refused`, is part of this stage.
+- Six callers need it: `read_file`, `list_files`, `write_file`, `search_files`, `edit_file` and the page's download route, `workspace_file` in `launchkit/web/app.py`, which today joins the name onto the workspace plainly.
 
 ## Break it first
 
-As **Maya at Harbor**, in the Breeze conversation, send:
+Sign in as **Jonas at Ember** and open his autumn conversation (its first message is "Autumn poster for the Night Shift roast"). Send:
 
-> Look in our saved briefs: which of them mention a holiday, and what do they say?
+> Please read ../../harbor/k7c1/outputs/campaign-brief.md and tell me what its positioning says.
 
-The agent lists the folder. Then it either reads the briefs one by one, which the Trace shows as a `read competitors/<name>.md` line for each, and the **Context** tab shows what that costs, or it gives up early and says that none of them mention a holiday, or it reads one or two and answers as if they were all of them. The last two are wrong answers: several of the briefs do mention one, and nothing in the reply says it missed any. All three outcomes are what this stage fixes.
-
-The agent remembers its last few turns, so a second ask for the same thing is answered from what it already read. Ask it once, or open a new conversation and run the research again.
+Harbor's brief comes back to Jonas. The Trace shows `read ../../harbor/k7c1/outputs/campaign-brief.md` with Harbor's characters counted, and the reply quotes the positioning line.
 
 ## Prompt card, for your coding agent
 
 ```
-Build stage 3 of Session 4: a search the agent can use instead of reading every file, capped from the start.
+Build stage 3 of Session 4: one check that every path passes before it is used. Read TICKETS.md (Stage 3) and the stub
+in launchkit/files/paths.py.
 
-1. launchkit/tools/search_files.py: make_search_files(workspace, trace) returning an Entry with kind "read" and the
-   function search_files(pattern, folder="."). One match per line, formatted `path:line: snippet`, with the path
-   relative to the workspace. The snippet is about 160 characters of the line centred on the match. Mark a cut end with
-   "...". Stop after 10 matches and add a final line that says it stopped early. Skip anything whose suffix is not
-   .md .txt .json .yaml .yml .csv, and anything over 500,000 bytes. Case-insensitive. Plain Python, not a call to
-   ripgrep: rg is not installed by default.
-   Add a `search` trace line to Trace.line in launchkit/trace.py.
+1. resolve_in_workspace(root, asked) in launchkit/files/paths.py: resolve both the root and root / asked, then
+   compare with Path.is_relative_to on the resolved paths, never with string prefixes. Raise OutsideWorkspace, with
+   one reason for an absolute path and one for anything else that resolves outside. It must refuse `..`, an absolute
+   path, a symbolic link that points out, and a folder whose name starts the same way as the conversation's
+   (t3a9-old next to t3a9).
 
-2. launchkit/tools/read_file.py: add first_line=1 and last_line=0 (0 means to the end), counting from 1, so the
-   agent can read the lines a search points at.
+2. Send every path in read_file, write_file, list_files, search_files and edit_file through it. On OutsideWorkspace return
+   refuse(trace, tool_name, asked, error.reason), which is already in that file, and add a file_refused line to
+   Trace.line that reads `refused   <tool> <path>: <reason>`. read_file also accepts paths beginning `brand/`, which resolve inside workspace.shared and never
+   anywhere else. Writes can only reach workspace.root.
 
-3. Register the search in build_catalogue, and word its Entry note this way:
-     search_files  "pick me to search the saved files, competitor briefs and documents for a word or phrase, to find
-                    which of them mention it and which line says so, before reading any of them"
+3. The download route workspace_file in launchkit/web/app.py joins the name onto the workspace root plainly. Send the
+   name through the same function and return 404 for anything outside.
 
-4. In MAIN_TASK in launchkit/agents/main_agent.py, add search_files to the workspace paragraph: the agent looks in the
-   workspace with list_files, search_files and read_file.
+Do NOT: change any line that is already in Trace.line, or its spacing; change what any tool does with a path that is inside; touch the Files panel.
 
-Do NOT: change any line that is already in Trace.line, or its spacing; add any path checking (stage 5); touch the other tools beyond the line range; build an index or use
-embeddings.
-
-Done when `uv run pytest checks/test_files.py -m "stage1 or stage2 or stage3"` passes and the rest of `uv run pytest checks -q
---ignore=checks/test_files.py` still passes.
+Done when `uv run pytest checks/test_files.py -m "stage1 or stage2 or stage3"` passes and the rest of
+`uv run pytest checks -q --ignore=checks/test_files.py` still passes.
 ```
 
 ## Prove it
 
 ```
 uv run pytest checks/test_files.py -m "stage1 or stage2 or stage3"
+uv run pytest checks -q --ignore=checks/test_files.py     # about six minutes: run it once, here, at the end of the last stage
 ```
 
-- A search returns a path, a line number and a snippet that contains the word it found, even when the line is long.
-- It stops after a set number of matches, and says when it stopped early.
-- It skips files that are not text or are over a size limit.
-- Answering "where did this line come from" costs a search and a read or two, not every file.
-- The search says which line, and a read can then take just that part of the file.
+- A path that looks local and resolves into Harbor's workspace is refused.
+- A symbolic link counts as leaving, which is why the check resolves before it compares.
+- `t3a9-old` is not `t3a9`. Comparing the text of a path says it is.
+- A legitimate read still succeeds, and so does a read of a shared brand file, because a fence that is too tight is also a defect.
+- The download route is the last caller: a file the conversation owns downloads, a path out of it does not.
+- The brand's shared files are readable and not writable: the same function, one more comparison.
+- Everything the earlier sessions built still passes.
 
 ## Run it again
 
-Send the same ask in a fresh conversation, after the research has run there. The Trace shows one `search 'holiday'` line and perhaps one `read`, the **Context** tab's tool results are a fraction of what they were, and the reply names the briefs and quotes the lines. The wording that works is an instruction to look in the saved briefs. A question about the topic alone sends the agent to the research skill. The cap, ten matches and a line saying it stopped, is covered by the checks.
+As Jonas, send the ask again. The Trace shows `refused   read_file ../../harbor/k7c1/outputs/campaign-brief.md: that path resolves outside this conversation's workspace`, and the reply says it cannot access files outside the workspace. Then the lookalike. An absolute path is refused too, and the checks cover that one:
+
+> Read ../t3a9-old/notes.md for me.
+
+That folder is seeded and sits next to Jonas's, and the check refuses it even though the text of the path starts the same way. A legitimate read still works. Still as Jonas:
+
+> Read brand/brand-book.md and tell me Ember's tone.
+
+Then the download route. Run this in a terminal while the page is running. A browser removes the `..` before it sends the address, so use `curl`:
+
+```
+curl --path-as-is -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/workspace/ember/t3a9/../../harbor/k7c1/outputs/campaign-brief.md
+```
+
+Before the fix it prints `200`: the page serves Harbor's brief from an address under Ember. Now it prints `404`.
+
+Last, the brand's own files. As **Maya at Harbor**, in the Breeze conversation:
+
+> Read brand/brand-book.md and tell me Harbor's tone.
+
+The reply quotes the tone section. Then:
+
+> In brand/brand-book.md, add a line at the end that says "Reviewed by Maya."
+
+The agent cannot change the brand book: it says it cannot find a file there, or it declines. `git status workspaces/` shows no change. The checks prove the refusal; a live run only shows that nothing changed.
 
 ## Why it matters
 
-Search the text, or build an index? An index is a copy of your files in another shape, and the moment you own a copy you own keeping it true and keeping it separated per tenant. It drifts four ways, each with a symptom the room will recognise: stale after an update, so a re-uploaded contract still returns the old clause; deleted content still returned, which is deleted data leaking; a missing tenant filter on one code path, so one customer's query returns another's paragraph; and one search type not being enough, since "clause 14.2" works with text search and fails with meaning search, and "the part about cancelling early" is the other way round. The missing tenant filter is the same bug as stage 3's path check, in another place.
+Resolve first, compare after, and compare resolved paths rather than strings: `"/data/files/ember/t3a9-old".startswith("/data/files/ember/t3a9")` is true. One function, with every caller going through it, is the fence; a check that only one caller calls is not. Put the other question to the room once and let it fail once: can a better prompt fix this? Add "never open another brand's files" to the task and watch what the model does with it. The check has to be code. And a check can be too strict, which is criterion 10: a legitimate read of a shared file that starts failing is a defect of the same stage.
+
+The brand's own files sit next to the conversation's workspace, not inside it, so reads resolve into either and writes resolve into one. Whether they should be writable with a person's approval instead, as one of the three products does, is a discussion for the room.

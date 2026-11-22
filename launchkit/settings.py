@@ -32,7 +32,7 @@ class Settings:
     # two-worker demo needs that, and nothing else in the session changes it.
     data_dir: Path = field(default_factory=lambda: Path(_env("LAUNCHKIT_DATA_DIR", str(ROOT / "data"))))
     limits: Limits = Limits()
-    budgets: dict = field(default_factory=lambda: {"rules": 1500, "task": 400, "facts": 1500, "history": 2000})
+    budgets: dict = field(default_factory=lambda: {"rules": 1500, "task": 700, "facts": 1500, "history": 2000})
 
 
 settings = Settings()

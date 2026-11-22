@@ -25,7 +25,7 @@ Everything except Maya's approved campaign brief lands in shared folders on purp
     data/conversations/ember/jonas/t3a9.json    Jonas's autumn posters                               (5)
 
 The conversation ids are fixed on purpose. The app mints a random one for a new conversation, which is right for
-a product and no use for a room: the stage 5 attack names Harbor's workspace, and it has to be a path everyone can
+a product and no use for a room: the stage 3 attack names Harbor's workspace, and it has to be a path everyone can
 type. Maya works in k7c1 and Jonas in t3a9, so after stage 1 Maya's brief lands in files/harbor/k7c1 and Jonas
 can ask for it by name.
 
@@ -181,12 +181,12 @@ def build(data: Path) -> None:
         (competitors / name).write_text("\n".join(lines) + "\n", encoding="utf-8")
     (data / "campaign-brief.md").write_text("\n".join(CAMPAIGN_BRIEF), encoding="utf-8")
 
-    # The approved campaign brief, in the folder Maya's conversation's workspace will be once stage 1 builds it. Stages 4
-    # and 5 edit it and read it by path. The competitor briefs are not seeded: the room's own research makes them.
+    # The approved campaign brief, in the folder Maya's conversation's workspace will be once stage 1 builds it. Stages 2
+    # and 3 edit it and read it by path. The competitor briefs are not seeded: the room's own research makes them.
     breeze = data / "files" / "harbor" / "k7c1"
     (breeze / "outputs").mkdir(parents=True, exist_ok=True)
     (breeze / "outputs" / "campaign-brief.md").write_text("\n".join(CAMPAIGN_BRIEF), encoding="utf-8")
-    # Jonas's own folder, empty. A path cannot climb out of a folder that is not there, so stage 5's attack needs it.
+    # Jonas's own folder, empty. A path cannot climb out of a folder that is not there, so stage 3's attack needs it.
     (data / "files" / "ember" / "t3a9" / "outputs").mkdir(parents=True, exist_ok=True)
 
     # Conversations with fixed ids, so the room can name another brand's workspace. Only these three are the seed's.
@@ -198,7 +198,7 @@ def build(data: Path) -> None:
             "turns": [{"role": r, "text": t, "files": []} if r == "user" else {"role": r, "reply": t, "files": []} for r, t in turns],
         }, indent=2), encoding="utf-8")
 
-    # The prefix case for stage 5: a conversation whose name starts the same way as Jonas's t3a9.
+    # The prefix case for stage 3: a conversation whose name starts the same way as Jonas's t3a9.
     lookalike = data / "files" / "ember" / "t3a9-old"
     lookalike.mkdir(parents=True, exist_ok=True)
     (lookalike / "notes.md").write_text("# Left over from an earlier conversation\n\nNobody has looked at this in a year.\n", encoding="utf-8")

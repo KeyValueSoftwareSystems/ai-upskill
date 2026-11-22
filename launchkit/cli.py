@@ -210,7 +210,7 @@ RAG_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob(
 TOOLS_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_tools*.py"))
 ORCH_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_orch*.py"))
 MEM_STEPS = sorted(p.stem.removeprefix("test_") for p in (ROOT / "checks").glob("test_mem*.py"))
-FILES_STAGES = [f"stage{n}" for n in range(1, 6)]  # Session 4: one check file, a marker per stage
+FILES_STAGES = [f"stage{n}" for n in range(1, 4)]  # Session 4: one check file, a marker per stage
 ORCH_GATE = ORCH_STEPS + [name for name in TOOLS_STEPS if name in ("tools3", "tools4", "tools5")]
 
 
@@ -343,7 +343,7 @@ def main(argv=None):
     explain.add_argument("--show", action="store_true", help="print the system message as sent")
     explain.set_defaults(func=cmd_explain)
 
-    check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all; retrieval: check rag1.. or rag; orchestration: check orch0.. or orch; files: check stage1..5 or files")
+    check = sub.add_parser("check", help="prove a step with the fakes: check 0..4 or all; retrieval: check rag1.. or rag; orchestration: check orch0.. or orch; files: check stage1..3 or files")
     check.add_argument("step", choices=["0", "1", "2", "3", "4", "onboard", "setup", "all", *RAG_STEPS, "rag", *TOOLS_STEPS, *ORCH_STEPS, "orch", *MEM_STEPS, "mem", *FILES_STAGES, "files"])
     check.set_defaults(func=cmd_check)
 

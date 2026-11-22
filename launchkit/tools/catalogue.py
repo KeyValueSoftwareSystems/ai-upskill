@@ -33,6 +33,7 @@ class Skill:
     note: str
     text: str
     hides: tuple[str, ...] = ()
+    needs: tuple[str, ...] = ()  # tools this skill cannot work without; a skill whose tools are not built is not offered
 
 
 def todo(fn: Callable) -> Callable:
@@ -55,7 +56,8 @@ def load_skills(folder: Path = SKILLS_DIR) -> dict[str, Skill]:
     for path in sorted(folder.glob("*/skill.md")):
         text = path.read_text(encoding="utf-8")
         hides = tuple(t.strip(" `") for t in field_of(text, "hides").split("(")[0].split(",") if t.strip(" `"))
-        skills[path.parent.name] = Skill(path.parent.name, field_of(text, "pick me when"), text, hides)
+        needs = tuple(t.strip(" `") for t in field_of(text, "needs").split(",") if t.strip(" `"))
+        skills[path.parent.name] = Skill(path.parent.name, field_of(text, "pick me when"), text, hides, needs)
     return skills
 
 
@@ -67,7 +69,7 @@ def ask_in_terminal(name: str, inputs: dict) -> bool:
 class Catalogue:
     def __init__(self, entries: list[Entry], skills: dict[str, Skill], trace: Trace, approve: Callable[[str, dict], bool]):
         self.entries = {e.name: e for e in entries if built(e.fn)}
-        self.skills = skills
+        self.skills = {name: skill for name, skill in skills.items() if all(tool in self.entries for tool in skill.needs)}
         self.trace = trace
         self.approve = approve
         self.leash: Callable | None = None
@@ -109,7 +111,7 @@ class Catalogue:
         hidden = {name for s in self.skills.values() for name in s.hides}
 
         def find_tool(query: str) -> str:
-            """List the skills and tools that could help with a job, best first, each with when to pick it. Call this first."""
+            """List the skills and tools that could help with a job, best first, each with when to pick it. Call this first. In the query, say what you want to do and to what, in the marketer's words, not only the topic. For example: 'resize the poster', 'check brand rules', 'look up the warranty', 'open the draft'."""
             lines = [(f'skill {s.name}: {s.note} · call run_skill("{s.name}")', f"{s.name} {s.note}") for s in self.skills.values()]
             lines += [(f"tool {e.name} ({e.kind}): {e.note} · call {call_shape(e)}", f"{e.name} {e.note}") for e in self.entries.values() if e.name not in hidden]
             asked = stems(query)

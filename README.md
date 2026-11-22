@@ -16,7 +16,8 @@ A marketing assistant built in steps across the session. A marketer asks for a p
 | `session-02-orchestration-step1`, `step2` | each step's answer |
 | `session-03-memory-step1`, `step2` | agent memory (Session 3): the morning the support queue filled; the room builds the memory fixes here |
 | `session-03-memory-solutions` | every Session 3 memory fix built: the answer |
-| **`session-04-filesystem-prd`** (you are here) | agent file systems (Session 4): Harbor's feature request, built in five stages |
+| **`session-04-filesystem-prd`** (you are here) | agent file systems (Session 4): Harbor's feature request, built in three stages |
+| `session-04-filesystem-stage1`, `stage2` | the answer to stage 1, and to stages 1 and 2: check one out if you are stuck |
 | `session-04-filesystem-solutions` | every Session 4 stage built: the answer |
 
 Each branch contains the previous branch's solution. Fall behind, check out the next one.
@@ -25,7 +26,7 @@ Each branch contains the previous branch's solution. Fall behind, check out the 
 
 ## Session 4
 
-This branch is one feature request, built in stages, not a queue. Read `TICKETS.md`, write your decisions in
+This branch is one feature request, built in three stages, not a queue. Read `TICKETS.md`, write your decisions in
 `DECISIONS.md`, and see what is already built in `READY-MADE.md`. Do the Setup section below first (install and
 `.env`), then run:
 
@@ -38,7 +39,7 @@ uv run pytest checks/test_files.py -m stage1    # one stage's criteria, as code.
 `uv run launchkit setup` replaces only the folders the seed owns. Conversations, the brand index and Session 3's
 memory database live under `data/` too and are left alone.
 
-One card per stage: `docs/files-1.md` to `docs/files-5.md`. Each card says what to break first,
+One card per stage: `docs/files-1.md` to `docs/files-3.md`. Each card says what to break first,
 holds the stage's prompt for your coding agent, and ends with what the prompt must not build, so the next failure stays
 real. Read a stage's card after the room has written that stage's criteria, in order, on one working copy of this branch.
 

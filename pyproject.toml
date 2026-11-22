@@ -65,9 +65,8 @@ packages = ["launchkit"]
 testpaths = ["checks"]
 addopts = "-p no:cacheprovider"
 markers = [
-    "stage1: Session 4, stage 1: the file tools in a workspace per conversation, and the record behind the chat page",
-    "stage2: Session 4, stage 2: five writers at once, and no entry lost",
-    "stage3: Session 4, stage 3: a capped search",
-    "stage4: Session 4, stage 4: an edit tool",
-    "stage5: Session 4, stage 5: one check every path passes, and the brand's shared files",
+    "stage1: Session 4, build 1: the file tools in a workspace per conversation. The record and the search come ready",
+    "stage2: Session 4, build 2: an edit tool",
+    "stage3: Session 4, build 3: one check every path passes, and the brand's shared files",
+    "stretch: Session 4, optional stretch after build 2: an edit that refuses when the file moved on",
 ]

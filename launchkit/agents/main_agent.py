@@ -65,6 +65,33 @@ DIRECT_TASK = """You work for the marketer you are talking with. Decide what eac
 When a skill below fits the job, load it once with run_skill before you call any other tool, and do the job the way its steps say, not another way.
 Brand and product facts come only from get_brand_details. Answer in plain words, in the brand's voice."""
 
+def file_paragraph(tools: set[str]) -> str:
+    """What the agent is told about the conversation's files, naming only the file tools that are built. Before stage 1
+    nothing is built and nothing is said, so the break-it-first runs show an agent with nothing to look with."""
+    look = [name for name in ("list_files", "search_files", "read_file") if name in tools]
+    if not look:
+        return ""
+    sentences = [
+        "This conversation has a workspace of files, and everything you have made for the marketer is kept there.",
+        "Save finished work with write_file in outputs/ and drafts in work/.",
+        f"Before you answer from memory or ask the marketer to send something again, look in the workspace with {', '.join(look[:-1])} and {look[-1]}.",
+        "A brief, plan, draft or document is a file there, not a card on the board.",
+        "The marketer's briefs, drafts, plans and documents are the files in this workspace, including the competitor briefs in competitors/. When they ask about one, or to change one, work on the file.",
+        "When find_tool lists a tool that fits, call it with run_tool before you answer.",
+        "If you do not know a saved file's exact name, call list_files first; never guess one.",
+        "If the marketer asks whether you looked at, used or saved something, check the workspace with list_files before you answer.",
+    ]
+    return " ".join(sentences)
+
+
+def main_task(tools: set[str]) -> str:
+    paragraph = file_paragraph(tools)
+    if not paragraph:
+        return MAIN_TASK
+    head, tail = MAIN_TASK.split("Never say something is made", 1)
+    return f"{head}{paragraph}\nNever say something is made{tail}"
+
+
 MAIN_STEP_CAP = 20
 
 
@@ -98,7 +125,7 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
     ctx.set("rules", f"{ws.soul}\n\n{ws.agents}\n\n{placements_text(ws)}")
     warnings = " ".join(e.detail["text"] for e in trace.events if e.kind == "warning")
     ctx.set("facts", f"Today is {date.today():%-d %B %Y}. {warnings} {pictures.describe() if pictures else ''}".strip())
-    ctx.set("task", MAIN_TASK if catalogue.lookup else "\n\n".join(part for part in (DIRECT_TASK, catalogue.skills_text()) if part))
+    ctx.set("task", main_task(set(catalogue.entries)) if catalogue.lookup else "\n\n".join(part for part in (DIRECT_TASK, catalogue.skills_text()) if part))
     if catalogue.lookup and isinstance(model, OpenAIChat):
         # Several tool calls in one model message lose run_tool's name, so the agent with the doors calls one at a time.
         model = replace(model, request_params={**(model.request_params or {}), "parallel_tool_calls": False})
@@ -123,8 +150,9 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
     )
 
 
-def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya", pictures: Pictures | None = None) -> Catalogue:
+def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya", pictures: Pictures | None = None, files=None, message: str = "") -> Catalogue:
     ws = ws or load_workspace("harbor", settings, trace)
+    file_tools: list[Entry] = []  # stage 1 builds read, list and write here when files is given; stage 2 adds the search and the edit
     desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None)
     entries: list[Entry] = [
         Entry("get_brand_details", "look up this brand's guide and product facts", "read", make_get_brand_details(ws, trace, settings)),
@@ -136,6 +164,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
         describe_image_entry(settings, model, desk),
         text_to_speech_entry(settings, model),
         *(board.entries() if board else server_entries(settings, trace, user)),
+        *file_tools,
         *make_research_entries(model, settings, trace),
         *memory_entries(settings, lambda: memory_manager(settings, trace, model), user, namespace=ws.id),
     ]

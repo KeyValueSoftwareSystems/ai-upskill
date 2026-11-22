@@ -1,19 +1,19 @@
-"""Session 4's checks. Each one reads an acceptance criterion the room agreed, and each belongs to a stage.
+"""Session 4's checks. Each one reads an acceptance criterion the room agreed, and each belongs to a build.
 
-The session runs in stages, like red and green in test-driven work. A failure shows live, the room writes that
-stage's criteria, the lead runs the prompt, and that stage's checks go green:
+The session has three builds, like red and green in test-driven work. A failure shows live, the room writes that
+build's criteria, the lead runs the prompt, and that build's checks go green:
 
     uv run pytest checks/test_files.py -m stage1
 
-Every stage's checks fail on `session-04-filesystem-prd` and pass on `session-04-filesystem-solutions`. They are the specification
-written as code, and they are what "done" means for a stage. The stages, in order:
+Every build's checks fail on `session-04-filesystem-prd` and pass on `session-04-filesystem-solutions`. They are the
+specification written as code, and they are what "done" means for a build. The builds, in order:
 
-    stage1  the file tools in a workspace per conversation. The record and the chat page that reads it come ready:
-            they switch on when for_request is built, so the record's checks go green with this stage
-    stage2  five writers at once, and no entry lost
-    stage3  a capped search
-    stage4  an edit tool
-    stage5  one check every path passes, for every tool and for the download route, and the brand's shared files
+    stage1  the file tools (read with a line range, list, write) in a workspace per conversation. The record, the
+            search, the tools' notes and the paragraph that tells the agent about its files come ready: their checks
+            go green when for_request is built, so the room reads them. The search is not offered to the agent yet
+    stage2  an edit tool, and the search and the edit tool offered to the agent
+    stage3  one check every path passes, for every tool and for the download route, and the brand's shared files
+    stretch optional, after stage 2: an edit that refuses a file it has not read or that changed since it was read
 
 The interface the checks expect, so the lead's prompt and the room's build agree on names:
 
@@ -21,6 +21,7 @@ The interface the checks expect, so the lead's prompt and the room's build agree
                                 Workspace.drawer(name) -> Path, Workspace.shared -> Path
     launchkit.files.paths       resolve_in_workspace(root, asked) -> Path, or raises OutsideWorkspace
     launchkit.files.record      record(root, path, by, message), entries(root) -> list[Entry]   (ready-made)
+    launchkit.tools.notes       what each file tool says about itself (ready-made)
     launchkit.tools.*           make_read_file / make_list_files / make_write_file / make_search_files /
                                 make_edit_file, each taking (workspace, trace[, message]) and returning an Entry
                                 whose .fn is the tool
@@ -29,7 +30,7 @@ The checks read `Workspace` as a folder per conversation, because that is the an
 to reach. If the room chooses another layout, the lead adapts them.
 
 Criteria 2, 8 and 12 are read from the chat page in the room as well as from here, because what the marketer
-sees is the point of them. Criterion 9, the brand's shared files, is checked in stage 5 with the fence.
+sees is the point of them. Criterion 9, the brand's shared files, is checked in stage 3 with the fence.
 """
 
 import importlib
@@ -58,7 +59,7 @@ def workspace(settings, request_for):
     return for_request(request_for(workspace_id="harbor", session_id="k7c1"), settings)
 
 
-# Stage 1: the file tools, in a workspace per conversation, and the record behind the chat page ----
+# Stage 1: the file tools, in a workspace per conversation. The record and the search code come ready ----
 
 @pytest.mark.stage1
 def test_a_workspace_belongs_to_one_brand_and_one_conversation(settings, request_for):
@@ -267,9 +268,9 @@ def test_a_picture_is_shown_through_the_fenced_route_only(settings, request_for,
     assert page.get(f"/files/{poster.relative_to(settings.data_dir).as_posix()}").status_code == 404
 
 
-# Stage 2: five writers at once, and no entry lost ----------------------------
+# Ready-made, read in stage 1: five writers at once, and no entry lost -------------
 
-@pytest.mark.stage2
+@pytest.mark.stage1
 def test_two_writers_both_survive(workspace):
     """Five subagents write at once and no entry is lost.
 
@@ -285,7 +286,7 @@ def test_two_writers_both_survive(workspace):
     assert got == {f"competitors/{n}.md" for n in names}, f"entries were lost: only {sorted(got)} survived"
 
 
-@pytest.mark.stage2
+@pytest.mark.stage1
 def test_five_tools_built_together_keep_every_entry(workspace, trace):
     """The same thing as it happens live, with no threads and nothing to time.
 
@@ -300,7 +301,7 @@ def test_five_tools_built_together_keep_every_entry(workspace, trace):
     assert len(entries(workspace.root)) == 5, f"only {len(entries(workspace.root))} of 5 survived"
 
 
-@pytest.mark.stage2
+@pytest.mark.stage1
 def test_a_retry_does_not_record_the_same_artifact_twice(workspace):
     """A tool call that times out and runs again must not put the same entry in twice."""
     for _ in range(2):
@@ -308,7 +309,7 @@ def test_a_retry_does_not_record_the_same_artifact_twice(workspace):
     assert len(entries(workspace.root)) == 1, "a retry doubled the entry"
 
 
-# Stage 3: a capped search ----------------------------------------------------
+# Ready-made, read in stage 1: a capped search --------------------------------------
 
 BRIEFS = {
     "figma": "Positioning: the tool teams already have open.\nClaims: no lifetime guarantee anywhere in their copy.\n",
@@ -317,7 +318,7 @@ BRIEFS = {
 }
 
 
-@pytest.mark.stage3
+@pytest.mark.stage1
 def test_a_search_returns_a_path_a_line_and_a_snippet(workspace, trace):
     """3 · a search returns a path, a line number and a snippet."""
     write = tool("write_file", "make_write_file", workspace, trace)
@@ -329,7 +330,20 @@ def test_a_search_returns_a_path_a_line_and_a_snippet(workspace, trace):
     assert "headline of their pricing page" in out
 
 
-@pytest.mark.stage3
+@pytest.mark.stage1
+def test_a_phrase_found_nowhere_returns_the_lines_that_hold_some_of_its_words(workspace, trace):
+    """3 · a phrase is rarely written word for word, so a miss on the whole phrase shows the lines with some of its words, labelled."""
+    write = tool("write_file", "make_write_file", workspace, trace)
+    write("competitors/stanley.md", "Stanley: read soarwithus.co and campaignlive.com.")
+    search = tool("search_files", "make_search_files", workspace, trace)
+
+    partial = search("Stanley launch angle")
+    assert "competitors/stanley.md:1:" in partial, f"a phrase that is nowhere gave no partial lines: {partial!r}"
+    assert "as a whole" in partial, "the partial lines are not labelled as partial"
+    assert search("zzzz qqqq") == "Nothing matched 'zzzz qqqq'.", "a phrase with no word anywhere should still say nothing matched"
+
+
+@pytest.mark.stage1
 def test_a_snippet_shows_the_word_even_when_the_line_is_long(workspace, trace):
     """3 · a brief is often one long line, so the snippet is cut around the match, not from the start of the line."""
     write = tool("write_file", "make_write_file", workspace, trace)
@@ -340,7 +354,7 @@ def test_a_snippet_shows_the_word_even_when_the_line_is_long(workspace, trace):
     assert len(out) < 260, f"the snippet is not capped: {len(out)} characters"
 
 
-@pytest.mark.stage3
+@pytest.mark.stage1
 def test_a_search_stops_after_a_set_number_of_matches_and_says_so(workspace, trace):
     """3 · it stops after a set number of matches, and says when it stopped early."""
     write = tool("write_file", "make_write_file", workspace, trace)
@@ -353,7 +367,7 @@ def test_a_search_stops_after_a_set_number_of_matches_and_says_so(workspace, tra
     assert "stopped" in out.lower(), "it stopped early and did not say so"
 
 
-@pytest.mark.stage3
+@pytest.mark.stage1
 def test_a_search_skips_files_that_are_not_text_or_are_too_big(workspace, trace):
     """3 · it skips files that are not text or are over a size limit."""
     folder = workspace.drawer("work")
@@ -367,7 +381,7 @@ def test_a_search_skips_files_that_are_not_text_or_are_too_big(workspace, trace)
     assert "huge.md" not in out
 
 
-@pytest.mark.stage3
+@pytest.mark.stage1
 def test_finding_a_line_costs_a_search_not_the_folder(workspace, trace):
     """4 · answering "where did this line come from" costs a search and a read or two, not every file."""
     write = tool("write_file", "make_write_file", workspace, trace)
@@ -378,7 +392,7 @@ def test_finding_a_line_costs_a_search_not_the_folder(workspace, trace):
     assert len(out) < sum(len(t * 50) for t in BRIEFS.values()) / 4, "the search cost about as much as reading the folder"
 
 
-@pytest.mark.stage3
+@pytest.mark.stage1
 def test_a_read_can_take_just_the_lines_it_needs(workspace, trace):
     """4 · the search says which line, and a read can then take just that part of the file."""
     tool("write_file", "make_write_file", workspace, trace)("outputs/brief.md", "one\ntwo\nthree\nfour\n")
@@ -386,9 +400,9 @@ def test_a_read_can_take_just_the_lines_it_needs(workspace, trace):
     assert got.splitlines() == ["two", "three"]
 
 
-# Stage 4: an edit tool -------------------------------------------------------
+# Stage 2: an edit tool -------------------------------------------------------
 
-@pytest.mark.stage4
+@pytest.mark.stage2
 def test_an_edit_changes_the_one_line_and_nothing_else(workspace, trace):
     """6 · an edit replaces the text it was asked to replace and nothing else."""
     write = tool("write_file", "make_write_file", workspace, trace)
@@ -402,7 +416,7 @@ def test_an_edit_changes_the_one_line_and_nothing_else(workspace, trace):
     assert after == original.replace("avoid the lifetime-guarantee framing", "lean into the five-year warranty")
 
 
-@pytest.mark.stage4
+@pytest.mark.stage2
 def test_an_edit_refuses_when_the_old_text_is_missing(workspace, trace):
     """6 · it refuses when the old text is missing, and the file is untouched."""
     write = tool("write_file", "make_write_file", workspace, trace)
@@ -415,7 +429,7 @@ def test_an_edit_refuses_when_the_old_text_is_missing(workspace, trace):
     assert (workspace.root / "outputs/brief.md").read_text(encoding="utf-8") == "Tone\nwarm and plain\n"
 
 
-@pytest.mark.stage4
+@pytest.mark.stage2
 def test_an_edit_refuses_when_the_old_text_appears_twice(workspace, trace):
     """6 · it refuses when the old text appears more than once, and says how many."""
     write = tool("write_file", "make_write_file", workspace, trace)
@@ -428,7 +442,7 @@ def test_an_edit_refuses_when_the_old_text_appears_twice(workspace, trace):
     assert (workspace.root / "outputs/brief.md").read_text(encoding="utf-8") == "lifetime\nlifetime\n"
 
 
-@pytest.mark.stage4
+@pytest.mark.stage2
 def test_an_edit_is_recorded_the_way_a_write_is(workspace, trace):
     """7 · the edit tool records what it changed, under its own name, like every tool that writes a file."""
     write = tool("write_file", "make_write_file", workspace, trace, "m1")
@@ -439,9 +453,9 @@ def test_an_edit_is_recorded_the_way_a_write_is(workspace, trace):
     assert ("outputs/brief.md", "edit_file", "m2") in [(e.path, e.by, e.message) for e in entries(workspace.root)]
 
 
-# Stage 5: one check every path passes, and what it protects ------------------
+# Stage 3: one check every path passes, and what it protects ------------------
 
-@pytest.mark.stage5
+@pytest.mark.stage3
 @pytest.mark.parametrize(
     "asked, why",
     [
@@ -456,7 +470,7 @@ def test_a_path_that_leaves_the_workspace_is_refused(workspace, asked, why):
         resolve_in_workspace(workspace.root, asked)
 
 
-@pytest.mark.stage5
+@pytest.mark.stage3
 def test_jonas_at_ember_cannot_read_harbors_brief(settings, request_for, trace):
     """5 · the session's attack, as it is told: a path that looks local and resolves into Harbor's workspace."""
     harbor = for_request(request_for(workspace_id="harbor", session_id="k7c1"), settings)
@@ -469,7 +483,7 @@ def test_jonas_at_ember_cannot_read_harbors_brief(settings, request_for, trace):
     assert "embargo" not in out
 
 
-@pytest.mark.stage5
+@pytest.mark.stage3
 def test_a_symbolic_link_out_is_refused(workspace, tmp_path):
     """5 · a symbolic link counts as leaving, which is why the check resolves before it compares."""
     outside = tmp_path / "outside.md"
@@ -480,7 +494,7 @@ def test_a_symbolic_link_out_is_refused(workspace, tmp_path):
         resolve_in_workspace(workspace.root, "work/looks-local.md")
 
 
-@pytest.mark.stage5
+@pytest.mark.stage3
 def test_a_folder_whose_name_starts_the_same_is_refused(settings, request_for):
     """5 · t3a9-old is not t3a9. Comparing the text of a path says it is."""
     ember = for_request(request_for(workspace_id="ember", session_id="t3a9"), settings)
@@ -489,14 +503,14 @@ def test_a_folder_whose_name_starts_the_same_is_refused(settings, request_for):
         resolve_in_workspace(ember.root, "../t3a9-old/brand-book.md")
 
 
-@pytest.mark.stage5
+@pytest.mark.stage3
 def test_a_legitimate_path_still_resolves(workspace):
     """10 · a legitimate read still succeeds, because a fence that is too tight is also a defect."""
     real = resolve_in_workspace(workspace.root, "outputs/poster.png")
     assert real.is_relative_to(workspace.root)
 
 
-@pytest.mark.stage5
+@pytest.mark.stage3
 @pytest.mark.parametrize("module, factory, args", [
     ("read_file", "make_read_file", ("../../harbor/x.md",)),
     ("write_file", "make_write_file", ("../../harbor/x.md", "nope")),
@@ -513,7 +527,7 @@ def test_every_tool_refuses_through_the_same_door_and_says_so_on_the_trace(works
     assert refusals and refusals[-1].detail["tool"] == module and refusals[-1].detail["reason"]
 
 
-@pytest.mark.stage5
+@pytest.mark.stage3
 def test_the_brands_own_files_can_still_be_read(settings, request_for, trace):
     """10 · a legitimate read of a shared brand file still succeeds, because a fence that is too tight is also a defect."""
     ws = for_request(request_for(workspace_id="harbor", session_id="k7c1"), settings)
@@ -522,7 +536,7 @@ def test_the_brands_own_files_can_still_be_read(settings, request_for, trace):
     assert len(out) > 0
 
 
-@pytest.mark.stage5
+@pytest.mark.stage3
 def test_the_download_route_goes_through_the_same_door(settings, request_for, trace, monkeypatch):
     """5, 12 · the download route is the fourth caller: a file the conversation owns downloads, a path out of it does not."""
     from fastapi.testclient import TestClient
@@ -541,7 +555,7 @@ def test_the_download_route_goes_through_the_same_door(settings, request_for, tr
     assert page.get("/workspace/harbor/k7c1/outputs/missing.md").status_code == 404
 
 
-@pytest.mark.stage5
+@pytest.mark.stage3
 def test_the_brands_shared_files_are_outside_the_workspace_and_cannot_be_written(workspace, trace):
     """9 · shared brand files are readable by the agent and not writable by it."""
     assert not workspace.shared.is_relative_to(workspace.root), "the brand's files are a drawer of the conversation"
@@ -565,3 +579,112 @@ def test_the_seed_gives_the_room_conversations_it_can_name(settings, monkeypatch
     assert maya["session_id"] == "k7c1" and any("lifetime" in (t.get("reply") or "") for t in maya["turns"])
     assert jonas["session_id"] == "t3a9" and jonas["turns"]
     assert (settings.data_dir / "files" / "ember" / "t3a9-old").is_dir(), "the lookalike conversation is missing"
+
+def test_a_seeded_conversation_can_be_picked_when_a_newer_one_exists(settings, monkeypatch):
+    """The page's picker asks for a conversation by id. The seeded ones (k7c1, s5b2, t3a9) are not six hex characters,
+    and picking one must open it, not whichever conversation was saved last."""
+    from fastapi.testclient import TestClient
+    from launchkit.files.seed import build
+    from launchkit.web import app as web
+    build(settings.data_dir)
+    monkeypatch.setattr(web, "settings", settings)
+    page = TestClient(web.app)
+    page.post("/conversations/harbor/maya/new")  # a newer conversation than k7c1
+    picked = page.get("/conversations/harbor/maya", params={"session_id": "k7c1"}).json()
+    assert picked["session_id"] == "k7c1" and any("lifetime" in (t.get("reply") or "") for t in picked["turns"])
+    assert "k7c1" in [c["session_id"] for c in picked["conversations"]]
+
+
+# What the agent sees: its prompt, its skills and the tools find_tool lists, all without a model ------------------
+
+def test_a_skill_is_offered_only_when_the_tools_it_needs_are_built():
+    """A skill that needs a tool nobody has built yet is not offered, so the agent is never sent to a tool that is not there."""
+    from launchkit.tools.catalogue import Catalogue, Entry, load_skills
+    from launchkit.trace import Trace
+
+    skill = load_skills()["edit_a_line"]
+    assert skill.needs == ("search_files", "read_file", "edit_file")
+
+    def offered(*names):
+        entries = [Entry(name, "n", "read", lambda: "") for name in names]
+        return "edit_a_line" in Catalogue(entries, load_skills(), Trace(), lambda *a: False).skills
+
+    assert not offered("search_files", "read_file")
+    assert offered("search_files", "read_file", "edit_file")
+
+
+@pytest.fixture(scope="module")
+def find(tmp_path_factory):
+    """find_tool as the agent sees it for a conversation with every file tool built: the names, best first, for what was said."""
+    from dataclasses import replace
+
+    from launchkit.agents.main_agent import build_catalogue
+    from launchkit.brands.request import Request
+    from launchkit.settings import settings as base_settings
+    from launchkit.trace import Trace
+
+    settings = replace(base_settings, data_dir=tmp_path_factory.mktemp("routing"), image_mode="fake", search="saved", board="local")
+    files = for_request(Request(workspace_id="harbor", user_id="maya", session_id="r1", text=""), settings)
+    find_tool = build_catalogue(settings, Trace(), lambda *a, **k: False, files=files, message="m").make_find_tool()
+
+    def top(said: str) -> list[str]:
+        return [line.split(":")[0].split()[1] for line in find_tool(said).split("\n") if line.startswith(("skill", "tool"))]
+
+    return top
+
+
+@pytest.mark.stage1
+def test_the_main_prompt_fits_its_budget_with_every_file_tool_told():
+    """The paragraph about the files is long. A prompt cut to its budget loses the end of it, and the rules after it, without a word."""
+    from launchkit.agents.main_agent import main_task
+    from launchkit.agents.prompt import trim_to_budget
+    from launchkit.settings import settings as base
+
+    told = main_task({"list_files", "search_files", "read_file", "write_file", "edit_file"})
+    assert not trim_to_budget(told, base.budgets["task"])[1]
+
+
+@pytest.mark.stage1
+@pytest.mark.parametrize("said, wanted", [
+    ("Look in our saved briefs: what did the research say about Stanley's launch angle?", "read_file"),
+    ("did you check the briefs we saved?", "list_files"),
+])
+def test_a_question_about_saved_work_finds_the_file_tool(find, said, wanted):
+    """The agent only calls a tool find_tool shows it, so what a person says has to rank the right file tool near the top."""
+    assert wanted in find(said)[:3], find(said)
+
+
+@pytest.mark.stage2
+def test_a_question_about_which_briefs_mention_a_word_finds_the_search(find):
+    """The search is ready-made and is offered to the agent with the edit tool in stage 2, so only then can find_tool list it."""
+    said = "Look in our saved briefs: which of them mention a holiday, and what do they say?"
+    assert "search_files" in find(said)[:3], find(said)
+
+
+@pytest.mark.stage1
+def test_the_research_ask_still_goes_to_the_research_skill(find):
+    """The notes mention research, and a brief ask to research competitors must still rank the research skill first."""
+    said = "Find out how Hydro Flask, Klean Kanteen, Owala, Stanley and Yeti are launching their bottles this season"
+    assert find(said)[0] == "competitor_research", find(said)
+
+
+@pytest.mark.stage2
+@pytest.mark.parametrize("said", [
+    'In our Breeze campaign brief, change "avoid the lifetime-guarantee framing, two competitors use it" to "lead with the five-year warranty" and leave everything else in the file exactly as it is.',
+    "Take out the lifetime-guarantee line from the brief",
+    "Replace the lifetime-guarantee line in the brief with the five-year warranty",
+])
+def test_a_change_to_a_line_finds_the_edit(find, said):
+    """The ask to change one line ranks the edit skill or the edit tool among the first three."""
+    assert {"edit_a_line", "edit_file"} & set(find(said)[:3]), find(said)
+
+
+@pytest.mark.stage2
+@pytest.mark.parametrize("said", [
+    "Look in our saved briefs: which of them mention a holiday, and what do they say?",
+    "did you check the briefs we saved?",
+    "Write a headline for the Breeze poster",
+])
+def test_a_question_does_not_find_the_edit_skill(find, said):
+    """A question about saved work, or a headline, is not an edit, so the edit skill is not in the first two."""
+    assert "edit_a_line" not in find(said)[:2], find(said)
