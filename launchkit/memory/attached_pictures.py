@@ -1,15 +1,16 @@
 """The pictures in one conversation: the ones the marketer attached and the ones the agent made. The picture tools
 work on the newest one. They are kept with the conversation, like its chat history; a new conversation starts with none.
 
-They are kept under data/pictures/<brand>/<person>/<conversation>, a folder of their own that nothing else uses.
-Stage 1 moves them into the conversation's workspace, an attached photo into uploads/.
+They live in the conversation's workspace: an attached photo lands in uploads/, and the list of them is pictures.json
+at the workspace root. Stage 1. Reference page 3, Where the work lives.
 """
 
 import hashlib
 import json
-import shutil
 from pathlib import Path
 
+from launchkit.brands.request import Request
+from launchkit.files.workspace import for_request
 from launchkit.settings import ROOT
 
 NO_PICTURE = ("No poster in this conversation yet. Stop here and tell the marketer: attach the poster to the chat, "
@@ -35,22 +36,25 @@ def sidecar(picture: Path, suffix: str) -> Path | None:
 
 class Pictures:
     def __init__(self, settings, workspace_id: str, user_id: str, session_id: str):
-        self.dir = settings.data_dir / "pictures" / workspace_id / user_id / session_id
-        self.index = self.dir / "pictures.json"
+        self.files = for_request(Request(workspace_id=workspace_id, user_id=user_id, session_id=session_id, text=""), settings)
+        self.index = self.files.root / "pictures.json"
 
     def all(self) -> list[dict]:
         return json.loads(self.index.read_text(encoding="utf-8")) if self.index.exists() else []
 
     def _add(self, path: Path, by: str):
-        self.dir.mkdir(parents=True, exist_ok=True)
+        self.index.parent.mkdir(parents=True, exist_ok=True)
         items = self.all() + [{"file": str(path), "name": Path(path).name, "by": by}]
         self.index.write_text(json.dumps(items, indent=2), encoding="utf-8")
 
     def attach(self, source: Path, name: str | None = None) -> Path:
         """The marketer attached a picture: keep a copy with this conversation."""
-        self.dir.mkdir(parents=True, exist_ok=True)
-        dest = self.dir / Path(name or Path(source).name).name
-        shutil.copyfile(source, dest)
+        return self.attach_bytes(name or Path(source).name, Path(source).read_bytes())
+
+    def attach_bytes(self, name: str, data: bytes) -> Path:
+        """The same, for a picture that arrived over the chat page rather than from a path."""
+        dest = self.files.drawer("uploads") / Path(name).name
+        dest.write_bytes(data)
         self._add(dest, "attached")
         return dest
 
