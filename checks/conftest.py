@@ -88,12 +88,12 @@ def slow_search(settings):
 
 
 def pytest_runtest_logreport(report):
-    if report.when != "call":
+    if report.when != "call" and not report.skipped:
         return
     doc = (report.head_line or "").strip()
     item_doc = getattr(report, "_launchkit_doc", None)
     label = item_doc or doc
-    mark = "PASS" if report.passed else "FAIL"
+    mark = "PASS" if report.passed else "SKIP" if report.skipped else "FAIL"
     print(f"\n{mark}  {label}")
 
 

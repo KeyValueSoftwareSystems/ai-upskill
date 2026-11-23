@@ -16,13 +16,49 @@ A marketing assistant built in steps across the session. A marketer asks for a p
 | `session-02-orchestration-step1`, `step2` | each step's answer |
 | `session-03-memory-step1`, `step2` | agent memory (Session 3): the morning the support queue filled; the room builds the memory fixes here |
 | `session-03-memory-solutions` | every Session 3 memory fix built: the answer |
-| **`session-04-filesystem-prd`** (you are here) | agent file systems (Session 4): Harbor's feature request, built in three stages |
+| `session-04-filesystem-prd` | agent file systems (Session 4): Harbor's feature request, built in three stages |
 | `session-04-filesystem-stage1`, `stage2` | the answer to stage 1, and to stages 1 and 2: check one out if you are stuck |
 | `session-04-filesystem-solutions` | every Session 4 stage built: the answer |
+| **`session-05-runtime-prd`** (you are here) | agent runtime and sandboxing (Session 5): Maya's four conditions, one hands-on, the rest ready-made |
+| `session-05-runtime-solutions` | the hands-on built: the answer, in one commit |
 
 Each branch contains the previous branch's solution. Fall behind, check out the next one.
 
-*PS: For session 4 each commit in the solution branch represents the solution*
+*PS: For sessions 4 and 5 each commit in the solution branch represents the solution*
+
+## Session 5
+
+The agent works things out and makes things in bulk itself: it runs code it writes, walled off, within limits, as a
+job that survives a reload and a restart. The room builds one part, the sandbox: the agent's code moves from a process
+on the server into an OpenSandbox sandbox (github.com/opensandbox-group/OpenSandbox), with limits. The code tool,
+jobs, Stop and resume are ready-made, and the lead runs them live. Read `TICKETS.md`, write your decisions in
+`DECISIONS.md`, and see what is already built in `READY-MADE.md`.
+
+Docker is needed. Install Docker Desktop (Mac, Windows) or Docker Engine (Linux) before the day, then:
+
+```
+uv sync
+uv run python -m launchkit.check_setup   # says whether Docker and the sandbox server are running
+uv run launchkit setup      # puts data/ back the way Breeze's first week left it, builds the sandbox image, fetches OpenSandbox's images
+uv run launchkit sandbox    # in a second terminal: the OpenSandbox server the agent's code runs in; leave it running
+uv run launchkit ui         # in a third: the chat page; sign in as Maya at Harbor and open her Breeze conversation
+uv run pytest checks/test_run.py -m sandbox   # the hands-on's criteria, as code. Red until you build it. Or: launchkit check sandbox
+```
+
+The hands-on's card is `docs/run-1.md`: what to break first, the prompt for your coding agent, and what the prompt
+must not build. The live demos of the ready-made parts are in `docs/run-demos.md`. The scripted models for the failure
+moments are `fake:peek`, `fake:runaway` and `fake:slow_sizes`: type one into **Model**.
+
+### If something breaks
+
+| What you see | What to do |
+| --- | --- |
+| `Docker is not installed` (setup, or a check that says SKIP) | Install Docker Desktop or Docker Engine, start it, and run `uv run launchkit setup` again. Without it, the hands-on becomes a discussion. |
+| `Docker is installed but not running` | Start Docker Desktop, or the Docker service. |
+| `A sandbox image is not ready` | The first build downloads Python's libraries and OpenSandbox's images: check the internet connection and run setup again. |
+| `The code did not run: the sandbox is not available` in the chat | run_code fails closed: start the sandbox server with `uv run launchkit sandbox`, and keep it running. |
+| `uv run launchkit sandbox` says the port is in use | Another program has 127.0.0.1:8090. Stop it, or set `LAUNCHKIT_SANDBOX_HOST=127.0.0.1:<port>` for both `sandbox` and `ui`. |
+| A run fails with a message about a host path not allowed | The server mounts only the folders in `data/sandbox.toml`. Restart `uv run launchkit sandbox`, which writes that file again. |
 
 ## Session 4
 

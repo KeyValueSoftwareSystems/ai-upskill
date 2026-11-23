@@ -27,6 +27,7 @@ dependencies = [
     "transformers<5; sys_platform == 'darwin' and platform_machine == 'x86_64'",
     "pyarrow<26; sys_platform == 'darwin' and platform_machine == 'x86_64'",
     "mcp>=1.20,<2",
+    "opensandbox==1.2.1",
 ]
 
 [project.scripts]
@@ -69,4 +70,6 @@ markers = [
     "stage2: Session 4, build 2: an edit tool",
     "stage3: Session 4, build 3: one check every path passes, and the brand's shared files",
     "stretch: Session 4, optional stretch after build 2: an edit that refuses when the file moved on",
+    "sandbox: Session 5 (test_run.py), the hands-on: the agent's code runs in an OpenSandbox sandbox, with limits",
+    "ready: Session 5 (test_run.py): the ready-made code tool, jobs, Stop and resume",
 ]

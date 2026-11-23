@@ -884,6 +884,7 @@ dependencies = [
     { name = "lancedb", version = "0.40.0", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "mcp" },
     { name = "numpy", version = "1.26.4", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'" },
+    { name = "opensandbox" },
     { name = "pillow" },
     { name = "pyarrow", version = "25.0.1", source = { registry = "https://pypi.org/simple" }, marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'" },
     { name = "pydantic" },
@@ -914,6 +915,7 @@ requires-dist = [
     { name = "lancedb", marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'", specifier = "==0.25.3" },
     { name = "mcp", specifier = ">=1.20,<2" },
     { name = "numpy", marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'", specifier = "<2" },
+    { name = "opensandbox", specifier = "==1.2.1" },
     { name = "pillow", specifier = ">=10.0" },
     { name = "pyarrow", marker = "platform_machine == 'x86_64' and sys_platform == 'darwin'", specifier = "<26" },
     { name = "pydantic", specifier = ">=2.7" },
@@ -1229,6 +1231,24 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e4/99/5f6206494a87edbaa67b35c5212a2cb5e6f414bee5efb0f0672c4704315a/openai-3.29.0.tar.gz", hash = "sha256:bc70a46d97b70ba64daedfcb3227f610a395f297ec68d39f735676190a92be94", size = 1828914, upload-time = "2026-10-11T17:39:41.895Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ef/9a/91285d01a9293d0b3d86167f9c7bd13f08c960d3fa365782751ce9bcbfb1/openai-3.29.0-py3-none-any.whl", hash = "sha256:860d3bad424c5d38cd9ba0a0a2050d558b58ce027596a39f9ccbc0f51a2090b7", size = 2173181, upload-time = "2026-10-11T17:39:39.493Z" },
+]
+
+[[package]]
+name = "opensandbox"
+version = "1.2.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+    { name = "httpcore" },
+    { name = "httpx" },
+    { name = "httpx-sse" },
+    { name = "opentelemetry-api" },
+    { name = "pydantic" },
+    { name = "python-dateutil" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ad/44/55e37c760f28b008051dcc0afcdb09a0d526929f54ce952c5e4a1dbe7967/opensandbox-1.2.1.tar.gz", hash = "sha256:079bdde72fb7cd047de09c04928820cbed7394ab5c537ddda9e5ac108b1855df", size = 339085, upload-time = "2026-11-13T00:34:19.168Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/85/a8/f72a8549ff5d076841c9180bfcea251cc8c64adb9ceb3b6d4b919f84f989/opensandbox-1.2.1-py3-none-any.whl", hash = "sha256:67c9210a06cc2c18e621b34b6b21ce143e04226b6773ea17924783b379a75585", size = 742873, upload-time = "2026-11-13T00:34:17.886Z" },
 ]
 
 [[package]]

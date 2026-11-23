@@ -71,6 +71,10 @@ class Trace:
     def written(self, path: Path):
         self.add("written", path=str(path))
 
+    def code_run(self, code: str, exit_code: int | None, stopped: str | None, seconds: float, characters: int, files: list[str], label: str = ""):
+        """One run of the agent's own code (Session 5): the code itself, how it ended, and what it wrote."""
+        self.add("code_run", code=code, exit_code=exit_code, stopped=stopped, seconds=round(seconds, 1), characters=characters, files=files, label=label)
+
     def picture(self, status: str, **detail):
         self.add("picture", status=status, **detail)
 
@@ -105,6 +109,11 @@ class Trace:
                 return f"search    {d['pattern']!r} · {d['matches']} matches{more}"
             case "file_refused":
                 return f"refused   {d['tool']} {d['path']}: {d['reason']}"
+            case "code_run":
+                ended = f"stopped: {d['stopped']}" if d["stopped"] else f"exit {d['exit_code']}"
+                wrote = f" · wrote {', '.join(d['files'][:3])}" + (f" and {len(d['files']) - 3} more" if len(d["files"]) > 3 else "") if d["files"] else ""
+                label = f"[{d['label']}] " if d.get("label") else ""
+                return f"code      {label}{_short(d['code'], 60)} · {ended} · {d['seconds']} s · {d['characters']} characters back{wrote}"
             case "file_listed":
                 return f"listed    {d['folder']} · {d['files']} files"
             case "reply":

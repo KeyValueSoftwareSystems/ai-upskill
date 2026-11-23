@@ -4,7 +4,7 @@ import re
 import threading
 import time
 import uuid
-from dataclasses import replace
+from dataclasses import asdict, replace
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 from queue import Queue
@@ -23,6 +23,9 @@ from launchkit.files.paths import OutsideWorkspace, resolve_in_workspace
 from launchkit.files.record import entries
 from launchkit.files.workspace import for_request
 from launchkit.guardrails.poster_check import SpecError
+from launchkit.jobs.record import current as current_job, events_after
+from launchkit.jobs.runner import start_job, stop_job
+from launchkit.jobs.steps import resume_jobs
 from launchkit.knowledge.brand_library import asset_path, read_library, workspace_root
 from launchkit.mcp.servers.notion import NotionServer, connected, log_in
 from launchkit.memory.attached_pictures import Pictures
@@ -42,6 +45,7 @@ ASK_WAIT = 300
 MEDIA = {".png", ".jpg", ".jpeg", ".webp", ".mp3", ".wav"}
 SESSION_ID = re.compile(r"[A-Za-z0-9_-]{1,32}")  # a conversation id: the seeded ones (k7c1, t3a9) are not six hex characters
 USER_ID = r"^[a-z0-9-]{1,32}$"  # a login name; it becomes a folder name under data/, so nothing else is accepted
+JOB_ID = r"^j[0-9]{1,6}$"
 
 
 class RunBody(BaseModel):
@@ -51,6 +55,7 @@ class RunBody(BaseModel):
     model: str | None = None
     session_id: str | None = None
     attached: list[str] = []
+    job_id: str | None = None  # set when the turn runs as a job (Session 5)
 
 
 class Answer(BaseModel):
@@ -143,6 +148,10 @@ def new_conversation(workspace_id: str, user_id: str):
 
 @app.post("/run")
 def start_run(body: RunBody):
+    """Start a turn. The turn is a job (launchkit/jobs, ready-made): it runs apart from this request, and a message to a
+    conversation that already has a job running waits for it."""
+    if built(start_job):
+        return start_job(settings, body.model_dump(), run_turn)
     run_id = uuid.uuid4().hex[:8]
     queue: Queue = Queue()
     RUNS[run_id] = queue
@@ -150,15 +159,17 @@ def start_run(body: RunBody):
     return {"run_id": run_id}
 
 
-def ask_on_page(queue: Queue):
+def ask_on_page(emit):
     """The page's version of ask_in_terminal: the run stops, the chat shows Allow and Deny, and the answer comes back
-    through /answer. No answer in five minutes counts as no."""
+    through /answer. No answer in five minutes counts as no. `emit` is where the question goes: the page's queue
+    when there are no jobs, a job's log when there are."""
+    emit = getattr(emit, "put", emit)
 
     def approve(name: str, inputs: dict) -> bool:
         ask_id = uuid.uuid4().hex[:8]
         answered, answer = threading.Event(), {"allow": False}
         ASKS[ask_id] = (answered, answer)
-        queue.put({"type": "ask", "id": ask_id, "name": name, "inputs": inputs})
+        emit({"type": "ask", "id": ask_id, "name": name, "inputs": inputs})
         answered.wait(ASK_WAIT)
         ASKS.pop(ask_id, None)
         return answer["allow"]
@@ -229,22 +240,40 @@ def _echo(trace: Trace, heading: str):
 
 
 def _worker(body: RunBody, queue: Queue):
+    """A turn as it ran before Session 5's jobs: inside the request that started it, reporting only to that page."""
+    try:
+        run_turn(body.model_dump(), queue.put)
+    finally:
+        queue.put(DONE)
+
+
+def run_turn(body: dict, emit, hooks=()):
+    """One turn, start to end: the message goes into the conversation, the main agent runs, and the reply or the error
+    goes into the conversation too. Every event, trace lines included, goes to emit.
+
+    Without jobs, emit puts events on the page's queue. A job's runner calls this with emit writing to the job's event
+    log, and hooks, Agno tool hooks the main agent adds to its own: the job's Stop and its steps. A job's message is the job's id, so a job that starts again after a restart records its files against the
+    same message, and its message is not added to the conversation twice.
+    """
+    body = RunBody(**body)
     trace = Trace()
-    trace.listeners.append(lambda event: queue.put({"type": "trace", "kind": event.kind, "detail": event.detail, "line": trace.line(event)}))
-    _echo(trace, f'run · {body.workspace_id} · {body.user_id} · "{body.text}"')
+    trace.listeners.append(lambda event: emit({"type": "trace", "kind": event.kind, "detail": event.detail, "line": trace.line(event)}))
+    _echo(trace, f'run · {body.workspace_id} · {body.user_id} · "{body.text}"' + (f" · job {body.job_id}" if body.job_id else ""))
     current = replace(settings, model=body.model) if body.model else settings
     refusal = refuse_bad_workspace(body, current)
     if refusal:
-        queue.put({"type": "error", "kind": "UnknownWorkspace", "message": refusal})
-        queue.put(DONE)
+        emit({"type": "error", "kind": "UnknownWorkspace", "message": refusal})
         return
     conversation = _load_conversation(body.workspace_id, body.user_id, body.session_id)
     req = Request(workspace_id=body.workspace_id, user_id=body.user_id, session_id=conversation["session_id"], text=body.text)
-    conversation["turns"].append({"role": "user", "text": body.text, "files": body.attached})
+    last = conversation["turns"][-1] if conversation["turns"] else {}
+    if not (body.job_id and last.get("job") == body.job_id):
+        conversation["turns"].append({"role": "user", "text": body.text, "files": body.attached, **({"job": body.job_id} if body.job_id else {})})
+        _save_conversation(body.workspace_id, body.user_id, conversation)
     started = time.time()
-    message = trace.message = uuid.uuid4().hex[:8]
+    message = trace.message = body.job_id or uuid.uuid4().hex[:8]
     try:
-        result = run_main(req, settings=current, trace=trace, approve=ask_on_page(queue))
+        result = run_main(req, settings=current, trace=trace, approve=ask_on_page(emit), **({"hooks": hooks} if hooks else {}))
         answer = {
             "type": "result",
             "reply": result.reply,
@@ -253,17 +282,16 @@ def _worker(body: RunBody, queue: Queue):
             "memory": {"tokens": result.memory_tokens},
         }
         conversation["turns"].append({"role": "assistant", "reply": answer["reply"], "files": answer["files"]})
-        queue.put(answer)
+        emit(answer)
     except (UnknownWorkspace, SpecError) as error:
         conversation["turns"].append({"role": "error", "kind": type(error).__name__, "message": str(error)})
-        queue.put({"type": "error", "kind": type(error).__name__, "message": str(error), "errors": getattr(error, "errors", None)})
+        emit({"type": "error", "kind": type(error).__name__, "message": str(error), "errors": getattr(error, "errors", None)})
     except Exception as error:
         made = _made_before_failing(current, req, message)
         conversation["turns"].append({"role": "error", "kind": type(error).__name__, "message": str(error), "files": made})
-        queue.put({"type": "error", "kind": type(error).__name__, "message": str(error), "files": made})
+        emit({"type": "error", "kind": type(error).__name__, "message": str(error), "files": made})
     finally:
         _save_conversation(body.workspace_id, body.user_id, conversation)
-        queue.put(DONE)
 
 
 @app.post("/attach")
@@ -349,6 +377,53 @@ async def events(run_id: str):
             yield f"data: {json.dumps(item, default=str)}\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+@app.get("/jobs/now/{workspace_id}/{session_id}")
+def job_now(workspace_id: str, session_id: str):
+    """The job running in this conversation, if any, so a page that was reloaded can pick it up again."""
+    if not built(current_job):
+        raise HTTPException(404, "jobs are not available")
+    job = current_job(settings, workspace_id, session_id)
+    return {"job": asdict(job) if job else None}
+
+
+@app.post("/jobs/{job_id}/stop")
+def job_stop(job_id: str = UrlPart(pattern=JOB_ID)):
+    if not built(stop_job):
+        raise HTTPException(404, "jobs are not available")
+    return {"status": stop_job(settings, job_id).status}
+
+
+@app.get("/jobs/{job_id}/events")
+async def job_events(request: HttpRequest, job_id: str = UrlPart(pattern=JOB_ID), after: int = 0):
+    """A job's events from number `after` on, then each new one as it happens. A page that reconnects says where it got
+    to, in the after= address or in the Last-Event-ID header the browser sends by itself, and misses nothing."""
+    if not built(events_after):
+        raise HTTPException(404, "jobs are not available")
+    last = request.headers.get("last-event-id", "")
+    seen = max(after, int(last)) if last.isdigit() else after
+
+    async def stream():
+        seq = seen
+        while True:
+            for event in events_after(settings, job_id, seq):
+                seq = event["seq"]
+                yield f"id: {seq}\ndata: {json.dumps(event, default=str)}\n\n"
+                if event.get("type") == "end":
+                    yield "event: done\ndata: {}\n\n"
+                    return
+            await asyncio.sleep(0.3)
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+@app.on_event("startup")
+def resume_on_start():
+    """A job the last server left running starts again, from where its steps had got to."""
+    if built(resume_jobs):
+        for job_id in resume_jobs(settings, run_turn):
+            print(f"resumed job {job_id}", flush=True)
 
 
 @app.get("/outputs/{name}")

@@ -38,6 +38,10 @@ main{flex:1;display:grid;grid-template-columns:minmax(320px,1fr) minmax(360px,1.
 .media{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:8px}
 .media figure{margin:0;font:11.5px ui-monospace,Menlo,monospace;color:var(--muted);word-break:break-all}
 .media img{margin:0 0 4px}
+.jobbar{display:flex;gap:10px;align-items:center;padding:8px 18px;border-top:1px solid var(--line);background:var(--model-soft);font-size:13.5px}
+.jobbar[hidden]{display:none}
+.jobbar #jobText{flex:1}
+.msg.waiting{border-color:var(--model);color:var(--ink);font-style:normal}
 .compose{display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line);background:var(--surface)}
 .compose input{flex:1}
 .compose .attach{cursor:pointer;align-self:center;font-size:20px}
@@ -103,7 +107,7 @@ header button.quiet.on{color:var(--accent);border-color:var(--accent);background
   <label>Person <select id="person"></select></label>
   <label>Conversation <select id="session"></select></label>
   <label>Model <input id="model" list="models" placeholder="from .env" size="11"></label>
-  <datalist id="models"><option value="fake:tools"><option value="fake:brief"><option value="fake:memory"></datalist>
+  <datalist id="models"><option value="fake:tools"><option value="fake:brief"><option value="fake:memory"><option value="fake:peek"><option value="fake:runaway"><option value="fake:slow_sizes"></datalist>
   <button class="quiet" id="new">New conversation</button>
   <button class="quiet" id="onboardToggle">Onboard a brand</button>
   <button class="quiet" id="libraryToggle">Brand library</button>
@@ -133,6 +137,7 @@ header button.quiet.on{color:var(--accent);border-color:var(--accent);background
 <main>
   <section class="chat">
     <div class="messages" id="messages"><div class="msg empty">Loading…</div></div>
+    <div class="jobbar" id="jobbar" hidden><span id="jobText"></span><button class="quiet" id="stop" type="button">Stop</button></div>
     <form class="compose" id="form">
       <label class="attach" title="Attach a picture">📎<input id="attachFile" type="file" accept="image/png,image/jpeg,image/webp" hidden></label>
       <span id="attached" class="hint"></span>
@@ -191,6 +196,7 @@ async function loadConversation(sessionId){
   $("messages").innerHTML = ""; $("poster").innerHTML = '<div class="empty">What the agent made this turn appears here: finished work only, never drafts.</div>';
   if (!data.turns.length) add("empty", `Signed in as ${esc($("person").selectedOptions[0].textContent)} at ${esc($("brand").selectedOptions[0].textContent)}. Ask the agent for something.`);
   data.turns.forEach(renderTurn);
+  pickUpJob();
 }
 function fillPeople(){
   const b = $("brand").value; const sel = $("person"); sel.innerHTML = "";
@@ -381,40 +387,81 @@ $("attachFile").onchange = async () => {
   if (!res.ok) { add("error", `<b>Not attached</b>\n${esc((await res.json()).detail || res.statusText)}`); return; }
   ATTACHED.push(await res.json()); $("attached").textContent = "attached: " + ATTACHED.map(a => a.name).join(", "); $("attachFile").value = "";
 };
+// One turn's events, wherever they come from: the page's own run, or a job's log.
+function working(label){
+  const pending = add("pending", `${label} 0s`);
+  const t0 = Date.now(); let stage = "";
+  const show = () => { pending.textContent = `${label} ${Math.round((Date.now() - t0) / 1000)}s${stage}`; };
+  const tick = setInterval(show, 1000);
+  return {
+    pending,
+    stage(line){ stage = " · " + line.replace(/\s+/g, " ").slice(0, 70); show(); },
+    finish(){ clearInterval(tick); pending.remove(); $("send").disabled = false; },
+  };
+}
+function handle(ev, w, state){
+  if (ev.type === "trace") { traceLine(ev); w.stage(ev.line); }
+  if (ev.type === "trace" && ev.kind === "warning") { add("error", esc(ev.detail.text)); showNotion(); }
+  if (ev.type === "result" || ev.type === "error") state.answered = true;
+  if (ev.type === "ask") showAsk(ev);
+  if (ev.type === "result") { renderTurn({ role: "assistant", reply: ev.reply, files: ev.files }); showView(ev.view, ev.memory); }
+  if (ev.type === "error") { sendAgain(add("error", `<b>${esc(ev.kind)}</b>\n${esc(ev.message)}${mediaHtml(ev.files)}`)); if (ev.files && ev.files.length) $("poster").innerHTML = mediaHtml(ev.files); }
+  if (ev.type === "waiting") add("pending waiting", esc(ev.text));
+  if (ev.type === "end" && ev.status === "stopped") { state.answered = true; add("error", "<b>Stopped</b>\nThe job was stopped. Nothing it started is still running."); }
+}
+
+// Stage 4 on: a job runs apart from the page. The page follows its event log, and a reload picks it up again.
+let JOB = null;
+function showJob(job, text){ JOB = job; $("jobbar").hidden = !job; $("jobText").textContent = job ? `Job ${job} · ${text}` : ""; $("stop").disabled = false; }
+$("stop").onclick = async () => {
+  if (!JOB) return;
+  $("stop").disabled = true; $("jobText").textContent = `Job ${JOB} · stopping…`;
+  await fetch(`/jobs/${JOB}/stop`, { method: "POST" });
+};
+function followJob(jobId, label){
+  const w = working(label); const state = { answered: false };
+  $("send").disabled = false;  // a message sent now waits for this job, and the page says so
+  showJob(jobId, "running");
+  const es = new EventSource(`/jobs/${jobId}/events?after=0`);
+  es.onmessage = m => { const ev = JSON.parse(m.data); handle(ev, w, state); if (ev.type === "trace") $("jobText").textContent = `Job ${jobId} · running · ${ev.line.replace(/\s+/g, " ").slice(0, 60)}`; };
+  es.addEventListener("done", () => { es.close(); w.finish(); showJob(null); refreshSessions(); if ($("memory").classList.contains("on")) loadMemory(); pickUpJob(); });
+  // When the connection drops, the browser reconnects by itself and says which event it got to: nothing is missed.
+}
+async function pickUpJob(){
+  const w = who(); if (!w.workspace_id || !session || JOB) return;
+  const r = await fetch(`/jobs/now/${w.workspace_id}/${session}`);
+  if (!r.ok) return;  // jobs are not built yet
+  const { job } = await r.json();
+  if (!job) return;
+  $("trace").innerHTML = "";
+  if (job.waiting && job.waiting.length) add("pending waiting", `${job.waiting.length} message${job.waiting.length > 1 ? "s" : ""} waiting for job ${job.id} to finish.`);
+  followJob(job.id, `Working on job ${job.id}…`);
+}
+
 $("form").onsubmit = async e => {
   e.preventDefault();
   const text = $("text").value.trim(); if (!text) return;
   const w = who(); if (!w.workspace_id || !w.user_id) return;
   const attached = AGAIN || ATTACHED.map(a => a.url); AGAIN = null; LAST = { text, attached };
   add("user", esc(text) + mediaHtml(attached)); $("text").value = ""; ATTACHED = []; $("attached").textContent = "";
-  $("trace").innerHTML = ""; $("send").disabled = true;
-  const pending = add("pending", "Working… 0s");
-  const t0 = Date.now(); let stage = "";
-  const show = () => { pending.textContent = `Working… ${Math.round((Date.now() - t0) / 1000)}s${stage}`; };
-  const tick = setInterval(show, 1000);
-  let answered = false;
-  const finish = () => { clearInterval(tick); pending.remove(); $("send").disabled = false; };
+  $("send").disabled = true;
   const body = { ...w, text, session_id: session, model: $("model").value.trim() || null, attached };
-  let run_id;
+  let started;
   try {
-    ({ run_id } = await (await fetch("/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json());
+    started = await (await fetch("/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })).json();
   } catch (err) {
-    finish(); sendAgain(add("error", `<b>No answer</b>\nThe page could not reach its server. Is <code>uv run launchkit ui</code> still running?`)); return;
+    $("send").disabled = false; sendAgain(add("error", `<b>No answer</b>\nThe page could not reach its server. Is <code>uv run launchkit ui</code> still running?`)); return;
   }
-  const es = new EventSource(`/events/${run_id}`);
-  es.onmessage = m => {
-    const ev = JSON.parse(m.data);
-    if (ev.type === "trace") { traceLine(ev); stage = " · " + ev.line.replace(/\s+/g, " ").slice(0, 70); show(); }
-    if (ev.type === "trace" && ev.kind === "warning") { add("error", esc(ev.detail.text)); showNotion(); }
-    if (ev.type === "result" || ev.type === "error") answered = true;
-    if (ev.type === "ask") showAsk(ev);
-    if (ev.type === "result") { renderTurn({ role: "assistant", reply: ev.reply, files: ev.files }); showView(ev.view, ev.memory); }
-    if (ev.type === "error") { sendAgain(add("error", `<b>${esc(ev.kind)}</b>\n${esc(ev.message)}${mediaHtml(ev.files)}`)); if (ev.files && ev.files.length) $("poster").innerHTML = mediaHtml(ev.files); }
-  };
-  es.addEventListener("done", () => { es.close(); finish(); refreshSessions(); if ($("memory").classList.contains("on")) loadMemory(); });
+  if (started.waiting) { $("send").disabled = false; return; }  // the running job's log says it waits, and the page shows that
+  if (started.job_id) { $("trace").innerHTML = ""; if (JOB !== started.job_id) followJob(started.job_id, "Working…"); return; }
+  $("trace").innerHTML = "";
+  const wk = working("Working…"); const state = { answered: false };
+  const es = new EventSource(`/events/${started.run_id}`);
+  es.onmessage = m => handle(JSON.parse(m.data), wk, state);
+  es.addEventListener("done", () => { es.close(); wk.finish(); refreshSessions(); if ($("memory").classList.contains("on")) loadMemory(); });
   es.onerror = () => {
-    es.close(); finish();
-    if (!answered) sendAgain(add("error", `<b>No answer</b>\nThe page lost the connection to its server before the run finished. Check the page server and the proxy, then send again.`));
+    es.close(); wk.finish();
+    if (!state.answered) sendAgain(add("error", `<b>No answer</b>\nThe page lost the connection to its server before the run finished. Check the page server and the proxy, then send again.`));
   };
 };
 </script>

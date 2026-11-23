@@ -18,6 +18,13 @@ What it makes, and which requirement each part is there for:
     data/files/ember/t3a9/outputs/  Jonas's own folder, empty, so a path can climb out of it  (5)
     data/files/ember/t3a9-old/  a conversation named like Jonas's t3a9, which is the prefix case  (5)
 
+Session 5 adds, on top of Session 4's state:
+
+    data/files/harbor/k7c1/uploads/breeze-results.csv   Breeze's first week of ads, one row per channel per day  (S5: 1, 3)
+    data/files/harbor/k7c1/outputs/breeze-poster.png    the approved Breeze poster the fourteen sizes are cut from (S5: 4, 5)
+    data/files/ember/t3a9/uploads/autumn-results.csv    Jonas's own results file, the one he asks the agent to tidy (S5: 2)
+    data/jobs/                                          emptied, so no job from an earlier run is left over       (S5: 4, 5)
+
 Everything except Maya's approved campaign brief lands in shared folders on purpose. That is the system the room inherits.
 
     data/conversations/harbor/maya/k7c1.json    Maya's Breeze conversation, with a fixed id          (all)
@@ -147,7 +154,79 @@ CONVERSATIONS = {
 
 # Only these are the seed's to own. data/ also holds conversations, the brand index and Session 3's memory
 # database, so this never removes the data directory itself.
-SEEDED = ("outputs", "sizes", "audio", "uploads", "competitors", "files")
+SEEDED = ("outputs", "sizes", "audio", "uploads", "competitors", "files", "jobs")
+
+CHANNELS = ("Search", "Social", "Video", "Email", "Display")
+# Per channel: spend a day in pounds, impressions, click rate, and the share of clicks that sign up.
+CHANNEL_SHAPE = {
+    "Search": (420, 38000, 0.040, 0.040),
+    "Social": (610, 120000, 0.020, 0.040),
+    "Video": (880, 210000, 0.0052, 0.047),
+    "Email": (95, 18000, 0.040, 0.022),
+    "Display": (300, 160000, 0.004, 0.034),
+}
+
+
+def breeze_results() -> str:
+    """Breeze's first week of ads, 14 to 20 November, one row per channel per day, as Maya downloads it.
+
+    Built so that reading it by eye gives the wrong answer. Email is the cheapest channel per sign-up on most single
+    days, and one bad day makes it lose over the week; Social and Search are close. Only adding the columns up says
+    which channel is cheapest, which is what Session 5's first demo is about.
+    """
+    import random
+
+    rng = random.Random(5)
+    rows = ["date,channel,spend,impressions,clicks,signups"]
+    for day in range(14, 21):
+        for channel in CHANNELS:
+            spend, impressions, click_rate, signup_rate = CHANNEL_SHAPE[channel]
+            spend = round(spend * rng.uniform(0.85, 1.15), 2)
+            impressions = int(impressions * rng.uniform(0.85, 1.15))
+            clicks = int(impressions * click_rate * rng.uniform(0.9, 1.1))
+            signups = int(clicks * signup_rate * rng.uniform(0.85, 1.15))
+            if channel == "Email" and day == 18:  # the send that went to the wrong list
+                spend, signups = round(spend * 4.5, 2), 0
+            if channel == "Email" and day != 18:
+                signups = int(signups * 1.45)
+            rows.append(f"2026-11-{day},{channel},{spend:.2f},{impressions},{clicks},{signups}")
+    return "\n".join(rows) + "\n"
+
+
+AUTUMN_RESULTS = """Date , Channel,Spend (GBP),Clicks ,Sign ups
+14/11/2026, social ,"1,204.50", 1830,61
+14/11/2026,Search,  612.00,940 , 38
+15/11/2026, Social,"1,180.00",1795 ,58
+15/11/2026,search ,598.40, 911,36
+16/11/2026,SOCIAL,"1,250.10", 1902, 64
+16/11/2026,Search,630.00,968 ,39
+"""
+
+
+def breeze_poster() -> bytes:
+    """The approved Breeze poster, 1080 by 1350: a picture with real pixels, because the jobs demo cuts fourteen sizes from it."""
+    import io
+
+    from PIL import Image, ImageDraw, ImageFont
+
+    width, height = 1080, 1350
+    picture = Image.new("RGB", (width, height))
+    draw = ImageDraw.Draw(picture)
+    top, bottom = (16, 42, 67), (143, 190, 180)
+    for y in range(height):
+        share = y / height
+        draw.line([(0, y), (width, y)], fill=tuple(int(a + (b - a) * share) for a, b in zip(top, bottom)))
+    draw.rounded_rectangle([440, 430, 640, 1080], radius=60, fill=(222, 231, 228), outline=(16, 42, 67), width=6)
+    draw.rectangle([480, 380, 600, 440], fill=(16, 42, 67))
+    try:
+        big, small = ImageFont.load_default(size=110), ImageFont.load_default(size=48)
+    except TypeError:  # an older Pillow has one fixed-size font
+        big = small = ImageFont.load_default()
+    draw.text((width / 2, 170), "Breeze", font=big, fill=(240, 244, 242), anchor="mm")
+    draw.text((width / 2, 1220), "Keep using it.", font=small, fill=(16, 42, 67), anchor="mm")
+    out = io.BytesIO()
+    picture.save(out, format="PNG")
+    return out.getvalue()
 
 
 def build(data: Path) -> None:
@@ -188,6 +267,14 @@ def build(data: Path) -> None:
     (breeze / "outputs" / "campaign-brief.md").write_text("\n".join(CAMPAIGN_BRIEF), encoding="utf-8")
     # Jonas's own folder, empty. A path cannot climb out of a folder that is not there, so stage 3's attack needs it.
     (data / "files" / "ember" / "t3a9" / "outputs").mkdir(parents=True, exist_ok=True)
+
+    # Session 5: Breeze's first week of ads and its approved poster in Maya's conversation, and Jonas's own results.
+    (breeze / "uploads").mkdir(parents=True, exist_ok=True)
+    (breeze / "uploads" / "breeze-results.csv").write_text(breeze_results(), encoding="utf-8")
+    (breeze / "outputs" / "breeze-poster.png").write_bytes(breeze_poster())
+    jonas_uploads = data / "files" / "ember" / "t3a9" / "uploads"
+    jonas_uploads.mkdir(parents=True, exist_ok=True)
+    (jonas_uploads / "autumn-results.csv").write_text(AUTUMN_RESULTS, encoding="utf-8")
 
     # Conversations with fixed ids, so the room can name another brand's workspace. Only these three are the seed's.
     for (brand, person, session), turns in CONVERSATIONS.items():

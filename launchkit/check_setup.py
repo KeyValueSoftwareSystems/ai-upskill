@@ -263,6 +263,27 @@ def check_data_dir(c: Check) -> None:
         c.fail(f"Cannot write to {DATA} ({err.strerror}). Check the folder's permissions or clone the repo somewhere you own")
 
 
+def check_docker(c: Check) -> None:
+    """Session 5 runs the agent's code in an OpenSandbox sandbox, and OpenSandbox starts each one with Docker."""
+    from .sandbox.engine import EGRESS_IMAGE, EXECD_IMAGE, HOST, IMAGE, docker_problem, image_ready, server_reachable
+
+    c.start("Docker (Session 5's sandbox)")
+    problem = docker_problem()
+    if problem:
+        c.fail(f"{problem}. Without Docker the code runs only as a local process, and the hands-on becomes a discussion")
+        return
+    missing = [image for image in (IMAGE, EXECD_IMAGE, EGRESS_IMAGE) if not image_ready(image)]
+    if missing:
+        c.ok(f"running; `uv run launchkit setup` builds or fetches {', '.join(missing)}")
+    else:
+        c.ok("running, the sandbox images ready")
+    c.start("Sandbox server (Session 5)")
+    if server_reachable():
+        c.ok(f"running at {HOST}")
+    else:
+        c.skip("not running. Start it in a second terminal with `uv run launchkit sandbox` when the session needs it")
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Check that your LaunchKit setup is ready.")
     parser.add_argument("--no-image", action="store_true", help="skip the paid picture call (LAUNCHKIT_IMAGE_PROVIDER=litellm only)")
@@ -294,6 +315,7 @@ def main(argv: list[str] | None = None) -> int:
         check_image(c, api_blocked or ("--no-image" if args.no_image else None))
 
     check_data_dir(c)
+    check_docker(c)
 
     print()
     if c.failed:

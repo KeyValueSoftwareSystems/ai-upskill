@@ -34,6 +34,7 @@ from launchkit.memory.scope import held_back
 from launchkit.tools.save_memory import memory_entries
 from launchkit.tools.edit_file import make_edit_file
 from launchkit.tools.list_files import make_list_files
+from launchkit.tools.run_code import make_run_code
 from launchkit.tools.read_file import make_read_file
 from launchkit.tools.search_files import make_search_files
 from launchkit.tools.write_file import make_write_file
@@ -87,6 +88,8 @@ def file_paragraph(tools: set[str]) -> str:
         "If you do not know a saved file's exact name, call list_files first; never guess one.",
         "If the marketer asks whether you looked at, used or saved something, check the workspace with list_files before you answer.",
     ]
+    if "run_code" in tools:  # Session 5
+        sentences.append("When an answer depends on figures in a file, work them out with run_code: write Python that reads the file and prints the figures, then answer from what it printed, and say which file it read. Never work figures out by reading the table yourself.")
     return " ".join(sentences)
 
 
@@ -127,7 +130,7 @@ def placements_text(ws) -> str:
     return "This brand's placements (every size): " + ", ".join(sizes) + "." if sizes else ""
 
 
-def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue, pictures: Pictures | None = None, user_id: str = "", session_id: str = "") -> Agent:
+def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, catalogue: Catalogue, pictures: Pictures | None = None, user_id: str = "", session_id: str = "", hooks=()) -> Agent:
     ctx.set("rules", f"{ws.soul}\n\n{ws.agents}\n\n{placements_text(ws)}")
     warnings = " ".join(e.detail["text"] for e in trace.events if e.kind == "warning")
     ctx.set("facts", f"Today is {date.today():%-d %B %Y}. {warnings} {pictures.describe() if pictures else ''}".strip())
@@ -151,7 +154,8 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
         # catalogue tool of kind "write", so it goes through run_tool and asks first.
         update_memory_on_run=False,
         tools=loose(catalogue.agent_tools()),
-        tool_hooks=[make_leash(replace(settings.limits, step_cap=MAIN_STEP_CAP), trace)],
+        # Session 5: a job adds its own hooks here, its Stop and its steps.
+        tool_hooks=[make_leash(replace(settings.limits, step_cap=MAIN_STEP_CAP), trace), *hooks],
         telemetry=False,
     )
 
@@ -159,6 +163,8 @@ def build_main_agent(ws, ctx: ContextBuilder, model, settings, trace: Trace, cat
 def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws: Workspace | None = None, user: str = "maya", pictures: Pictures | None = None, files=None, message: str = "") -> Catalogue:
     ws = ws or load_workspace("harbor", settings, trace)
     file_tools = [make_read_file(files, trace), make_list_files(files, trace), make_write_file(files, trace, message), make_search_files(files, trace), make_edit_file(files, trace, message)] if files is not None else []
+    # Session 5: the code tool.
+    code_tools = [make_run_code(files, trace, message)] if files is not None else []
     outputs = files.drawer("outputs") if files is not None else None
     desk = PictureDesk(settings, ws.colours, trace, model, pictures.newest if pictures else None, pictures.size_made if pictures else None, files, message)
     entries: list[Entry] = [
@@ -172,6 +178,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
         text_to_speech_entry(settings, model, files, message),
         *(board.entries() if board else server_entries(settings, trace, user)),
         *file_tools,
+        *code_tools,
         *make_research_entries(model, settings, trace, write=(lambda: make_write_file(files, trace, message).fn) if files is not None else None),
         *memory_entries(settings, lambda: memory_manager(settings, trace, model), user, namespace=ws.id),
     ]
@@ -181,7 +188,7 @@ def build_catalogue(settings, trace: Trace, approve, board=None, model=None, ws:
 
 
 @closes_its_mcp_links
-def run_main(req: Request, *, settings=default_settings, model=None, trace: Trace | None = None, approve=ask_in_terminal, board=None, attach=()) -> MainResult:
+def run_main(req: Request, *, settings=default_settings, model=None, trace: Trace | None = None, approve=ask_in_terminal, board=None, attach=(), hooks=()) -> MainResult:
     trace = trace if trace is not None else Trace()
     trace.message = trace.message or uuid.uuid4().hex[:8]
     settings.data_dir.mkdir(parents=True, exist_ok=True)
@@ -200,7 +207,7 @@ def run_main(req: Request, *, settings=default_settings, model=None, trace: Trac
     catalogue = build_catalogue(settings, trace, approve, board, model, ws, req.user_id, pictures, files, message=trace.message)
     ctx = ContextBuilder(settings.budgets)
     session = f"{wid}:{req.user_id}:{req.session_id}:main"
-    agent = build_main_agent(ws, ctx, model, settings, trace, catalogue, pictures, req.user_id, session)
+    agent = build_main_agent(ws, ctx, model, settings, trace, catalogue, pictures, req.user_id, session, hooks)
     before = user_memories(session_db(settings), req.user_id)
     held = [m for m in before if held_back(m.memory, settings)]
     trace.memory("loaded", rows=len(before) - len(held), held=len(held), tokens=next(r["tokens"] for r in ctx.report() if r["section"] == "memory"), by=settings.memory_model if built(memory_manager) and not isinstance(model, FakeModel) else model_name(model))
