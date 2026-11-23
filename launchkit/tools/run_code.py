@@ -4,15 +4,12 @@ The model is bad at arithmetic by eye: asked for the cheapest channel in Breeze'
 answers in two conversations, and neither matched the sums. run_code lets it write the sums as code instead, run
 them, and answer from what the code printed.
 
-Today the code runs as a separate process on this machine (launchkit/sandbox/local.py), in this conversation's
-folder, so it opens uploads/breeze-results.csv by that name. A run has a time limit; past it, the process and
-everything it started are killed and the agent is told why. What it printed goes back cut to a set size, with a line
-saying how much was cut. Every file it wrote or changed goes into the record, so the chat page shows it with the
-message that asked for it.
-
-What it does not do yet: the process inherits the server's environment, keys included, can open any file the server
-can, and can use the whole machine. The hands-on (docs/run-1.md) moves the run into an OpenSandbox sandbox, with
-limits: run_code calls run_in_sandbox instead of run_here, and fails closed when no sandbox can be made.
+The code runs in an OpenSandbox sandbox (launchkit/sandbox/opensandbox.py, the hands-on) that sees only this
+conversation's folder, at /work, and the brand's own files, read only, at /brand. The code still opens
+uploads/breeze-results.csv by that name. Every run is held to the limits in launchkit/sandbox/limits.py, and the
+agent and the trace say which one stopped it. Without the sandbox server the code does not run at all: the tool
+fails closed. What it printed goes back cut to a set size, with a line saying how much was cut. Every file it wrote
+or changed goes into the record, so the chat page shows it with the message that asked for it.
 
 Reference page 3, Why an agent runs code, and page 4, What a code tool hands back.
 """
@@ -20,8 +17,9 @@ Reference page 3, Why an agent runs code, and page 4, What a code tool hands bac
 from pathlib import Path
 
 from launchkit.files.record import Record
+from launchkit.sandbox import engine
 from launchkit.sandbox.limits import RunLimits
-from launchkit.sandbox.local import run_here
+from launchkit.sandbox.opensandbox import run_in_sandbox
 from launchkit.tools.catalogue import Entry
 
 NOT_ARTIFACTS = {"artifacts.jsonl", "pictures.json"}  # the workspace's own bookkeeping, never something the code made
@@ -29,8 +27,9 @@ NOT_ARTIFACTS = {"artifacts.jsonl", "pictures.json"}  # the workspace's own book
 NOTE = (
     "pick me to work out figures, totals, averages, rankings or a table from a file in this conversation, such as "
     "uploads/breeze-results.csv, by writing Python that reads the file and prints the answer; also to make files with "
-    "code, such as a chart or every size of a picture. The code runs in this conversation's folder. Python's standard "
-    "library, numpy and Pillow are there. label names what the run makes, such as cost-per-signup"
+    "code, such as a chart or every size of a picture. The code runs in a sandbox, in this conversation's folder at "
+    "/work, with the brand's own files read-only at /brand. pandas, matplotlib, numpy and Pillow are there; there is "
+    "no internet. label names what the run makes, such as cost-per-signup"
 )
 
 
@@ -59,14 +58,20 @@ def make_run_code(workspace, trace, message: str = "", limits: RunLimits | None 
     record = Record(workspace.root)
     reasons = {
         "time": f"the run went past its time limit of {limits.seconds} seconds",
+        "memory": f"the run used more than its memory limit of {limits.memory_mb} MB",
+        "processes": f"the run tried to start more than {limits.processes} processes",
         "killed": "the run was killed from outside, by Stop or by the machine",
     }
 
     def run_code(code: str, label: str = "") -> str:
         """Run Python on this conversation's files and return what it printed."""
         workspace.root.mkdir(parents=True, exist_ok=True)
+        problem = engine.server_problem()
+        if problem:  # fail closed: without the sandbox the code does not run at all, rather than run unguarded
+            trace.refused("run_code", f"no sandbox: {problem}")
+            return f"The code did not run: the sandbox is not available ({problem})."
         before = snapshot(workspace.root)
-        ran = run_here(workspace, code, limits)
+        ran = run_in_sandbox(workspace, code, limits)
         files = written_since(workspace.root, before)
         for path in files:
             record.add(Path(path), "run_code", message)

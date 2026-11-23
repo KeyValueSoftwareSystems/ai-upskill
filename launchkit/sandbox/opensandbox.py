@@ -1,15 +1,13 @@
 """The hands-on: run the agent's code in an OpenSandbox sandbox, with limits.
 
-Not built yet. The room builds it after watching fake:peek and fake:runaway (docs/run-1.md).
-
 The ready-made runner in local.py starts the code as a child of the server. On the chat page, the code Jonas's agent
 wrote to tidy his results printed LaunchKit's keys and listed Harbor's folder, and `fake:runaway` took every core
 and a gigabyte of memory while Jonas's poster waited. Turning off a file tool does not take away the ability to read
 files, because code can open them itself. So the code runs somewhere that cannot see them, with a budget it cannot
 exceed.
 
-What it must do. One sandbox per run. run_in_sandbox asks the OpenSandbox server (engine.py) for a new sandbox,
-runs the code in it, and destroys it, whatever happened. The sandbox:
+One sandbox per run. run_in_sandbox asks the OpenSandbox server (engine.py) for a new sandbox, runs the code in it,
+and destroys it, whatever happened. The sandbox:
 
     image        engine.IMAGE: Python with pandas, matplotlib, numpy and Pillow
     /work        this conversation's folder, read and write; the code starts there
@@ -29,11 +27,13 @@ Reference page 6, How strong the isolation is, page 9, The network, and page 10,
 """
 
 import os
+import shlex
+import time
+from datetime import timedelta
 
 from launchkit.files.workspace import Workspace
-from launchkit.sandbox import Ran
-from launchkit.sandbox.limits import RunLimits
-from launchkit.tools.catalogue import todo
+from launchkit.sandbox import Ran, engine
+from launchkit.sandbox.limits import RunLimits, stop_reason
 
 # An empty environment: env -i drops even what the image set, and only what Python needs is put back.
 CLEAN_ENV = ["env", "-i", "PATH=/usr/local/bin:/usr/bin:/bin", "HOME=/tmp", "MPLCONFIGDIR=/tmp", "LANG=C.UTF-8"]
@@ -46,14 +46,57 @@ def sandbox_user() -> tuple[int, int]:
     return 10001, 10001
 
 
-@todo
 def oom_kills(sandbox) -> int:
-    """How many times the kernel has killed a process in this sandbox for memory: the oom_kill line of
-    /sys/fs/cgroup/memory.events, read inside the sandbox. 0 when it cannot be read."""
-    raise NotImplementedError("the hands-on builds oom_kills")
+    """How many times the kernel has killed a process in this sandbox for memory. 0 when it cannot be read: a run
+    that used up the process limit leaves no room to start `cat`."""
+    try:
+        execution = sandbox.commands.run("cat /sys/fs/cgroup/memory.events")
+        text = "\n".join(m.text for m in execution.logs.stdout)
+        counts = dict(line.split() for line in text.splitlines() if len(line.split()) == 2)
+        return int(counts.get("oom_kill", 0))
+    except Exception:
+        return 0
 
 
-@todo
 def run_in_sandbox(workspace: Workspace, code: str, limits: RunLimits) -> Ran:
     """Run `code` with Python in a new sandbox that sees only this conversation, and give back what happened."""
-    raise NotImplementedError("the hands-on builds run_in_sandbox")
+    from opensandbox.exceptions import SandboxException
+    from opensandbox.models.execd import RunCommandOpts
+    from opensandbox.models.sandboxes import Host, NetworkPolicy, Volume
+    from opensandbox.sync.sandbox import SandboxSync
+
+    uid, gid = sandbox_user()
+    sandbox = SandboxSync.create(
+        engine.IMAGE,
+        connection_config=engine.connection(),
+        timeout=timedelta(seconds=limits.seconds + 60),   # a backstop: the server ends it even if LaunchKit never does
+        env={},
+        metadata=engine.labels(workspace.brand, workspace.conversation),
+        resource={"cpu": str(limits.cpus), "memory": f"{limits.memory_mb}Mi"},
+        network_policy=NetworkPolicy(default_action="deny", egress=[]),
+        volumes=[
+            Volume(name="work", host=Host(path=str(workspace.root.resolve())), mount_path="/work", read_only=False),
+            Volume(name="brand", host=Host(path=str(workspace.shared.resolve())), mount_path="/brand", read_only=True),
+        ],
+    )
+    started = time.monotonic()
+    try:
+        try:
+            execution = sandbox.commands.run(
+                shlex.join([*CLEAN_ENV, "python", "-I", "-c", code]),
+                opts=RunCommandOpts(working_directory="/work", timeout=timedelta(seconds=limits.seconds), uid=uid, gid=gid),
+            )
+        except SandboxException:   # the sandbox went away mid-run: Stop killed it, or the machine did
+            return Ran(None, "", "killed", time.monotonic() - started)
+        seconds = time.monotonic() - started
+        messages = sorted(execution.logs.stdout + execution.logs.stderr, key=lambda m: m.timestamp)
+        output = "\n".join(m.text.rstrip("\n") for m in messages)
+        timed_out = seconds >= limits.seconds - 0.5
+        exit_code = None if timed_out else execution.exit_code
+        oom_killed = bool(exit_code) and oom_kills(sandbox) > 0
+        return Ran(exit_code, output, stop_reason(exit_code, timed_out, oom_killed, output), seconds)
+    finally:
+        try:
+            sandbox.kill()
+        finally:
+            sandbox.close()
