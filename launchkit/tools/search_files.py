@@ -10,14 +10,13 @@ About fifteen lines of Python rather than a wrapper around ripgrep. `rg` is not 
 Windows or most Linux images, and nobody should spend session time installing one. Most coding editors do bundle
 their own copy for speed, which is worth saying in the room and is not what this needs to be.
 
-Stage 3 sends its folder through the one check every path passes, like the other tools.
+It does not check its folder yet: stage 3 sends every path through one check, and the search is one of its callers.
 
 Reference page 4, Finding a file, and page 5, What an index costs to keep true.
 """
 
 import re
 
-from launchkit.files.paths import OutsideWorkspace, refuse, resolve_in_workspace
 from launchkit.tools.catalogue import Entry
 from launchkit.tools.notes import SEARCH_FILES
 
@@ -41,10 +40,7 @@ def snippet(line: str, wanted: str) -> str:
 def make_search_files(workspace, trace) -> Entry:
     def search_files(pattern: str, folder: str = ".") -> str:
         """Find which of this conversation's files mention a word or phrase, and on which line, before reading any of them."""
-        try:
-            root = resolve_in_workspace(workspace.root, folder)
-        except OutsideWorkspace as error:
-            return refuse(trace, "search_files", folder, error.reason)
+        root = workspace.root / folder
         wanted = pattern.lower()
         matches, stopped = [], False
         for file in sorted(root.rglob("*")) if root.is_dir() else []:
@@ -55,7 +51,7 @@ def make_search_files(workspace, trace) -> Entry:
                     if len(matches) == MAX_MATCHES:
                         stopped = True
                         break
-                    matches.append(f"{file.relative_to(workspace.root.resolve()).as_posix()}:{number}: {snippet(line.strip(), wanted)}")
+                    matches.append(f"{file.relative_to(workspace.root).as_posix()}:{number}: {snippet(line.strip(), wanted)}")
             if stopped:
                 break
         if not matches:
@@ -69,7 +65,7 @@ def make_search_files(workspace, trace) -> Entry:
                     for number, line in enumerate(file.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
                         hit = [w for w in words if w in line.lower()]
                         if hit:
-                            partial.append((len(hit), f"{file.relative_to(workspace.root.resolve()).as_posix()}:{number}: {snippet(line.strip(), hit[0])}"))
+                            partial.append((len(hit), f"{file.relative_to(workspace.root).as_posix()}:{number}: {snippet(line.strip(), hit[0])}"))
                 partial.sort(key=lambda p: -p[0])
             trace.add("search", pattern=pattern, matches=len(partial[:MAX_MATCHES]), stopped=False)
             if not partial:
